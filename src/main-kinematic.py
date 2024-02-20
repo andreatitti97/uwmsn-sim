@@ -99,13 +99,13 @@ def sig(x):
     gamma = config.d
     return 1/(1+np.e**(alpha*(gamma-x)))
 
-def run_simulation(target, auvNum, pub_vehicle_states):
+def run_simulation(target, auvNum, pub_s_state, pub_t_state):
 
     """Simulate the sensor platform and the moving target
     Input:  target : target initial state
             obs : list containing already initialized classes Tracker() (reproduce the local estimations)
             auv : list containing sensors state and methods for measurements
-            pub : list containing the publishers
+            pub_t_state : list containing the publishers
             cpf_control : already initialized class for CPF
             f : choosen geometry
             s_pose : initial s state
@@ -134,14 +134,18 @@ def run_simulation(target, auvNum, pub_vehicle_states):
         rospy.loginfo('SIMULATION TIME(s)')
         rospy.loginfo(t)
 
+        for i in range(N):
+            # Publish agents info
+            a = np.array([auvs_xy[i,0],auvs_xy[i,1],auvs_theta[i]], dtype=np.float32)
+            pub_s_state[i].publish(a)
+            # Publish target info
+            pub_t_state[i].publish(np.array([target.pose.x,target.pose.y,target.pose.theta], dtype=np.float32))
+
         # Move Agents
         for i in range(N):
             auvs_xy[i,0] = auvs_xy[i,0]+ctrl_cmds[i]
             auvs_xy[i,1] = auvs_xy[i,1]+ctrl_cmds[i]
-
-        for i in range(N):
-            a = np.array(auvs_xy[i], dtype=np.float32)
-            pub_vehicle_states[i].publish(a)
+            auvs_theta[i] = auvs_theta[i]+ctrl_cmds[i]
 
         # Move Target
         target.move_target(dt)
@@ -189,8 +193,6 @@ def run_simulation(target, auvNum, pub_vehicle_states):
                 np.savetxt(plot_path+'/vy_ON.txt',est_vy)
                 np.savetxt(plot_path+'/cond_ON',cond_phi)
    
-
-
             else:
                 np.savetxt(plot_path+'/est4_x_OFF.txt',est_x)
                 np.savetxt(plot_path+'/est4_y_OFF.txt',est_y)
@@ -213,13 +215,12 @@ def run_simulation(target, auvNum, pub_vehicle_states):
                 np.savetxt(plot_path+'/vy_OFF.txt',est_vy)
                 np.savetxt(plot_path+'/cond_OFF',cond_phi)
                 np.savetxt(plot_path+'/cond_ON',cond_phi)
-            
               
         t += dt
         count1 += 1  
         rate.sleep()
 
-def callback(data,i):
+def callback(data):
     global ctrl_cmds, ctrl_cmd1, ctrl_cmd2, ctrl_cmd3, ctrl_cmd4
     
     tmp = data.data
@@ -239,7 +240,7 @@ def callback(data,i):
 def listener(n_auv):
     
     for i in range(n_auv):
-        rospy.Subscriber('/'+str(i+1)+'/ctrl_cmd_'+str(i+1), numpy_msg(Floats), callback())
+        rospy.Subscriber('/'+str(i+1)+'/ctrl_cmd_'+str(i+1), numpy_msg(Floats), callback)
     
 def main():
 
@@ -252,27 +253,22 @@ def main():
     rospy.init_node('kinematic_sim')
 
     # Initialize publishers
-    pub = []
-    pub_vehicles_state = []
+    pub_t_state = []
+    pub_s_state = []
     
     for i in range(auvNum):
-        tmp = rospy.Publisher('/'+str(i+1)+'/vehicle_state_'+str(i+1), numpy_msg(Floats), queue_size=100)
-        pub_vehicles_state.append(tmp)
+        tmp1 = rospy.Publisher('/'+str(i+1)+'/vehicle_state_'+str(i+1), numpy_msg(Floats), queue_size=10)
+        tmp2 = rospy.Publisher('/'+str(i+1)+'/target_state', numpy_msg(Floats), queue_size=10)
+        pub_s_state.append(tmp1)
+        pub_t_state.append(tmp2)
        
-    pub_target_state = rospy.Publisher('target_state', numpy_msg(Floats), queue_size=100)
-    pub.append(pub_target_state)
 
-    # Initialization target
-    pose = utils.Pose(config.TARGET_INIT[0], config.TARGET_INIT[1],  config.TARGET_INIT[2])
-    target_ = target.Target()
-    target_.set_start_target_poses(pose)      
-
-    # Sensor and AUVs Initialization
-
+    # Initialization object target
+    target_obj = target.Target()
 
     # Start listeners and run simulation
     
-    run_simulation(target_, auvNum, pub_vehicles_state)
+    run_simulation(target_obj, auvNum, pub_s_state, pub_t_state)
     rospy.spin()
 
 if __name__ == '__main__':

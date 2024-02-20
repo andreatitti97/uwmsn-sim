@@ -36,7 +36,7 @@ class Target:
     def __init__(self): #path_finder_controller_target
 
         #self.target_controller = path_finder_controller_target # FOR FOLLOWING A POLYNOMIAL TRAJECTORY
-        self.pose = utils.Pose(0,0,0)
+        self.pose = utils.Pose(config.TARGET_INIT[0], config.TARGET_INIT[1],  config.TARGET_INIT[2])
         self.lin_vel = config.alpha_0 #(m/s)
         self.ang_vel = config.omega_0 #(rad/sec)
         self.lin_acc = config.alpha_dot_0 #(m/sec^2)

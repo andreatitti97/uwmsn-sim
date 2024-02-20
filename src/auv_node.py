@@ -27,7 +27,8 @@ spec.loader.exec_module(sensor)
 plot_path = os.path.abspath('/home/andrea/Desktop/ros_simulation_ws/src/ipp_pkg/src/logs/plot')
 
 # Initi Global Variables 
-s_pose = [0,0,0] # --> Agent Pose
+s_state = [0,0,0] # --> Agent Pose
+t_pose = [0,0,0]
 
 def run_simulation(pub,auvID,auv):
 
@@ -38,9 +39,9 @@ def run_simulation(pub,auvID,auv):
             pub : list containing the publishers
             cpf_control : already initialized class for CPF
             f : choosen geometry
-            s_pose : initial s state
+            s_state : initial s state
     """
-    global count1, s_pose
+    global count1, s_state, t_pose
 
     Hz = 1/(config.TIME_STEP) #NB: different from sampling rate for move things, this is ros rate
     Hz = 1
@@ -49,17 +50,27 @@ def run_simulation(pub,auvID,auv):
     # Init time variables and counters and lists
     t, count1 = 0,0
     dt = config.TIME_STEP*config.TIME_SCALER
+    meas_table = []
 
     ## SIMULATION LOOP ############################################################################################################
     while not rospy.is_shutdown():
 
+        # Perform measurement 
+        [measure_, rel_bearing_, meas_pos] = auv.measureBearing(t_pose[0],t_pose[1],[s_state[0],s_state[1]],s_state[2])
+        arr = [t,measure_,meas_pos[0],meas_pos[1]]
+        pub[0].publish(np.array(arr,dtype=np.float32))
+        meas_table.append(arr)
 
-        
-        a = np.array([auvID,0.1], dtype=np.float32)
-        pub[1].publish(a)
-        rospy.loginfo('AUV STATE: (ID) and (POSE)')
+        #pub[1]
+
+        # OPTIMIZATION OR OFFLINE PLANING MUST ACT HERE
+
+        ctrl_cmd = np.array([auvID,0.1], dtype=np.float32)
+        pub[2].publish(ctrl_cmd)
+        rospy.loginfo('AUV STATE: (ID) and (POSE) and (TARGET STATE)')
         rospy.loginfo(auvID)
-        rospy.loginfo(s_pose)
+        rospy.loginfo(s_state)
+        rospy.loginfo(t_pose)
 
         t += dt
         count1 += 1 
@@ -68,12 +79,18 @@ def run_simulation(pub,auvID,auv):
 
 def callback(data):
     
-    global s_pose
-    s_pose = data.data
+    global s_state
+    s_state = data.data
+
+def callback2(data):
+    
+    global t_pose
+    t_pose = data.data
     
 def listener(auvID):
 
     rospy.Subscriber('vehicle_state_'+str(auvID), numpy_msg(Floats), callback)
+    rospy.Subscriber('target_state', numpy_msg(Floats), callback2)
     
 def main():
 
@@ -87,8 +104,10 @@ def main():
     rospy.init_node('auv'+str(auvID))
     # Publishers init
     pub = []
+    pub_measurement = rospy.Publisher('measurement', numpy_msg(Floats), queue_size=10)
     pub_estimation = rospy.Publisher('estimation', numpy_msg(Floats), queue_size=10)
     pub_ctrl_cmd = rospy.Publisher('ctrl_cmd_'+str(auvID), numpy_msg(Floats),queue_size=10)
+    pub.append(pub_measurement)
     pub.append(pub_estimation)  
     pub.append(pub_ctrl_cmd)
 
