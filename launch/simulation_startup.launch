@@ -1,0 +1,44 @@
+<?xml version="1.0"?>
+<launch>
+
+<!-- auvNum must be passed as arg from cmd line -->
+    <arg name="auvNum"/>
+    <arg name="formationControl"/>
+
+<node pkg="uwmsn-sim" type="main-kinematic.py" name="kinematic_sim" output="screen">
+    <param name="auvNum" value="$(eval arg('auvNum'))" />
+    <param name="formation_control" value="$(eval arg('formationControl'))" />
+</node>
+<!-- AUV 1 -->
+    <group if="$(eval arg('auvNum') >= 1)" clear_params="false" ns="1">
+        <include file="$(find uwmsn-sim)/launch/auvs_initialization.launch" >
+            <arg name="auvID" value="1" />
+            <arg name="auvNum" value="$(eval arg('auvNum'))" />
+        </include>
+    </group>
+    
+<!-- AUV 2 -->
+    <group if="$(eval arg('auvNum') >= 2)" clear_params="false" ns="2">
+        <include file="$(find uwmsn-sim)/launch/auvs_initialization.launch" >
+            <arg name="auvID" value="2" />
+            <arg name="auvNum" value="$(eval arg('auvNum'))" />
+        </include>
+    </group>
+    
+<!-- AUV 3 -->
+    <group if="$(eval arg('auvNum') >= 3)" clear_params="false" ns="3">
+        <include file="$(find uwmsn-sim)/launch/auvs_initialization.launch" >
+            <arg name="auvID" value="3" />
+            <arg name="auvNum" value="$(eval arg('auvNum'))" />
+        </include>
+    </group>
+    
+<!-- AUV 4 -->
+    <group if="$(eval arg('auvNum') >= 4)" clear_params="false" ns="4">
+        <include file="$(find uwmsn-sim)/launch/auvs_initialization.launch" >
+            <arg name="auvID" value="4" />
+            <arg name="auvNum" value="$(eval arg('auvNum'))" />
+        </include>
+    </group>
+
+</launch>
