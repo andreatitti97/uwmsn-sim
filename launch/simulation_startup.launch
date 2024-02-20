@@ -15,12 +15,20 @@
             <arg name="auvID" value="1" />
             <arg name="auvNum" value="$(eval arg('auvNum'))" />
         </include>
+        <include file="$(find uw-communication)/launch/acoustic_modem_init.launch" >
+            <arg name="auvID" value="1" />
+            <arg name="auvNum" value="$(eval arg('auvNum'))" />
+        </include>
     </group>
     
 <!-- AUV 2 -->
     <group if="$(eval arg('auvNum') >= 2)" clear_params="false" ns="2">
         <include file="$(find uwmsn-sim)/launch/auvs_initialization.launch" >
             <arg name="auvID" value="2" />
+            <arg name="auvNum" value="$(eval arg('auvNum'))" />
+        </include>
+        <include file="$(find uw-communication)/launch/acoustic_modem_init.launch" >
+            <arg name="auvID" value="1" />
             <arg name="auvNum" value="$(eval arg('auvNum'))" />
         </include>
     </group>
@@ -30,6 +38,9 @@
         <include file="$(find uwmsn-sim)/launch/auvs_initialization.launch" >
             <arg name="auvID" value="3" />
             <arg name="auvNum" value="$(eval arg('auvNum'))" />
+        </include><include file="$(find uw-communication)/launch/acoustic_modem_init.launch" >
+            <arg name="auvID" value="1" />
+            <arg name="auvNum" value="$(eval arg('auvNum'))" />
         </include>
     </group>
     
@@ -37,6 +48,9 @@
     <group if="$(eval arg('auvNum') >= 4)" clear_params="false" ns="4">
         <include file="$(find uwmsn-sim)/launch/auvs_initialization.launch" >
             <arg name="auvID" value="4" />
+            <arg name="auvNum" value="$(eval arg('auvNum'))" />
+        </include><include file="$(find uw-communication)/launch/acoustic_modem_init.launch" >
+            <arg name="auvID" value="1" />
             <arg name="auvNum" value="$(eval arg('auvNum'))" />
         </include>
     </group>
