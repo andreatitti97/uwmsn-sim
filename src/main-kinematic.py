@@ -128,6 +128,12 @@ def run_simulation(target, auvNum, pub_s_state, pub_t_state):
     # Initialize nominal vel for the CPF algorithm
     v_n = config.AUV_VEL   
     listener(auvNum)
+    for i in range(len(auvs_xy)):
+        auvs_xy[i,0] = i*100
+        auvs_xy[i,1] = 0
+
+    print('SENSORS INITIAL POSITION',auvs_xy)
+    
     rospy.sleep(1)
     ## SIMULATION LOOP ############################################################################################################
     while not rospy.is_shutdown():

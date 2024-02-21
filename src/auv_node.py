@@ -57,24 +57,20 @@ def run_simulation(pub,auvID,auv,obs,Ts,Tf, auvNum):
     meas_table = []
 
     t_tdma = 0
-    epsi = 0.01
+    epsi = 1
     old_m = [0,0,0,0]
 
 
     ## SIMULATION LOOP ############################################################################################################
     while not rospy.is_shutdown():
 
-        
-
         if count1 == Hz:
             t_tdma += 1#TODO: SHOULD BE DIMENSIONED AFTER CHOOSING dt
             count1 = 0
-            
-            rospy.loginfo('AUV__'+str(auvID)+'__MEAS TABLE---------------------')
-            rospy.loginfo(meas_table)
 
             if auvID*Ts == t_tdma:
                 rospy.loginfo(str(auvID)+'AUV is transmitting - CHANNEL BUSY')
+                rospy.loginfo(t)
                 # Perform measurement 
                 [measure_, rel_bearing_, meas_pos] = auv.measureBearing(t_pose[0],t_pose[1],[s_state[0],s_state[1]],s_state[2])
                 arr = [t,measure_,meas_pos[0],meas_pos[1]]
@@ -82,26 +78,25 @@ def run_simulation(pub,auvID,auv,obs,Ts,Tf, auvNum):
                 if t_tdma == auvNum*Ts:
                     t_tdma = 0
 
-
-                
-
         # TODO: PUT MEASUREMENTS PROCESSING HERE
-        if sum(np.abs(m_rx[0:3]))-sum(np.abs(old_m[0:3]))>epsi:
-        #if sum(m_rx) > 0:
+        if m_rx[0] - old_m[0] > epsi:#check if the measurement is new
+
             meas_table.append(m_rx)
+            rospy.loginfo('AUV__'+str(auvID)+'__MEAS TABLE---------------------')
+            rospy.loginfo(meas_table)
         
         # Process the measurements and compute target state estimation if some conditions
-        if len(meas_table) > 3:
+        if len(meas_table) > 5:
             
-            rospy.loginfo('AUV'+str(auvID)+'is MAKING AN ESTIMATION')
-            time.sleep(50)
+            #rospy.loginfo('AUV'+str(auvID)+'is MAKING AN ESTIMATION')
             obs.processMeasurement(meas_table)
             obs.propagate_estimation(t)
 
         # OPTIMIZATION OR OFFLINE PLANING MUST ACT HERE
 
-        ctrl_cmd = np.array([auvID,0.1], dtype=np.float32)
+        ctrl_cmd = np.array([auvID,0.0], dtype=np.float32)
         pub[2].publish(ctrl_cmd)
+
         '''rospy.loginfo('AUV STATE: (ID) and (POSE) and (TARGET STATE)')
         rospy.loginfo(auvID)
         rospy.loginfo(s_state)
