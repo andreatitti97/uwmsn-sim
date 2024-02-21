@@ -114,7 +114,7 @@ def run_simulation(target, auvNum, pub_s_state, pub_t_state):
     propagation = False
     N = auvNum
     Hz = 1/(config.TIME_STEP) #NB: different from sampling rate for move things, this is ros rate
-    Hz = 1
+    
     rate = rospy.Rate(Hz)
 
     # Init time variables and counters and lists
@@ -128,11 +128,12 @@ def run_simulation(target, auvNum, pub_s_state, pub_t_state):
     # Initialize nominal vel for the CPF algorithm
     v_n = config.AUV_VEL   
     listener(auvNum)
+    rospy.sleep(1)
     ## SIMULATION LOOP ############################################################################################################
     while not rospy.is_shutdown():
 
-        rospy.loginfo('SIMULATION TIME(s)')
-        rospy.loginfo(t)
+        #rospy.loginfo('SIMULATION TIME(s)')
+        #rospy.loginfo(t)
 
         for i in range(N):
             # Publish agents info

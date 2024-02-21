@@ -35,7 +35,7 @@ s_state = [0,0,0] # --> Agent Pose
 t_pose = [0,0,0]
 m_rx = [0,0,0,0]
 
-def run_simulation(pub,auvID,auv,obs,Ts,Tf):
+def run_simulation(pub,auvID,auv,obs,Ts,Tf, auvNum):
 
     """Simulate the sensor platform and the moving target
     Input:  target : target initial state
@@ -49,7 +49,6 @@ def run_simulation(pub,auvID,auv,obs,Ts,Tf):
     global count1, s_state, t_pose, m_rx
 
     Hz = 1/(config.TIME_STEP) #NB: different from sampling rate for move things, this is ros rate
-    Hz = 1
     rate = rospy.Rate(Hz)
 
     # Init time variables and counters and lists
@@ -65,21 +64,37 @@ def run_simulation(pub,auvID,auv,obs,Ts,Tf):
     ## SIMULATION LOOP ############################################################################################################
     while not rospy.is_shutdown():
 
-
-        t_tdma += 1#TODO: SHOULD BE DIMENSIONED AFTER CHOOSING dt
         
-        if auvID*Ts == t_tdma:
-            # Perform measurement 
-            [measure_, rel_bearing_, meas_pos] = auv.measureBearing(t_pose[0],t_pose[1],[s_state[0],s_state[1]],s_state[2])
-            arr = [t,measure_,meas_pos[0],meas_pos[1]]
-            pub[0].publish(np.array(arr,dtype=np.float32))
+
+        if count1 == Hz:
+            t_tdma += 1#TODO: SHOULD BE DIMENSIONED AFTER CHOOSING dt
+            count1 = 0
+            
+            rospy.loginfo('AUV__'+str(auvID)+'__MEAS TABLE---------------------')
+            rospy.loginfo(meas_table)
+
+            if auvID*Ts == t_tdma:
+                rospy.loginfo(str(auvID)+'AUV is transmitting - CHANNEL BUSY')
+                # Perform measurement 
+                [measure_, rel_bearing_, meas_pos] = auv.measureBearing(t_pose[0],t_pose[1],[s_state[0],s_state[1]],s_state[2])
+                arr = [t,measure_,meas_pos[0],meas_pos[1]]
+                pub[0].publish(np.array(arr,dtype=np.float32))
+                if t_tdma == auvNum*Ts:
+                    t_tdma = 0
+
+
+                
 
         # TODO: PUT MEASUREMENTS PROCESSING HERE
         if sum(np.abs(m_rx[0:3]))-sum(np.abs(old_m[0:3]))>epsi:
+        #if sum(m_rx) > 0:
             meas_table.append(m_rx)
         
         # Process the measurements and compute target state estimation if some conditions
-        if len(meas_table) > 10:
+        if len(meas_table) > 3:
+            
+            rospy.loginfo('AUV'+str(auvID)+'is MAKING AN ESTIMATION')
+            time.sleep(50)
             obs.processMeasurement(meas_table)
             obs.propagate_estimation(t)
 
@@ -87,10 +102,10 @@ def run_simulation(pub,auvID,auv,obs,Ts,Tf):
 
         ctrl_cmd = np.array([auvID,0.1], dtype=np.float32)
         pub[2].publish(ctrl_cmd)
-        rospy.loginfo('AUV STATE: (ID) and (POSE) and (TARGET STATE)')
+        '''rospy.loginfo('AUV STATE: (ID) and (POSE) and (TARGET STATE)')
         rospy.loginfo(auvID)
         rospy.loginfo(s_state)
-        rospy.loginfo(t_pose)
+        rospy.loginfo(t_pose)'''
 
         old_m = m_rx
         t += dt
@@ -112,7 +127,8 @@ def callback2(data):
 def callback3(data):
     
     global m_rx
-    m_rx = data.data
+    tmp = data.data
+    m_rx = [tmp[0],tmp[1],tmp[2],tmp[3]]
     
 def listener(auvID):
 
@@ -128,6 +144,7 @@ def main():
     # Get AUV ID and number of vehicles.
     auvID = rospy.get_param(params_path+'/auvID')
     auvNum = rospy.get_param(params_path+'/auvNum')
+
     # Node Init
     rospy.init_node('auv'+str(auvID))
     # Publishers init
@@ -147,7 +164,7 @@ def main():
     Tf = config.Ts*auvNum
     # Start listener and simulation
     listener(auvID)
-    run_simulation(pub,auvID,auv,obs,config.Ts,Tf)
+    run_simulation(pub,auvID,auv,obs,config.Ts,Tf,auvNum)
 
     rospy.spin()
 

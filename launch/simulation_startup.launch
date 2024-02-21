@@ -28,7 +28,7 @@
             <arg name="auvNum" value="$(eval arg('auvNum'))" />
         </include>
         <include file="$(find uw-communication)/launch/acoustic_modem_init.launch" >
-            <arg name="auvID" value="1" />
+            <arg name="auvID" value="2" />
             <arg name="auvNum" value="$(eval arg('auvNum'))" />
         </include>
     </group>
@@ -39,7 +39,7 @@
             <arg name="auvID" value="3" />
             <arg name="auvNum" value="$(eval arg('auvNum'))" />
         </include><include file="$(find uw-communication)/launch/acoustic_modem_init.launch" >
-            <arg name="auvID" value="1" />
+            <arg name="auvID" value="3" />
             <arg name="auvNum" value="$(eval arg('auvNum'))" />
         </include>
     </group>
@@ -50,7 +50,7 @@
             <arg name="auvID" value="4" />
             <arg name="auvNum" value="$(eval arg('auvNum'))" />
         </include><include file="$(find uw-communication)/launch/acoustic_modem_init.launch" >
-            <arg name="auvID" value="1" />
+            <arg name="auvID" value="4" />
             <arg name="auvNum" value="$(eval arg('auvNum'))" />
         </include>
     </group>
