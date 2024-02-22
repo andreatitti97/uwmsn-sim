@@ -1,43 +1,32 @@
 #!/usr/bin/env python
 #Import basic system modules
 import os
-import time
 import importlib.util, pathlib
 
 # Import math modules
-from math import pi, atan2
 import numpy as np
-from scipy import stats
 
 #Import ROS modules
 import rospy
 from rospy_tutorials.msg import Floats
 from rospy.numpy_msg import numpy_msg
 
-# Import Costum classes
-class_path = pathlib.Path(__file__).parent.resolve()
-class_path = class_path/'Classes'
-spec = importlib.util.spec_from_file_location("module.config", class_path/'config.py')
-config = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(config)
-spec = importlib.util.spec_from_file_location("module.sensor", class_path/'sensor.py')
-sensor = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(sensor)
-spec = importlib.util.spec_from_file_location("module.tracker", class_path/'tracker.py')
-tracker = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(tracker)
+# Load the header file as a Python module 
+header_file = pathlib.Path(__file__).parent.resolve()
+header_file = os.path.dirname(header_file)
+header_file = header_file+'/include'+'/uwmsn-sim'
+spec = importlib.util.spec_from_file_location("module.header", header_file+'/auv_node_h.py')
+header = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(header)
 
-# Log path definition
-plot_path = os.path.abspath('/home/andrea/Desktop/ros_simulation_ws/src/ipp_pkg/src/logs/plot')
-
-# Initi Global Variables 
+# Init Global Variables 
 s_state = [0,0,0] # --> Agent Pose
-t_pose = [0,0,0]
-m_rx = [0,0,0,0]
+t_pose = [0,0,0] # --> Target ground truth
+m_rx = [0,0,0,0] # --> received measurament
 
 def run_simulation(pub,auvID,auv,obs,Ts,Tf, auvNum):
 
-    """Simulate the sensor platform and the moving target
+    """Simulate the header.sensor platform and the moving target
     Input:  target : target initial state
             obs : list containing already initialized classes Tracker() (reproduce the local estimations)
             auv : list containing sensors state and methods for measurements
@@ -48,18 +37,19 @@ def run_simulation(pub,auvID,auv,obs,Ts,Tf, auvNum):
     """
     global count1, s_state, t_pose, m_rx
 
-    Hz = 1/(config.TIME_STEP) #NB: different from sampling rate for move things, this is ros rate
+    Hz = 1/(header.config.TIME_STEP) #NB: different from sampling rate for move things, this is ros rate
     rate = rospy.Rate(Hz)
+    listener(auvID) #start the listeners
 
     # Init time variables and counters and lists
-    t, count1 = 0,0
-    dt = config.TIME_STEP*config.TIME_SCALER
+    t, count1, t_tdma = 0,0,0
+    dt = header.config.TIME_STEP*header.config.TIME_SCALER
     meas_table = []
-
-    t_tdma = 0
-    epsi = 1
     old_m = [0,0,0,0]
 
+    # Start listeners
+    listener(auvID)
+    rate.sleep()
 
     ## SIMULATION LOOP ############################################################################################################
     while not rospy.is_shutdown():
@@ -79,7 +69,7 @@ def run_simulation(pub,auvID,auv,obs,Ts,Tf, auvNum):
                     t_tdma = 0
 
         # TODO: PUT MEASUREMENTS PROCESSING HERE
-        if m_rx[0] - old_m[0] > epsi:#check if the measurement is new
+        if m_rx[0] - old_m[0] > 1:#check if the measurement is new
 
             meas_table.append(m_rx)
             rospy.loginfo('AUV__'+str(auvID)+'__MEAS TABLE---------------------')
@@ -101,6 +91,9 @@ def run_simulation(pub,auvID,auv,obs,Ts,Tf, auvNum):
         rospy.loginfo(auvID)
         rospy.loginfo(s_state)
         rospy.loginfo(t_pose)'''
+
+        if int(t) == (header.config.TIME_DURATION-1):
+            rospy.signal_shutdown('Simulation time limit reached')
 
         old_m = m_rx
         t += dt
@@ -151,15 +144,15 @@ def main():
     pub.append(pub_estimation)  
     pub.append(pub_ctrl_cmd)
 
-    # Initialize sensor and tracker object from costum class
-    auv = sensor.Sensor(str(auvID),1,0,config.SIGMA_MEAS)
-    obs = tracker.Tracker()
+    # Initialize header.sensor and header.tracker object from costum class
+    auv = header.sensor.Sensor(str(auvID),1,0,header.config.SIGMA_MEAS)
+    obs = header.tracker.Tracker()
 
     # Init Communication protocol parameters (TDMA)
-    Tf = config.Ts*auvNum
-    # Start listener and simulation
-    listener(auvID)
-    run_simulation(pub,auvID,auv,obs,config.Ts,Tf,auvNum)
+    Tf = header.config.Ts*auvNum
+    # Start simulation
+    
+    run_simulation(pub,auvID,auv,obs,header.config.Ts,Tf,auvNum)
 
     rospy.spin()
 
