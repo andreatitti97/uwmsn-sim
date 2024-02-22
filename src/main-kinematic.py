@@ -1,13 +1,11 @@
 #!/usr/bin/env python
 #Import basic system modules
 import os
-import time
 import importlib.util, pathlib
-import matplotlib.pyplot as plt
+
 # Import math modules
-from math import pi, atan2
 import numpy as np
-from scipy import stats
+
 #Import ROS modules
 import rospy
 from rospy_tutorials.msg import Floats
@@ -19,18 +17,13 @@ log_path = os.path.dirname(class_path) #output is a string with the path (sum st
 log_path = log_path+'/logs'
 class_path = class_path/'Classes'
 
-spec = importlib.util.spec_from_file_location("module.config", class_path/'config.py')
-config = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(config)
-spec = importlib.util.spec_from_file_location("module.utils", class_path/'utils.py')
-utils = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(utils)
-spec = importlib.util.spec_from_file_location("module.tracker", class_path/'tracker.py')
-tracker = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(tracker)
-spec = importlib.util.spec_from_file_location("module.target", class_path/'target.py')
-target = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(target)
+# Load the header file as a Python module 
+header_file = pathlib.Path(__file__).parent.resolve()
+header_file = os.path.dirname(header_file)
+header_file = header_file+'/include'+'/uwmsn-sim'
+spec = importlib.util.spec_from_file_location("module.header", header_file+'/main-kinematic_h.py')
+header = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(header)
 
 # Init lists for plot
 # Target and AUVs
@@ -40,13 +33,12 @@ auv1_x, auv1_y, auv2_x, auv2_y,auv3_x,auv3_y,auv4_x,auv4_y  = [], [], [], [], []
 est1_x, est1_y, est2_x, est2_y,est3_x, est3_y,est_x, est_y, est_vx, est_vy = [],[], [], [], [], [], [], [], [], []
 cov1, cov2, cov3, cov4, err_quad, cond_phi = [],[],[],[],[],[]
 
-ctrl_cmd1,ctrl_cmd2,ctrl_cmd3,ctrl_cmd4 = 0,0,0,0
 ctrl_cmds = [0,0,0,0]
 
 def run_simulation(target, auvNum, pub_s_state, pub_t_state):
 
-    """Simulate the sensor platform and the moving target
-    Input:  target : target initial state
+    """Simulate the sensor platform and the moving header.target
+    Input:  header.target : header.target initial state
             obs : list containing already initialized classes Tracker() (reproduce the local estimations)
             auv : list containing sensors state and methods for measurements
             pub_t_state : list containing the publishers
@@ -54,15 +46,15 @@ def run_simulation(target, auvNum, pub_s_state, pub_t_state):
             f : choosen geometry
             s_pose : initial s state
     """
-    global count1, ctrl_cmds, ctrl_cmd1, ctrl_cmd2, ctrl_cmd3, ctrl_cmd4
+    global count1, ctrl_cmds
 
     # ROS simulation parameters
-    Hz = 1/(config.TIME_STEP) #NB: different from sampling rate for move things, this is ros rate   
+    Hz = 1/(header.config.TIME_STEP) #NB: different from sampling rate for move things, this is ros rate   
     rate = rospy.Rate(Hz)
 
     # Init time variables and counters and lists
     t, count1 = 0,0
-    dt = config.TIME_STEP*config.TIME_SCALER
+    dt = header.config.TIME_STEP*header.config.TIME_SCALER
  
     # Init AUVs position and orientation
     auvs_xy = np.zeros((4,2))
@@ -84,12 +76,13 @@ def run_simulation(target, auvNum, pub_s_state, pub_t_state):
 
         #rospy.loginfo('SIMULATION TIME(s)')
         #rospy.loginfo(t)
+        
 
         for i in range(auvNum):
             # Publish agents info
             a = np.array([auvs_xy[i,0],auvs_xy[i,1],auvs_theta[i]], dtype=np.float32)
             pub_s_state[i].publish(a)
-            # Publish target info
+            # Publish header.target info
             pub_t_state[i].publish(np.array([target.pose.x,target.pose.y,target.pose.theta], dtype=np.float32))
 
         # Move Agents
@@ -100,7 +93,9 @@ def run_simulation(target, auvNum, pub_s_state, pub_t_state):
 
         # Move Target
         target.move_target(dt)
-
+        if count1 % 100 == 0:
+            rospy.loginfo('--------------------------------------------------------------------------------Ground Truth')
+            rospy.loginfo([target.pose.x,target.pose.y])
         #################################################################################################################
         ##################### SAVE THE POSITIONS OF TEAM REFERENCE/AGENTS/TARGET/ STATE FOR PLOT ########################
         
@@ -119,7 +114,7 @@ def run_simulation(target, auvNum, pub_s_state, pub_t_state):
         
         ##################################################################################################################
         #  Stop simulation and save data to .txt files ###################################################################
-        if int(t) == (config.TIME_DURATION-1):
+        if int(t) == (header.config.TIME_DURATION-1):
             rospy.on_shutdown(shutdown_cllbk)
             rospy.signal_shutdown('Simulation time limit reached')
         
@@ -154,11 +149,10 @@ def shutdown_cllbk():
     np.savetxt(log_path+'/vy_ON.txt',est_vy)
     np.savetxt(log_path+'/cond_ON',cond_phi)
     rospy.loginfo('SIMULATION DATA SAVED --> Shutting down ...')
-    #rospy.signal_shutdown('User stopped simulation')
     
 def callback(data):
-    global ctrl_cmds, ctrl_cmd1, ctrl_cmd2, ctrl_cmd3, ctrl_cmd4
-    
+    global ctrl_cmds
+    ctrl_cmd1, ctrl_cmd2, ctrl_cmd3, ctrl_cmd4 = 0,0,0,0
     tmp = data.data
 
     if int(tmp[0]) == 1:
@@ -169,6 +163,7 @@ def callback(data):
         ctrl_cmd3 = tmp[1]
     elif int(tmp[0]) == 4:
         ctrl_cmd4 = tmp[1]
+
     ctrl_cmds = [ctrl_cmd1,ctrl_cmd2,ctrl_cmd3,ctrl_cmd4]
 
 def listener(n_auv):
@@ -180,7 +175,6 @@ def main():
 
     # ROS INIT   
     namespace = rospy.get_namespace()
-    params_path = namespace
     # Get AUV ID and number of vehicles.
     auvNum = rospy.get_param('/kinematic_sim/auvNum')
     # Node Init
@@ -196,9 +190,8 @@ def main():
         pub_s_state.append(tmp1)
         pub_t_state.append(tmp2)
        
-
-    # Initialization object target
-    target_obj = target.Target()
+    # Initialization object header.target
+    target_obj = header.target.Target()
 
     # Start listeners and run simulation
     

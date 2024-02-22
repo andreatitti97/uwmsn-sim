@@ -81,16 +81,16 @@ def run_simulation(pub,auvID,auv,obs,Ts,Tf, auvNum):
             #rospy.loginfo('AUV'+str(auvID)+'is MAKING AN ESTIMATION')
             obs.processMeasurement(meas_table)
             obs.propagate_estimation(t)
+            curr_est,phy,y = obs.state
+            if count1 % 100 == 0:
+                rospy.loginfo('----------------------------------------------Target STATE ESTIMATION from AUV'+str(auvID))
+                rospy.loginfo(curr_est)
+            
 
         # OPTIMIZATION OR OFFLINE PLANING MUST ACT HERE
 
         ctrl_cmd = np.array([auvID,0.0], dtype=np.float32)
         pub[2].publish(ctrl_cmd)
-
-        '''rospy.loginfo('AUV STATE: (ID) and (POSE) and (TARGET STATE)')
-        rospy.loginfo(auvID)
-        rospy.loginfo(s_state)
-        rospy.loginfo(t_pose)'''
 
         if int(t) == (header.config.TIME_DURATION-1):
             rospy.signal_shutdown('Simulation time limit reached')

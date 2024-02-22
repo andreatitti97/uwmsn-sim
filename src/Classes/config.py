@@ -78,5 +78,5 @@ K_att = 0.8 # Attractive Gain
 K_rep = 0.0 # Repulsive gain
 d_rep = d # Distance threshold for repulsion
 
-Ts = 5
+Ts = 2
 #OPTIMIZATION_TIME_STEP = Ts*auvNum (at least) to compute inside nodes
