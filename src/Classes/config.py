@@ -9,7 +9,7 @@ spec.loader.exec_module(utils)
 
 ############################################################ SIMULATION SETUP ########################################################
 # Simulation parameters
-TIME_DURATION = 10 # (s)
+TIME_DURATION = 60 # (s)
 TIME_STEP = 0.01
 TIME_SCALER = 1#80 # TIME SCALER OF THE SIMULATION 
 c = 1500 #sound wave speed

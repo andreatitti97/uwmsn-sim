@@ -11,11 +11,13 @@ import rospy
 from rospy_tutorials.msg import Floats
 from rospy.numpy_msg import numpy_msg
 
-# Import Costum classes
-class_path = pathlib.Path(__file__).parent.resolve() #output is an object path (sum a string using '/')
-log_path = os.path.dirname(class_path) #output is a string with the path (sum strings using '+')
-log_path = log_path+'/logs'
-class_path = class_path/'Classes'
+# Environment: Define the relevant paths
+'''pathlib: output is an object path (sum a string using '/')
+os.path.dirname: output is a string with the path (sum strings using '+')'''
+
+pkg_directory = os.path.dirname(pathlib.Path(__file__).parent.resolve())
+log_path = pkg_directory+'/logs'
+class_path = pkg_directory+'/src/Classes'
 
 # Load the header file as a Python module 
 header_file = pathlib.Path(__file__).parent.resolve()
@@ -29,9 +31,6 @@ spec.loader.exec_module(header)
 # Target and AUVs
 target_x_traj, target_y_traj, platform_x, platform_y = [], [], [], []
 auv1_x, auv1_y, auv2_x, auv2_y,auv3_x,auv3_y,auv4_x,auv4_y  = [], [], [], [], [], [], [], []
-# Estimation Data
-est1_x, est1_y, est2_x, est2_y,est3_x, est3_y,est_x, est_y, est_vx, est_vy = [],[], [], [], [], [], [], [], [], []
-cov1, cov2, cov3, cov4, err_quad, cond_phi = [],[],[],[],[],[]
 
 ctrl_cmds = [0,0,0,0]
 
@@ -65,18 +64,14 @@ def run_simulation(target, auvNum, pub_s_state, pub_t_state):
         auvs_xy[i,0] = i*100
         auvs_xy[i,1] = 0
 
-    print('SENSORS INITIAL POSITION',auvs_xy)
-    print('TARGET INITIAL POSITION',target.pose.x,target.pose.y,target.pose.theta)
+    rospy.loginfo('|---- KINEMATIC SIMULATION: Initial AUVs positions (m) --> %s',auvs_xy)
+    rospy.loginfo('|---- KINEMATIC SIMULATION: Initial Target position (m) --> %s',[target.pose.x,target.pose.y,target.pose.theta])
 
     # Start listeners
     listener(auvNum)
     rospy.sleep(1)
     ## SIMULATION LOOP ############################################################################################################
     while not rospy.is_shutdown():
-
-        #rospy.loginfo('SIMULATION TIME(s)')
-        #rospy.loginfo(t)
-        
 
         for i in range(auvNum):
             # Publish agents info
@@ -93,9 +88,7 @@ def run_simulation(target, auvNum, pub_s_state, pub_t_state):
 
         # Move Target
         target.move_target(dt)
-        if count1 % 100 == 0:
-            rospy.loginfo('--------------------------------------------------------------------------------Ground Truth')
-            rospy.loginfo([target.pose.x,target.pose.y])
+                    
         #################################################################################################################
         ##################### SAVE THE POSITIONS OF TEAM REFERENCE/AGENTS/TARGET/ STATE FOR PLOT ########################
         
@@ -117,22 +110,21 @@ def run_simulation(target, auvNum, pub_s_state, pub_t_state):
         if int(t) == (header.config.TIME_DURATION-1):
             rospy.on_shutdown(shutdown_cllbk)
             rospy.signal_shutdown('Simulation time limit reached')
-        
+      
+        if count1 % Hz == 0:
+            '''ADD DEBUG PRINTS HERE'''
+            rospy.loginfo('|---- KINEMATIC SIMULATION: Elapsed time (s) --> %s',t)
+            rospy.loginfo('|---- KINEMATIC SIMULATION: Target groud truth (m) --> %s',[target.pose.x,target.pose.y])
+
         t += dt
         count1 += 1  
         rate.sleep()
 
 def shutdown_cllbk():
-    rospy.loginfo('saving data for plot')
-
+    
     np.savetxt(log_path+'/target_x_traj.txt',target_x_traj)
     np.savetxt(log_path+'/target_y_traj.txt',target_y_traj)
-    
-    np.savetxt(log_path+'/est4_x_ON.txt',est_x)
-    np.savetxt(log_path+'/est4_y_ON.txt',est_y)
-    np.savetxt(log_path+'/err_quad_ON.txt',err_quad)
-    np.savetxt(log_path+'/x_platform_ON.txt',platform_x)
-    np.savetxt(log_path+'/y_platform_ON.txt',platform_y)
+
     np.savetxt(log_path+'/auv1_x_ON.txt',auv1_x)
     np.savetxt(log_path+'/auv1_y_ON.txt',auv1_y)
     np.savetxt(log_path+'/auv2_x_ON.txt',auv2_x)
@@ -141,14 +133,8 @@ def shutdown_cllbk():
     np.savetxt(log_path+'/auv3_y_ON.txt',auv3_y)
     np.savetxt(log_path+'/auv4_x_ON.txt',auv4_x)
     np.savetxt(log_path+'/auv4_y_ON.txt',auv4_y)
-    np.savetxt(log_path+'/cov1_ON.txt',cov1)
-    np.savetxt(log_path+'/cov2_ON.txt',cov2)
-    np.savetxt(log_path+'/cov3_ON.txt',cov3)
-    np.savetxt(log_path+'/cov4_ON.txt',cov4)
-    np.savetxt(log_path+'/vx_ON.txt',est_vx)
-    np.savetxt(log_path+'/vy_ON.txt',est_vy)
-    np.savetxt(log_path+'/cond_ON',cond_phi)
-    rospy.loginfo('SIMULATION DATA SAVED --> Shutting down ...')
+
+    rospy.loginfo('|---- KINEMATIC SIMULATION: Simulation data saved --> Shutting down ...')
     
 def callback(data):
     global ctrl_cmds
@@ -174,7 +160,6 @@ def listener(n_auv):
 def main():
 
     # ROS INIT   
-    namespace = rospy.get_namespace()
     # Get AUV ID and number of vehicles.
     auvNum = rospy.get_param('/kinematic_sim/auvNum')
     # Node Init
@@ -194,8 +179,8 @@ def main():
     target_obj = header.target.Target()
 
     # Start listeners and run simulation
-    
-    run_simulation(target_obj, auvNum, pub_s_state, pub_t_state)
+    run_simulation(target_obj, auvNum, pub_s_state, pub_t_state)  
+    rospy.on_shutdown(shutdown_cllbk)
     rospy.spin()
 
 if __name__ == '__main__':
