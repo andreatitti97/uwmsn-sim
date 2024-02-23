@@ -37,13 +37,12 @@ ctrl_cmds = [0,0,0,0]
 def run_simulation(target, auvNum, pub_s_state, pub_t_state):
 
     """Simulate the sensor platform and the moving header.target
-    Input:  header.target : header.target initial state
-            obs : list containing already initialized classes Tracker() (reproduce the local estimations)
-            auv : list containing sensors state and methods for measurements
-            pub_t_state : list containing the publishers
-            cpf_control : already initialized class for CPF
-            f : choosen geometry
-            s_pose : initial s state
+    Input:  
+            target : target initial state
+            auvNum : list containing sensors state and methods for measurements
+            pub_s_state : list containing the publishers for the vehicles states
+            pub_t_state : list containing the publishers for the target state
+
     """
     global count1, ctrl_cmds
 
@@ -111,7 +110,7 @@ def run_simulation(target, auvNum, pub_s_state, pub_t_state):
             rospy.on_shutdown(shutdown_cllbk)
             rospy.signal_shutdown('Simulation time limit reached')
       
-        if count1 % Hz == 0:
+        if count1 % Hz/10 == 0:
             '''ADD DEBUG PRINTS HERE'''
             rospy.loginfo('|---- KINEMATIC SIMULATION: Elapsed time (s) --> %s',t)
             rospy.loginfo('|---- KINEMATIC SIMULATION: Target groud truth (m) --> %s',[target.pose.x,target.pose.y])
@@ -134,7 +133,9 @@ def shutdown_cllbk():
     np.savetxt(log_path+'/auv4_x_ON.txt',auv4_x)
     np.savetxt(log_path+'/auv4_y_ON.txt',auv4_y)
 
-    rospy.loginfo('|---- KINEMATIC SIMULATION: Simulation data saved --> Shutting down ...')
+    magenta = "\033[0;35m"
+    none = "\033[0m"
+    rospy.loginfo('|---- %sKINEMATIC SIMULATION: Simulation data saved --> Shutting down ...%s',magenta,none)
     
 def callback(data):
     global ctrl_cmds
@@ -163,8 +164,8 @@ def main():
     # Get AUV ID and number of vehicles.
     auvNum = rospy.get_param('/kinematic_sim/auvNum')
     # Node Init
-    rospy.init_node('kinematic_sim')
-
+    rospy.init_node('kinematic_sim') #log_level=rospy.DEBUG
+    
     # Initialize publishers
     pub_t_state = []
     pub_s_state = []

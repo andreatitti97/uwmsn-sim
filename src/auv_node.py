@@ -49,18 +49,22 @@ def computeCov(y,phi):
 def run_auv_node(pub,auv,obs,Ts,Tf, auvNum):
 
     """Simulate the header.sensor platform and the moving target
-    Input:  target : target initial state
-            obs : list containing already initialized classes Tracker() (reproduce the local estimations)
-            auv : list containing sensors state and methods for measurements
+    Input:              
             pub : list containing the publishers
-            cpf_control : already initialized class for CPF
-            f : choosen geometry
-            s_state : initial s state
+            auv : list containing sensors state and methods for measurements
+            obs : object containing already initialized classes Tracker() (reproduce the local estimations)
+            Ts  : slot time of the TDMA protocol
+            Tf  : frame time of the TDMA protocol
+            auvNum : number ora AUVs
     """
     global count1, s_state, t_pose, m_rx, auvID
 
     Hz = 1/(header.config.TIME_STEP) #NB: different from sampling rate for move things, this is ros rate
     rate = rospy.Rate(Hz)
+    # Colors for prints
+    blue = "\033[1;34m"
+    cyan = "\033[0;36m"
+    none = "\033[0m"
     listener(auvID) #start the listeners
 
     # Init time variables and counters and lists
@@ -82,7 +86,8 @@ def run_auv_node(pub,auv,obs,Ts,Tf, auvNum):
             #count1 = 0
 
             if auvID*Ts == t_tdma:
-                rospy.loginfo('|---- AUV '+str(auvID)+': Transmitting measurements at time %s --> Channel Busy',t)
+                
+                rospy.loginfo('%s|---- AUV '+str(auvID)+': Transmitting measurements at time %s --> Channel Busy%s',cyan,t,none)
                 
                 # Perform measurement 
                 [measure_, rel_bearing_, meas_pos] = auv.measureBearing(t_pose[0],t_pose[1],[s_state[0],s_state[1]],s_state[2])
@@ -102,9 +107,8 @@ def run_auv_node(pub,auv,obs,Ts,Tf, auvNum):
         if m_rx[0] - old_m[0] > 1:#check if the measurement is new
 
             meas_table.append(m_rx)
-            rospy.loginfo('|---- AUV '+str(auvID)+': Measuraments Table [t,y,p_sx,p_sy]--> %s',meas_table)
+            rospy.logdebug('|---- AUV '+str(auvID)+': Measuraments Table [t,y,p_sx,p_sy]--> %s',meas_table)
 
-        
         # Process the measurements and compute target state estimation if some conditions
         if len(meas_table) > 5:
 
@@ -113,7 +117,7 @@ def run_auv_node(pub,auv,obs,Ts,Tf, auvNum):
             curr_est,phi,y = obs.state
             cov = computeCov(y,phi)
             meas_table = []
-            rospy.loginfo('|---- AUV '+str(auvID)+': Target state Estimation [m,m/s] --> %s',curr_est)
+            rospy.logout('%s|---- AUV '+str(auvID)+': Target state Estimation [m,m/s] --> %s%s',blue,curr_est,none)
             # Computte the tracking error
             err_x = (t_pose[0] - curr_est[0,0])
             err_y = (t_pose[1] - curr_est[1,0])
@@ -131,9 +135,7 @@ def run_auv_node(pub,auv,obs,Ts,Tf, auvNum):
             cov4.append(cov[3,3])
             ############################################################################################################
             
-                
-
-        # OPTIMIZATION OR OFFLINE PLANING MUST ACT HERE s
+        #TODO: OPTIMIZATION OR OFFLINE PLANING MUST ACT HERE!
 
         ctrl_cmd = np.array([auvID,0.0], dtype=np.float32)
         pub[2].publish(ctrl_cmd)
@@ -163,8 +165,9 @@ def shutdown_cllbk():
     np.savetxt(log_path+'/'+str(auvID)+'-cov2.txt',cov2)
     np.savetxt(log_path+'/'+str(auvID)+'-cov3.txt',cov3)
     np.savetxt(log_path+'/'+str(auvID)+'-cov4.txt',cov4)
-
-    rospy.loginfo('|---- AUV '+str(auvID)+': Simulation data saved --> Shutting down ...')
+    magenta = "\033[0;35m"
+    none = "\033[0m"
+    rospy.loginfo('%s|---- AUV '+str(auvID)+': Simulation data saved --> Shutting down ...%s',magenta,none)
 
 def callback(data):
     
@@ -199,7 +202,8 @@ def main():
     auvNum = rospy.get_param(params_path+'/auvNum')
 
     # Node Init
-    rospy.init_node('auv'+str(auvID))
+    rospy.init_node('auv'+str(auvID)) #TO ADD debug prints --> log_level=rospy.DEBUG
+
     # Publishers init
     pub = []
     pub_measurement = rospy.Publisher('/'+str(auvID)+'/tx_meas', numpy_msg(Floats), queue_size=100)
