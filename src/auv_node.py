@@ -30,6 +30,16 @@ s_state = [0,0,0] # --> Agent Pose
 t_pose = [0,0,0] # --> Target ground truth
 m_rx = [0,0,0,0] # --> received measurament
 
+def compute_cost(phi,len_y):
+
+    tmp_phi = np.zeros((len_y,4))
+    for i in range(len_y):
+        row = phi[i]
+        tmp_phi[i,:] = [row[0],row[1],row[2],row[3]]
+    PHI = np.dot(np.transpose(tmp_phi[:,0:2]),tmp_phi[:,0:2])
+    cost = np.linalg.norm(np.linalg.inv(PHI),ord=2)*np.linalg.norm(PHI,ord=2)
+    return cost
+
 def computeCov(y,phi):
 
     # Compute Covariance of the target state
@@ -73,7 +83,7 @@ def run_auv_node(pub,auv,obs,Ts,Tf, auvNum):
     meas_table = []
     local_measures = []
     old_m = [0,0,0,0]
-
+    thresh = 1
     # Start listeners
     listener(auvID)
     rate.sleep()
@@ -83,8 +93,7 @@ def run_auv_node(pub,auv,obs,Ts,Tf, auvNum):
 
         if count1 % Hz == 0:
             t_tdma += 1#TODO: SHOULD BE DIMENSIONED AFTER CHOOSING dt
-            #count1 = 0
-
+            
             if auvID*Ts == t_tdma:
                 
                 rospy.loginfo('%s|---- AUV '+str(auvID)+': Transmitting measurements at time %s --> Channel Busy%s',cyan,t,none)
@@ -110,30 +119,35 @@ def run_auv_node(pub,auv,obs,Ts,Tf, auvNum):
             rospy.logdebug('|---- AUV '+str(auvID)+': Measuraments Table [t,y,p_sx,p_sy]--> %s',meas_table)
 
         # Process the measurements and compute target state estimation if some conditions
-        if len(meas_table) > 5:
+        if len(meas_table) > auvNum: #just to be sure there are enough measurements avoiding sing matrix
 
             obs.processMeasurement(meas_table)
-            obs.propagate_estimation(t)
-            curr_est,phi,y = obs.state
-            cov = computeCov(y,phi)
+            phi,y = obs.regressor #curr_est at this point is not used!
             meas_table = []
-            rospy.logout('%s|---- AUV '+str(auvID)+': Target state Estimation [m,m/s] --> %s%s',blue,curr_est,none)
-            # Computte the tracking error
-            err_x = (t_pose[0] - curr_est[0,0])
-            err_y = (t_pose[1] - curr_est[1,0])
-            e = np.sqrt(err_x**2+err_y**2)
-            # Save Estimation Data #####################################################################################
-            x_hat_1.append(curr_est[0,0])
-            x_hat_2.append(curr_est[1,0])
-            x_hat_3.append(curr_est[2,0])
-            x_hat_4.append(curr_est[3,0])
-            err.append(e)
-            # Save Covariance associated 
-            cov1.append(cov[0,0])
-            cov2.append(cov[1,1])
-            cov3.append(cov[2,2])
-            cov4.append(cov[3,3])
-            ############################################################################################################
+
+        # if good conditioning do estimation 
+            if compute_cost(phi,len(y)) >= thresh:
+                obs.propagate_estimation(t) #you can now propagate
+                curr_est = obs.state
+                cov = computeCov(y,phi)
+                
+                rospy.logout('%s|---- AUV '+str(auvID)+': Target state Estimation [m,m/s] --> %s%s',blue,curr_est,none)
+                # Computte the tracking error
+                err_x = (t_pose[0] - curr_est[0,0])
+                err_y = (t_pose[1] - curr_est[1,0])
+                e = np.sqrt(err_x**2+err_y**2)
+                # Save Estimation Data #####################################################################################
+                x_hat_1.append(curr_est[0,0])
+                x_hat_2.append(curr_est[1,0])
+                x_hat_3.append(curr_est[2,0])
+                x_hat_4.append(curr_est[3,0])
+                err.append(e)
+                # Save Covariance associated 
+                cov1.append(cov[0,0])
+                cov2.append(cov[1,1])
+                cov3.append(cov[2,2])
+                cov4.append(cov[3,3])
+                ############################################################################################################
             
         #TODO: OPTIMIZATION OR OFFLINE PLANING MUST ACT HERE!
 

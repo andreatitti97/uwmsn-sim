@@ -1,10 +1,12 @@
-import os
+import os, pathlib
 import importlib.util
-import time
-spec = importlib.util.spec_from_file_location("module.est", "/home/andrea/Desktop/ros_simulation_ws/src/ipp_pkg/src/Classes/estimation.py")
+
+pkg_directory = os.path.dirname(pathlib.Path(__file__).parent.resolve())
+class_path = pkg_directory+'/Classes'
+
+spec = importlib.util.spec_from_file_location("module.est", class_path+"/estimation.py")
 est = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(est)
-lib_path = os.path.abspath('/home/andrea/ros_simulation_ws/src/scripts/logs')
 
 class Tracker:
     '''
@@ -20,6 +22,9 @@ class Tracker:
     @property
     def state(self):
         return self.__estimator.current_estimate
+    @property
+    def regressor(self):
+        return self.__estimator.current_regressor
 
     def processMeasurement(self, table): #table = [tempo, misura, auv pos x, auv pos y]
         for i in range(len(table)):

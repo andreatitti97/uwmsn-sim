@@ -1,10 +1,13 @@
 import numpy as np
 import matplotlib.pyplot as plt
-import time, os
+import time, os, pathlib
 from math import atan2, pi
 import importlib.util
+
 # Import Costum classes
-class_path = os.path.abspath('/home/andrea/Desktop/ros_simulation_ws/src/ipp_pkg/src/Classes')
+pkg_directory = os.path.dirname(pathlib.Path(__file__).parent.resolve())
+class_path = pkg_directory+'/Classes'
+
 spec = importlib.util.spec_from_file_location("module.config", class_path+"/config.py")
 config = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(config)

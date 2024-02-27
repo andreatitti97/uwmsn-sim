@@ -1,11 +1,12 @@
 #Import basic system modules
-import os
-import time
+import os, pathlib
 import importlib.util
 import numpy as np
 from numpy import append, matlib
 # Import Costum classes
-class_path = os.path.abspath('/home/andrea/Desktop/ros_simulation_ws/src/ipp_pkg/src/Classes')
+pkg_directory = os.path.dirname(pathlib.Path(__file__).parent.resolve())
+class_path = pkg_directory+'/Classes'
+
 spec = importlib.util.spec_from_file_location("module.config", class_path+"/config.py")
 config = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(config)
@@ -30,7 +31,10 @@ class Estimator:
 
     @property
     def current_estimate(self):
-        return (self.__x, self.__phi, self.__y) #self.__w
+        return (self.__x)
+    @property
+    def current_regressor(self):
+        return (self.__phi, self.__y)
 
     def init_state_vector(self):
         return True

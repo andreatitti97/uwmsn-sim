@@ -1,8 +1,11 @@
 from math import pi
 import numpy as np
-import os
+import os, pathlib
 import importlib.util
-class_path = os.path.abspath('/home/andrea/Desktop/ros_simulation_ws/src/ipp_pkg/src/Classes')
+
+pkg_directory = os.path.dirname(pathlib.Path(__file__).parent.resolve())
+class_path = pkg_directory+'/Classes'
+
 spec = importlib.util.spec_from_file_location("module.utils", class_path+"/utils.py")
 utils = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(utils)
@@ -79,4 +82,6 @@ K_rep = 0.0 # Repulsive gain
 d_rep = d # Distance threshold for repulsion
 
 Ts = 2
+# Ts = (d/c)*(auvNum)**2
+# Tm = Ts/2 (meas sampling time)
 #OPTIMIZATION_TIME_STEP = Ts*auvNum (at least) to compute inside nodes
