@@ -53,7 +53,13 @@ print(tracking_errors)
 
 # PLOTs
 lw_ms = 2*7
+#fig = plt.figure(1)
+#patch = fig.patch 
+fig, ax = plt.subplots()
+
+ax.set_facecolor('cornflowerblue')
 plt.title('SCENARIO')
+
 for i in range(int(auvNum)):
     plt.plot(auv_x_traj[:,i],auv_y_traj[:,i],'ob',markersize=lw_ms)
     
