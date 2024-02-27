@@ -124,14 +124,15 @@ def shutdown_cllbk():
     np.savetxt(log_path+'/target_x_traj.txt',target_x_traj)
     np.savetxt(log_path+'/target_y_traj.txt',target_y_traj)
 
-    np.savetxt(log_path+'/auv1_x_ON.txt',auv1_x)
-    np.savetxt(log_path+'/auv1_y_ON.txt',auv1_y)
-    np.savetxt(log_path+'/auv2_x_ON.txt',auv2_x)
-    np.savetxt(log_path+'/auv2_y_ON.txt',auv2_y)
-    np.savetxt(log_path+'/auv3_x_ON.txt',auv3_x)
-    np.savetxt(log_path+'/auv3_y_ON.txt',auv3_y)
-    np.savetxt(log_path+'/auv4_x_ON.txt',auv4_x)
-    np.savetxt(log_path+'/auv4_y_ON.txt',auv4_y)
+    np.savetxt(log_path+'/auv1_x_traj.txt',auv1_x)
+    np.savetxt(log_path+'/auv1_y_traj.txt',auv1_y)
+    np.savetxt(log_path+'/auv2_x_traj.txt',auv2_x)
+    np.savetxt(log_path+'/auv2_y_traj.txt',auv2_y)
+    np.savetxt(log_path+'/auv3_x_traj.txt',auv3_x)
+    np.savetxt(log_path+'/auv3_y_traj.txt',auv3_y)
+    np.savetxt(log_path+'/auv4_x_traj.txt',auv4_x)
+    np.savetxt(log_path+'/auv4_y_traj.txt',auv4_y)
+    
 
     magenta = "\033[0;35m"
     none = "\033[0m"
@@ -178,6 +179,12 @@ def main():
        
     # Initialization object header.target
     target_obj = header.target.Target()
+
+    # Save a logfile with simulation settings
+    sim_info = [auvNum, header.config.TIME_DURATION, header.config.Ts]
+    ctrl_set = header.config.ctrl_cmd
+    np.savetxt(log_path+'/sim_info.txt',sim_info)
+    np.savetxt(log_path+'/ctrl_set.txt',ctrl_set)
 
     # Start listeners and run simulation
     run_simulation(target_obj, auvNum, pub_s_state, pub_t_state)  
