@@ -69,8 +69,13 @@ def run_auv_node(pub,auv,obs,Ts,Tf, auvNum):
     """
     global count1, s_state, t_pose, m_rx, auvID
 
-    Hz = 1/(header.config.TIME_STEP) #NB: different from sampling rate for move things, this is ros rate
+    # ROS simulation parameters
+    t_scaler = header.config.TIME_SCALER
+
+    Hz = 1/(header.config.TIME_STEP) #NB: different from sampling rate for move things, this is ros rate   
     rate = rospy.Rate(Hz)
+
+ 
     # Colors for prints
     blue = "\033[1;34m"
     cyan = "\033[0;36m"
@@ -79,19 +84,19 @@ def run_auv_node(pub,auv,obs,Ts,Tf, auvNum):
 
     # Init time variables and counters and lists
     t, count1, t_tdma = 0,0,0
-    dt = header.config.TIME_STEP*header.config.TIME_SCALER
+    dt = header.config.TIME_STEP*t_scaler
     meas_table = []
     local_measures = []
     old_m = [0,0,0,0]
     thresh = 1
     # Start listeners
     listener(auvID)
-    rate.sleep()
 
+    rospy.sleep(1)
     ## SIMULATION LOOP ############################################################################################################
     while not rospy.is_shutdown():
 
-        if count1 % Hz == 0:
+        if (count1 % (Hz/t_scaler))== 0:
             t_tdma += 1#TODO: SHOULD BE DIMENSIONED AFTER CHOOSING dt
             
             if auvID*Ts == t_tdma:
@@ -151,7 +156,7 @@ def run_auv_node(pub,auv,obs,Ts,Tf, auvNum):
             
         #TODO: OPTIMIZATION OR OFFLINE PLANING MUST ACT HERE!
 
-        ctrl_cmd = np.array([auvID,0.0], dtype=np.float32)
+        ctrl_cmd = np.array([auvID,0.1], dtype=np.float32)
         pub[2].publish(ctrl_cmd)
 
         if int(t) == (header.config.TIME_DURATION-1):

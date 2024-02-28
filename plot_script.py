@@ -46,11 +46,6 @@ for i in range(int(auvNum)):
     P.append(cov)
     tracking_errors.append(err)
 
-
-print(x_hat)
-print(P)
-print(tracking_errors)
-
 # PLOTs
 lw_ms = 2*7
 #fig = plt.figure(1)
@@ -61,7 +56,7 @@ ax.set_facecolor('cornflowerblue')
 plt.title('SCENARIO')
 
 for i in range(int(auvNum)):
-    plt.plot(auv_x_traj[:,i],auv_y_traj[:,i],'ob',markersize=lw_ms)
+    plt.plot(auv_x_traj[:,i],auv_y_traj[:,i],'b',markersize=lw_ms)
     
 plt.plot(target_x_traj,target_y_traj)
 

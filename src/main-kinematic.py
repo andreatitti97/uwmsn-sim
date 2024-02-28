@@ -47,12 +47,14 @@ def run_simulation(target, auvNum, pub_s_state, pub_t_state):
     global count1, ctrl_cmds
 
     # ROS simulation parameters
+    t_scaler = header.config.TIME_SCALER
+
     Hz = 1/(header.config.TIME_STEP) #NB: different from sampling rate for move things, this is ros rate   
     rate = rospy.Rate(Hz)
 
     # Init time variables and counters and lists
     t, count1 = 0,0
-    dt = header.config.TIME_STEP*header.config.TIME_SCALER
+    dt = header.config.TIME_STEP*t_scaler
  
     # Init AUVs position and orientation
     auvs_xy = np.zeros((4,2))
@@ -83,7 +85,7 @@ def run_simulation(target, auvNum, pub_s_state, pub_t_state):
         for i in range(auvNum):
             auvs_xy[i,0] = auvs_xy[i,0]+ctrl_cmds[i]
             auvs_xy[i,1] = auvs_xy[i,1]+ctrl_cmds[i]
-            auvs_theta[i] = auvs_theta[i]+ctrl_cmds[i]
+            auvs_theta[i] = auvs_theta[i]#+ctrl_cmds[i]
 
         # Move Target
         target.move_target(dt)
@@ -110,7 +112,7 @@ def run_simulation(target, auvNum, pub_s_state, pub_t_state):
             rospy.on_shutdown(shutdown_cllbk)
             rospy.signal_shutdown('Simulation time limit reached')
       
-        if count1 % Hz/10 == 0:
+        if count1 % Hz == 0:
             '''ADD DEBUG PRINTS HERE'''
             rospy.loginfo('|---- KINEMATIC SIMULATION: Elapsed time (s) --> %s',t)
             rospy.loginfo('|---- KINEMATIC SIMULATION: Target groud truth (m) --> %s',[target.pose.x,target.pose.y])
