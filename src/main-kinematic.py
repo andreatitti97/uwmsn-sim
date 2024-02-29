@@ -31,7 +31,7 @@ spec.loader.exec_module(header)
 # Target and AUVs
 target_x_traj, target_y_traj, platform_x, platform_y = [], [], [], []
 auv1_x, auv1_y, auv2_x, auv2_y,auv3_x,auv3_y,auv4_x,auv4_y  = [], [], [], [], [], [], [], []
-
+ctrl_cmd1, ctrl_cmd2, ctrl_cmd3, ctrl_cmd4 = 0,0,0,0 #TODO bug here probably
 ctrl_cmds = [0,0,0,0]
 
 def run_simulation(target, auvNum, pub_s_state, pub_t_state):
@@ -57,9 +57,8 @@ def run_simulation(target, auvNum, pub_s_state, pub_t_state):
     dt = header.config.TIME_STEP*t_scaler
  
     # Init AUVs position and orientation
-    auvs_xy = np.zeros((4,2))
-    auvs_theta = np.zeros(4) 
-       
+    auvs_xy = np.zeros((auvNum,3))
+           
     
     for i in range(len(auvs_xy)):
         auvs_xy[i,0] = i*100
@@ -76,16 +75,16 @@ def run_simulation(target, auvNum, pub_s_state, pub_t_state):
 
         for i in range(auvNum):
             # Publish agents info
-            a = np.array([auvs_xy[i,0],auvs_xy[i,1],auvs_theta[i]], dtype=np.float32)
+            a = np.array([auvs_xy[i,0],auvs_xy[i,1],auvs_xy[i,2]], dtype=np.float32)
             pub_s_state[i].publish(a)
             # Publish header.target info
             pub_t_state[i].publish(np.array([target.pose.x,target.pose.y,target.pose.theta], dtype=np.float32))
 
         # Move Agents
         for i in range(auvNum):
-            auvs_xy[i,0] = auvs_xy[i,0]+ctrl_cmds[i]
+            auvs_xy[i,0] = auvs_xy[i,0]#+ctrl_cmds[i]
             auvs_xy[i,1] = auvs_xy[i,1]+ctrl_cmds[i]
-            auvs_theta[i] = auvs_theta[i]#+ctrl_cmds[i]
+            auvs_xy[i,2] = auvs_xy[i,2]#+ctrl_cmds[i]
 
         # Move Target
         target.move_target(dt)
@@ -141,8 +140,8 @@ def shutdown_cllbk():
     rospy.loginfo('|---- %sKINEMATIC SIMULATION: Simulation data saved --> Shutting down ...%s',magenta,none)
     
 def callback(data):
-    global ctrl_cmds
-    ctrl_cmd1, ctrl_cmd2, ctrl_cmd3, ctrl_cmd4 = 0,0,0,0
+    global ctrl_cmds,ctrl_cmd1, ctrl_cmd2, ctrl_cmd3, ctrl_cmd4
+    
     tmp = data.data
 
     if int(tmp[0]) == 1:
@@ -174,8 +173,8 @@ def main():
     pub_s_state = []
     
     for i in range(auvNum):
-        tmp1 = rospy.Publisher('/'+str(i+1)+'/vehicle_state_'+str(i+1), numpy_msg(Floats), queue_size=10)
-        tmp2 = rospy.Publisher('/'+str(i+1)+'/target_state', numpy_msg(Floats), queue_size=10)
+        tmp1 = rospy.Publisher('/'+str(i+1)+'/vehicle_state_'+str(i+1), numpy_msg(Floats), queue_size=100)
+        tmp2 = rospy.Publisher('/'+str(i+1)+'/target_state', numpy_msg(Floats), queue_size=100)
         pub_s_state.append(tmp1)
         pub_t_state.append(tmp2)
        

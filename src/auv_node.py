@@ -156,7 +156,7 @@ def run_auv_node(pub,auv,obs,Ts,Tf, auvNum):
             
         #TODO: OPTIMIZATION OR OFFLINE PLANING MUST ACT HERE!
 
-        ctrl_cmd = np.array([auvID,0.1], dtype=np.float32)
+        ctrl_cmd = np.array([auvID,-0.1], dtype=np.float32)
         pub[2].publish(ctrl_cmd)
 
         if int(t) == (header.config.TIME_DURATION-1):

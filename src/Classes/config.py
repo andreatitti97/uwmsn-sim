@@ -12,9 +12,9 @@ spec.loader.exec_module(utils)
 
 ############################################################ SIMULATION SETUP ########################################################
 # Simulation parameters
-TIME_DURATION = 200 # (s)
+TIME_DURATION = 50 # (s)
 TIME_STEP = 0.01
-TIME_SCALER = 5# in [1 - 10] values near 10 may be source of errors (to fast for ROS stack)
+TIME_SCALER = 1# in [1 - 10] values near 10 may be source of errors (to fast for ROS stack)
 c = 1500 #sound wave speed
 OPTIMIZATION_ON = False
 
