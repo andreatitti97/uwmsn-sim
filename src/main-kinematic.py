@@ -103,7 +103,6 @@ def run_simulation(target, auvNum, pub_s_state, pub_t_state):
             tmp = paths[i]
 
             if tmp[0] != None:
-                #rospy.logerr(paths)
 
                 auvs_xy[i,0] = tmp[0]
                 auvs_xy[i,1] = tmp[1]
@@ -147,7 +146,6 @@ def shutdown_cllbk():
     
     np.savetxt(log_path+'/target_x_traj.txt',target_x_traj)
     np.savetxt(log_path+'/target_y_traj.txt',target_y_traj)
-
     np.savetxt(log_path+'/auv1_x_traj.txt',auv1_x)
     np.savetxt(log_path+'/auv1_y_traj.txt',auv1_y)
     np.savetxt(log_path+'/auv2_x_traj.txt',auv2_x)
@@ -160,7 +158,7 @@ def shutdown_cllbk():
 
     magenta = "\033[0;35m"
     none = "\033[0m"
-    #rospy.loginfo('|---- %sKINEMATIC SIMULATION: Simulation data saved --> Shutting down ...%s',magenta,none)
+    rospy.loginfo('|---- %sKINEMATIC SIMULATION: Simulation data saved --> Shutting down ...%s',magenta,none)
     
 def callback1(data):
     global paths,path1

@@ -30,8 +30,7 @@ cov1, cov2, cov3, cov4, err = [], [], [], [], []
 s_state = [0,0,0] # --> Agent Pose
 t_pose = [0,0,0] # --> Target ground truth
 m_rx = [0,0,0,0] # --> received measurament
-
-
+ctrl_policy = np.zeros((header.config.H,1))
 
 def updatePathRoutine(ax,ay,waypoints,s_pose,v_n,dt):
 
@@ -52,10 +51,9 @@ def updatePathRoutine(ax,ay,waypoints,s_pose,v_n,dt):
             ax.pop(-1)
             ay.pop(-1)
             
-    # Compute the distance travelled according to the new path
-    #d_real = path.s[-1]
+    # nitialized starting position
+
     a_i = [s_state[0],s_state[1]]
-    rospy.loginfo('AUV ID: %s current state %s',auvID,s_state)
     t_i = s_state[2]
 
     # Compute new waypoints according to the given heading change
@@ -76,7 +74,6 @@ def updatePathRoutine(ax,ay,waypoints,s_pose,v_n,dt):
         ay.pop(0)
     # Generate new path 
     path = splinePlanner.CubicSpline2D(ax, ay)
-    rospy.loginfo('AUV ID: %s waypoints ax:%s ay:%s ',auvID,ax,ay)
     [rx, ry, ryaw, rk, s] = header.utils.calc_spline_course(path,dt)
 
     tmp = []
@@ -128,7 +125,7 @@ def run_auv_node(pub,auv,obs,Ts,Tf, auvNum):
             Tf  : frame time of the TDMA protocol
             auvNum : number ora AUVs
     """
-    global s_state, t_pose, m_rx, auvID
+    global s_state, t_pose, m_rx, auvID, ctrl_policy
 
     # ROS simulation parameters
     t_scaler = header.config.TIME_SCALER
@@ -136,7 +133,6 @@ def run_auv_node(pub,auv,obs,Ts,Tf, auvNum):
     Hz = 1/(header.config.TIME_STEP) #NB: different from sampling rate for move things, this is ros rate   
     rate = rospy.Rate(Hz)
 
- 
     # Colors for prints
     blue = "\033[1;34m"
     cyan = "\033[0;36m"
@@ -147,15 +143,18 @@ def run_auv_node(pub,auv,obs,Ts,Tf, auvNum):
     dt = header.config.TIME_STEP*t_scaler
     meas_table, local_measures = [], []
     old_m = [0,0,0,0]
-    thresh = 1
-    # Start listeners
+    path = None
+
+    # Start listeners and init waypoints data structures
     listener(auvID)
     ax = [s_state[0]]
     ay = [s_state[1]]
     waypoints = np.zeros(header.config.H)
-    v_n = 1
-    path = None
 
+    # SIMULATION PARAMETERS (MOVE THEM FROM HERE)
+    thresh = 1
+    v_n = 1
+    
     rospy.sleep(1)
     ## SIMULATION LOOP ############################################################################################################
     while not rospy.is_shutdown():
@@ -202,12 +201,14 @@ def run_auv_node(pub,auv,obs,Ts,Tf, auvNum):
                 obs.propagate_estimation(t) #you can now propagate
                 curr_est = obs.state
                 cov = computeCov(y,phi)
-                
+                pub[1].publish(curr_est) #pub estimate of target state
                 rospy.logout('%s|---- AUV '+str(auvID)+': Target state Estimation [m,m/s] --> %s%s',blue,curr_est,none)
+                
                 # Computte the tracking error
                 err_x = (t_pose[0] - curr_est[0,0])
                 err_y = (t_pose[1] - curr_est[1,0])
                 e = np.sqrt(err_x**2+err_y**2)
+
                 # Save Estimation Data #####################################################################################
                 x_hat_1.append(curr_est[0,0])
                 x_hat_2.append(curr_est[1,0])
@@ -223,13 +224,13 @@ def run_auv_node(pub,auv,obs,Ts,Tf, auvNum):
             
                 #TODO: OPTIMIZATION OR OFFLINE PLANING MUST ACT HERE!
                 # optimization do stuff
-                # for now we simply assign predefined waypoints
+                # for now we simply assign predefined waypoints and publish them for build policy of intent
+                pub[3].publish(ctrl_policy)
                 
                 path, idx_motion, idx, rx, ry, ryaw = updatePathRoutine(ax,ay,waypoints,s_state,v_n,dt)
 
         # PUBLISH THE CTRL_CMD
-        if path != None: # TODO BUG HERE !!!!!!!!!!!!!!!!!!!!!!!!
-            #rospy.loginfo('AUV ID: %s is sending ctrl_cmds',auvID)
+        if path != None: 
             msg = []
             
             msg = np.array([int(auvID),rx[idx_motion+idx],ry[idx_motion+idx],ryaw[idx_motion+idx]], dtype=np.float32)
@@ -280,6 +281,7 @@ def callback2(data):
 def callback3(data):#probably better a service-client paradigm
     global ctrl_policy
     tmp = data.data
+    ctrl_policy = tmp
 
 def callback4(data):
     

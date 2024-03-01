@@ -16,7 +16,6 @@ auvNum = sim_info[0]
 elapsed_t = sim_info[1]
 Ts = sim_info[2]
 
-
 target_x_traj = np.loadtxt(log_directory+'/target_x_traj.txt')
 target_y_traj = np.loadtxt(log_directory+'/target_y_traj.txt')
 
@@ -26,6 +25,7 @@ auv_y_traj = np.zeros((len(target_y_traj),int(auvNum)))
 x_hat = []
 tracking_errors= []
 P = []
+PDR = np.zeros((int(auvNum),1))
 
 for i in range(int(auvNum)):
     auv_x_traj[:,i] = np.loadtxt(log_directory+'/auv'+str(i+1)+'_x_traj.txt')
@@ -35,7 +35,8 @@ for i in range(int(auvNum)):
     x_hat_ = np.zeros((len(tmp),4))
     err = np.loadtxt(log_directory+'/'+str(i+1)+'-err.txt')
     cov = np.zeros((len(tmp),4))
-
+ 
+    PDR[i] = np.loadtxt(log_directory+'/'+str(i+1)+'-PDR')
     
     for j in range(4):
         x_hat_[:,i] = np.loadtxt(log_directory+'/'+str(i+1)+'-x_hat_'+str(j+1)+'.txt')
@@ -47,6 +48,8 @@ for i in range(int(auvNum)):
     tracking_errors.append(err)
 
 # PLOTs
+print('SIMULATION INFO [auvNum - Simulation Time (s) - Slot Time (s)]',sim_info)   
+print('Acoustic Communication Stat [PDR AUV1,PDR AUV2,PDR AUV3,PDR AUV4]:',PDR)
 lw_ms = 2*7
 #fig = plt.figure(1)
 #patch = fig.patch 
@@ -76,6 +79,7 @@ for i in range(int(auvNum)):
     plt.ylabel('Tracking error')
     plt.grid()
 plt.show()
+
 
     
 
