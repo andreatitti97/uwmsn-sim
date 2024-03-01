@@ -12,7 +12,7 @@ spec.loader.exec_module(utils)
 
 ############################################################ SIMULATION SETUP ########################################################
 # Simulation parameters
-TIME_DURATION = 50 # (s)
+TIME_DURATION = 200 # (s)
 TIME_STEP = 0.01
 TIME_SCALER = 1# in [1 - 10] values near 10 may be source of errors (to fast for ROS stack)
 c = 1500 #sound wave speed
@@ -47,7 +47,7 @@ delta_u = 3*pi/180
 MAX = 30*pi/180
 MIN = 5*pi/180
 U = 5 #number of control choices
-M = 3 # planning horizon
+H = 3 # planning horizon
 
 ctrl_cmd = [-u_max, -u_max*4/(U),0,u_max*4/(U),u_max] # simplified set of control actions for fast debugging
 #ctrl_cmd = [-u_max, -u_max*4/(U),-u_max*2/(U),0,u_max*2/(U),u_max*4/(U),u_max] #set of control actions

@@ -31,7 +31,7 @@ for i in range(int(auvNum)):
     auv_x_traj[:,i] = np.loadtxt(log_directory+'/auv'+str(i+1)+'_x_traj.txt')
     auv_y_traj[:,i] = np.loadtxt(log_directory+'/auv'+str(i+1)+'_y_traj.txt')
 
-    tmp = np.loadtxt(log_directory+'/'+str(i+1)+'-x_hat_1.txt')
+    tmp = np.loadtxt(log_directory+'/'+str(i+1)+'-x_hat_2.txt')
     x_hat_ = np.zeros((len(tmp),4))
     err = np.loadtxt(log_directory+'/'+str(i+1)+'-err.txt')
     cov = np.zeros((len(tmp),4))

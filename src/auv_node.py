@@ -20,6 +20,7 @@ log_path = pkg_directory+'/logs'
 spec = importlib.util.spec_from_file_location("module.header", header_file+'/auv_node_h.py')
 header = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(header)
+splinePlanner = header.planner
 
 # Init empy lists for saving simulation data
 x_hat_1,x_hat_2,x_hat_3,x_hat_4 = [], [], [], []
@@ -29,6 +30,65 @@ cov1, cov2, cov3, cov4, err = [], [], [], [], []
 s_state = [0,0,0] # --> Agent Pose
 t_pose = [0,0,0] # --> Target ground truth
 m_rx = [0,0,0,0] # --> received measurament
+
+
+
+def updatePathRoutine(ax,ay,waypoints,s_pose,v_n,dt):
+
+    DT = 20 #optimization time step
+    n_samples = 4
+
+    if len(ax) >= 4:
+        tmp = []
+
+        for i in range(len(ax)):
+            
+            tmp.append(np.sqrt((s_state[0]-ax[i])**2+(s_state[1]-ay[i])**2))
+            
+        idx = tmp.index(min(tmp))
+        
+        for i in range(len(ax[idx:len(ax)])):
+            
+            ax.pop(-1)
+            ay.pop(-1)
+            
+    # Compute the distance travelled according to the new path
+    #d_real = path.s[-1]
+    a_i = [s_state[0],s_state[1]]
+    rospy.loginfo('AUV ID: %s current state %s',auvID,s_state)
+    t_i = s_state[2]
+
+    # Compute new waypoints according to the given heading change
+    for i in range(len(waypoints)):
+
+        for j in range(int(DT/(DT/n_samples))):
+            t_f = t_i+(waypoints[i]/int(DT/(DT/n_samples)))
+            tmp_x = np.cos(t_f)*v_n*(DT/n_samples)+a_i[0]
+            tmp_y = np.sin(t_f)*v_n*(DT/n_samples)+a_i[1]
+            ax.append(tmp_x)
+            ay.append(tmp_y)
+            t_i = t_f
+            a_i = [tmp_x,tmp_y]
+            
+    if len(ax)>10:
+        # Remove first waypoints (fixed path dimensions-->computational load)
+        ax.pop(0)
+        ay.pop(0)
+    # Generate new path 
+    path = splinePlanner.CubicSpline2D(ax, ay)
+    rospy.loginfo('AUV ID: %s waypoints ax:%s ay:%s ',auvID,ax,ay)
+    [rx, ry, ryaw, rk, s] = header.utils.calc_spline_course(path,dt)
+
+    tmp = []
+    for i in range(len(rx)):
+        
+        tmp.append(np.sqrt((s_pose[0]-rx[i])**2+(s_pose[1]-ry[i])**2))
+        
+    idx = tmp.index(min(tmp))
+  
+    idx_motion = 0
+
+    return path, idx_motion, idx, rx, ry, ryaw
 
 def compute_cost(phi,len_y):
 
@@ -56,6 +116,7 @@ def computeCov(y,phi):
         
     return cov
 
+
 def run_auv_node(pub,auv,obs,Ts,Tf, auvNum):
 
     """Simulate the header.sensor platform and the moving target
@@ -67,7 +128,7 @@ def run_auv_node(pub,auv,obs,Ts,Tf, auvNum):
             Tf  : frame time of the TDMA protocol
             auvNum : number ora AUVs
     """
-    global count1, s_state, t_pose, m_rx, auvID
+    global s_state, t_pose, m_rx, auvID
 
     # ROS simulation parameters
     t_scaler = header.config.TIME_SCALER
@@ -80,27 +141,31 @@ def run_auv_node(pub,auv,obs,Ts,Tf, auvNum):
     blue = "\033[1;34m"
     cyan = "\033[0;36m"
     none = "\033[0m"
-    listener(auvID) #start the listeners
 
     # Init time variables and counters and lists
     t, count1, t_tdma = 0,0,0
     dt = header.config.TIME_STEP*t_scaler
-    meas_table = []
-    local_measures = []
+    meas_table, local_measures = [], []
     old_m = [0,0,0,0]
     thresh = 1
     # Start listeners
     listener(auvID)
+    ax = [s_state[0]]
+    ay = [s_state[1]]
+    waypoints = np.zeros(header.config.H)
+    v_n = 1
+    path = None
 
     rospy.sleep(1)
     ## SIMULATION LOOP ############################################################################################################
     while not rospy.is_shutdown():
 
         if (count1 % (Hz/t_scaler))== 0:
-            t_tdma += 1#TODO: SHOULD BE DIMENSIONED AFTER CHOOSING dt
             
+            t_tdma += 1#TODO: SHOULD BE DIMENSIONED AFTER CHOOSING dt
+
             if auvID*Ts == t_tdma:
-                
+                rospy.loginfo('AUV ID: %s current state %s',auvID,s_state)
                 rospy.loginfo('%s|---- AUV '+str(auvID)+': Transmitting measurements at time %s --> Channel Busy%s',cyan,t,none)
                 
                 # Perform measurement 
@@ -111,7 +176,9 @@ def run_auv_node(pub,auv,obs,Ts,Tf, auvNum):
                     pub[0].publish(np.array(local_measures[i],dtype=np.float32))
                 local_measures = []
                 if t_tdma == auvNum*Ts:
+
                     t_tdma = 0
+
             else:#for making measurements also outside the given timeslot 
                 [measure_, rel_bearing_, meas_pos] = auv.measureBearing(t_pose[0],t_pose[1],[s_state[0],s_state[1]],s_state[2])
                 arr = [t,measure_,meas_pos[0],meas_pos[1]]
@@ -154,10 +221,21 @@ def run_auv_node(pub,auv,obs,Ts,Tf, auvNum):
                 cov4.append(cov[3,3])
                 ############################################################################################################
             
-        #TODO: OPTIMIZATION OR OFFLINE PLANING MUST ACT HERE!
+                #TODO: OPTIMIZATION OR OFFLINE PLANING MUST ACT HERE!
+                # optimization do stuff
+                # for now we simply assign predefined waypoints
+                
+                path, idx_motion, idx, rx, ry, ryaw = updatePathRoutine(ax,ay,waypoints,s_state,v_n,dt)
 
-        ctrl_cmd = np.array([auvID,-0.1], dtype=np.float32)
-        pub[2].publish(ctrl_cmd)
+        # PUBLISH THE CTRL_CMD
+        if path != None: # TODO BUG HERE !!!!!!!!!!!!!!!!!!!!!!!!
+            #rospy.loginfo('AUV ID: %s is sending ctrl_cmds',auvID)
+            msg = []
+            
+            msg = np.array([int(auvID),rx[idx_motion+idx],ry[idx_motion+idx],ryaw[idx_motion+idx]], dtype=np.float32)
+            pub[2].publish(msg)
+
+            idx_motion += 1
 
         if int(t) == (header.config.TIME_DURATION-1):
             rospy.on_shutdown(shutdown_cllbk)
@@ -198,7 +276,12 @@ def callback2(data):
     global t_pose
     t_pose = data.data
 
-def callback3(data):
+
+def callback3(data):#probably better a service-client paradigm
+    global ctrl_policy
+    tmp = data.data
+
+def callback4(data):
     
     global m_rx
     tmp = data.data
@@ -208,7 +291,9 @@ def listener(auvID):
 
     rospy.Subscriber('vehicle_state_'+str(auvID), numpy_msg(Floats), callback)
     rospy.Subscriber('target_state', numpy_msg(Floats), callback2)
-    rospy.Subscriber('/'+str(auvID)+'/rx_meas', numpy_msg(Floats), callback3)
+    rospy.Subscriber('/'+str(auvID)+'/ctrl_policy', numpy_msg(Floats), callback3)
+    rospy.Subscriber('/'+str(auvID)+'/rx_meas', numpy_msg(Floats), callback4)
+    
     
 def main():
 
@@ -228,16 +313,19 @@ def main():
     pub_measurement = rospy.Publisher('/'+str(auvID)+'/tx_meas', numpy_msg(Floats), queue_size=100)
     pub_estimation = rospy.Publisher('estimation', numpy_msg(Floats), queue_size=10)
     pub_ctrl_cmd = rospy.Publisher('ctrl_cmd_'+str(auvID), numpy_msg(Floats),queue_size=10)
+    pub_ctrl_policy = rospy.Publisher('/'+str(auvID)+'/tx_ctrl_policy', numpy_msg(Floats), queue_size=100)
     pub.append(pub_measurement)
     pub.append(pub_estimation)  
     pub.append(pub_ctrl_cmd)
+    pub.append(pub_ctrl_policy)
 
-    # Initialize header.sensor and header.tracker object from costum class
+    # Initialize sensor and tracker object from costum class
     auv = header.sensor.Sensor(str(auvID),1,0,header.config.SIGMA_MEAS)
     obs = header.tracker.Tracker()
 
     # Init Communication protocol parameters (TDMA)
     Tf = header.config.Ts*auvNum
+
 
     # Start simulation
     run_auv_node(pub,auv,obs,header.config.Ts,Tf,auvNum)

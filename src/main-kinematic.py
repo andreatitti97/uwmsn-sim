@@ -31,8 +31,24 @@ spec.loader.exec_module(header)
 # Target and AUVs
 target_x_traj, target_y_traj, platform_x, platform_y = [], [], [], []
 auv1_x, auv1_y, auv2_x, auv2_y,auv3_x,auv3_y,auv4_x,auv4_y  = [], [], [], [], [], [], [], []
-ctrl_cmd1, ctrl_cmd2, ctrl_cmd3, ctrl_cmd4 = 0,0,0,0 #TODO bug here probably
-ctrl_cmds = [0,0,0,0]
+path1 = [None,None,None]
+path2 = [None,None,None]
+path3 = [None,None,None]
+path4 = [None,None,None] #TODO bug here probably
+paths = [None,None,None,None]
+
+def updatePathRoutine(rx,ry,s_pose):
+
+    tmp = []
+    for i in range(len(rx)):
+        
+        tmp.append(np.sqrt((s_pose[0]-rx[i])**2+(s_pose[1]-ry[i])**2))
+        
+    idx = tmp.index(min(tmp))
+  
+    idx_motion = 0
+
+    return idx_motion, idx
 
 def run_simulation(target, auvNum, pub_s_state, pub_t_state):
 
@@ -44,7 +60,7 @@ def run_simulation(target, auvNum, pub_s_state, pub_t_state):
             pub_t_state : list containing the publishers for the target state
 
     """
-    global count1, ctrl_cmds
+    global count1, paths
 
     # ROS simulation parameters
     t_scaler = header.config.TIME_SCALER
@@ -63,6 +79,7 @@ def run_simulation(target, auvNum, pub_s_state, pub_t_state):
     for i in range(len(auvs_xy)):
         auvs_xy[i,0] = i*100
         auvs_xy[i,1] = 0
+        auvs_xy[i,2] = -np.pi/2
 
     rospy.loginfo('|---- KINEMATIC SIMULATION: Initial AUVs positions (m) --> %s',auvs_xy)
     rospy.loginfo('|---- KINEMATIC SIMULATION: Initial Target position (m) --> %s',[target.pose.x,target.pose.y,target.pose.theta])
@@ -82,9 +99,15 @@ def run_simulation(target, auvNum, pub_s_state, pub_t_state):
 
         # Move Agents
         for i in range(auvNum):
-            auvs_xy[i,0] = auvs_xy[i,0]#+ctrl_cmds[i]
-            auvs_xy[i,1] = auvs_xy[i,1]+ctrl_cmds[i]
-            auvs_xy[i,2] = auvs_xy[i,2]#+ctrl_cmds[i]
+            paths = [path1,path2,path3,path4]
+            tmp = paths[i]
+
+            if tmp[0] != None:
+                #rospy.logerr(paths)
+
+                auvs_xy[i,0] = tmp[0]
+                auvs_xy[i,1] = tmp[1]
+                auvs_xy[i,2] = tmp[2]
 
         # Move Target
         target.move_target(dt)
@@ -137,28 +160,41 @@ def shutdown_cllbk():
 
     magenta = "\033[0;35m"
     none = "\033[0m"
-    rospy.loginfo('|---- %sKINEMATIC SIMULATION: Simulation data saved --> Shutting down ...%s',magenta,none)
+    #rospy.loginfo('|---- %sKINEMATIC SIMULATION: Simulation data saved --> Shutting down ...%s',magenta,none)
     
-def callback(data):
-    global ctrl_cmds,ctrl_cmd1, ctrl_cmd2, ctrl_cmd3, ctrl_cmd4
+def callback1(data):
+    global paths,path1
     
     tmp = data.data
+    #rospy.loginfo('----------------------------------------------------------------CALLBACK AUV1 %s',tmp)
+    
+    path1 = [tmp[1],tmp[2],tmp[3]]
 
-    if int(tmp[0]) == 1:
-        ctrl_cmd1 = tmp[1]
-    elif int(tmp[0]) == 2:
-        ctrl_cmd2 = tmp[1]
-    elif int(tmp[0]) == 3:
-        ctrl_cmd3 = tmp[1]
-    elif int(tmp[0]) == 4:
-        ctrl_cmd4 = tmp[1]
+def callback2(data):
+    global paths, path2    
 
-    ctrl_cmds = [ctrl_cmd1,ctrl_cmd2,ctrl_cmd3,ctrl_cmd4]
+    tmp = data.data
+    #rospy.loginfo('----------------------------------------------------------------CALLBACK AUV2 %s',tmp)
+    path2 = [tmp[1],tmp[2],tmp[3]]
+
+def callback3(data):
+    global paths, path3
+
+    tmp = data.data
+    #rospy.loginfo('----------------------------------------------------------------CALLBACK AUV3 %s',tmp)
+    path3 = [tmp[1],tmp[2],tmp[3]]
+
+def callback4(data):
+    global paths, path4    
+
+    tmp = data.data
+    #rospy.loginfo('----------------------------------------------------------------CALLBACK AUV4 %s',tmp)
+    path4 = [tmp[1],tmp[2],tmp[3]]
 
 def listener(n_auv):
-    
+    callback_list = [callback1,callback2,callback3,callback4]
     for i in range(n_auv):
-        rospy.Subscriber('/'+str(i+1)+'/ctrl_cmd_'+str(i+1), numpy_msg(Floats), callback)
+        rospy.Subscriber('/'+str(i+1)+'/ctrl_cmd_'+str(i+1), numpy_msg(Floats), callback_list[i])
     
 def main():
 
@@ -173,8 +209,8 @@ def main():
     pub_s_state = []
     
     for i in range(auvNum):
-        tmp1 = rospy.Publisher('/'+str(i+1)+'/vehicle_state_'+str(i+1), numpy_msg(Floats), queue_size=100)
-        tmp2 = rospy.Publisher('/'+str(i+1)+'/target_state', numpy_msg(Floats), queue_size=100)
+        tmp1 = rospy.Publisher('/'+str(i+1)+'/vehicle_state_'+str(i+1), numpy_msg(Floats), queue_size=10)
+        tmp2 = rospy.Publisher('/'+str(i+1)+'/target_state', numpy_msg(Floats), queue_size=10)
         pub_s_state.append(tmp1)
         pub_t_state.append(tmp2)
        
