@@ -30,7 +30,7 @@ cov1, cov2, cov3, cov4, err = [], [], [], [], []
 s_state = [0,0,0] # --> Agent Pose
 t_pose = [0,0,0] # --> Target ground truth
 m_rx = [0,0,0,0] # --> received measurament
-ctrl_policy = np.zeros((header.config.H,1))
+ctrl_policy = np.zeros((3+header.config.H))
 
 def updatePathRoutine(ax,ay,waypoints,s_pose,v_n,dt):
 
@@ -173,6 +173,8 @@ def run_auv_node(pub,auv,obs,Ts,Tf, auvNum):
                 local_measures.append(arr)
                 for i in range(len(local_measures)):
                     pub[0].publish(np.array(local_measures[i],dtype=np.float32))
+
+                pub[3].publish(ctrl_policy)
                 local_measures = []
                 if t_tdma == auvNum*Ts:
 
@@ -225,7 +227,7 @@ def run_auv_node(pub,auv,obs,Ts,Tf, auvNum):
                 #TODO: OPTIMIZATION OR OFFLINE PLANING MUST ACT HERE!
                 # optimization do stuff
                 # for now we simply assign predefined waypoints and publish them for build policy of intent
-                pub[3].publish(ctrl_policy)
+                
                 
                 path, idx_motion, idx, rx, ry, ryaw = updatePathRoutine(ax,ay,waypoints,s_state,v_n,dt)
 
