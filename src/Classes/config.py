@@ -28,9 +28,16 @@ geometry = 'column2'
 d = 200 #vehicle distance 300
 
 # Communication Paramaters
-Ts = 5 #TDMA: slot time
+Ts = 2#TDMA: slot time
 alpha = -0.003 #Sigmoid parameters for packet loss, if alpha << gamma --> more packet loss
 gamma = d*2 #Sigmoid parameter for packet loss --> depends on the distance (tune only alpha)
+
+
+''' Fundamental parameter: DT --> Optimization time window'''
+''' The proposal can be implemented around this parameter which depends on the network '''
+''' Number of Nodes, Distance between Theme, TDMA Time slot, Optimization Complexity (?) --> Expected Time before having new info for another opt'''
+DT = 20 #d*auvNum/10 sort of
+k_phi_thresh = 1 #Thresh sul condizionamento del regressore per aggiornare la sitma
 
 # Team parameter: number of agents, baselines_XY, inital position, type of formation
 PLATFORM_INIT_POSE = [0, 0, 0] #[x,y,theta]
@@ -38,11 +45,12 @@ if geometry == 'column' or geometry == 'column2':
     PLATFORM_INIT_POSE = [d, 0, 0]
 
 AUV_VEL = 1.0 #(m/s) - nominal vel 
-AUV_MAX_VEL = 5.0 #(m/s) - max vel considering v_coop 3.0
+AUV_MAX_VEL = 5.0 #(m/s) - max vel (if CPF active considering v_coop)
 
 # Optimization Parameters
+DELTA = 10**15 #to start the BnB algorithm
 time_scaler = 5 # TIME SCALER OF THE SIMULATION INSIDE OPTIMIZATION
-u_max = 30*pi/180#
+u_max = 30*pi/180
 delta_u = 3*pi/180
 MAX = 30*pi/180
 MIN = 5*pi/180
@@ -81,7 +89,4 @@ K_att = 0.8 # Attractive Gain
 K_rep = 0.0 # Repulsive gain
 d_rep = d # Distance threshold for repulsion
 
-Ts = 2
-# Ts = (d/c)*(auvNum)**2
-# Tm = Ts/2 (meas sampling time)
-#OPTIMIZATION_TIME_STEP = Ts*auvNum (at least) to compute inside nodes
+

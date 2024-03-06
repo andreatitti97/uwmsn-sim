@@ -26,18 +26,18 @@ splinePlanner = header.planner
 x_hat_1,x_hat_2,x_hat_3,x_hat_4 = [], [], [], []
 cov1, cov2, cov3, cov4, err = [], [], [], [], []
 
-# Init Global Variables 
+# Init Global Variables for ROS callbacks
 s_state = [0,0,0] # --> Agent Pose
 t_pose = [0,0,0] # --> Target ground truth
 m_rx = [0,0,0,0] # --> received measurament
 ctrl_policy = np.zeros((3+header.config.H))
 
-def updatePathRoutine(ax,ay,waypoints,s_pose,v_n,dt):
+def updatePathRoutine(ax,ay,waypoints,s_pose,v_n,dt,DT):
 
-    DT = 20 #optimization time step
     n_samples = 4
+    max_wp_queue = 10
 
-    if len(ax) >= 4:
+    if len(ax) >= n_samples:
         tmp = []
 
         for i in range(len(ax)):
@@ -51,27 +51,24 @@ def updatePathRoutine(ax,ay,waypoints,s_pose,v_n,dt):
             ax.pop(-1)
             ay.pop(-1)
             
-    # nitialized starting position
-
+    # Initialized starting position
     a_i = [s_state[0],s_state[1]]
     t_i = s_state[2]
 
     # Compute new waypoints according to the given heading change
     for i in range(len(waypoints)):
-
-        for j in range(int(DT/(DT/n_samples))):
-            t_f = t_i+(waypoints[i]/int(DT/(DT/n_samples)))
-            tmp_x = np.cos(t_f)*v_n*(DT/n_samples)+a_i[0]
-            tmp_y = np.sin(t_f)*v_n*(DT/n_samples)+a_i[1]
-            ax.append(tmp_x)
-            ay.append(tmp_y)
+        for j in range(n_samples): #more samples for better curve fitting()
+            t_f = t_i+(waypoints[i]/int(DT/(DT/n_samples)))           
+            ax.append(np.cos(t_f)*v_n*(DT/n_samples)+a_i[0])
+            ay.append(np.sin(t_f)*v_n*(DT/n_samples)+a_i[1])
+            a_i = [ax[-1],ay[-1]]
             t_i = t_f
-            a_i = [tmp_x,tmp_y]
             
-    if len(ax)>10:
+    if len(ax)>max_wp_queue:
         # Remove first waypoints (fixed path dimensions-->computational load)
         ax.pop(0)
         ay.pop(0)
+
     # Generate new path 
     path = splinePlanner.CubicSpline2D(ax, ay)
     [rx, ry, ryaw, rk, s] = header.utils.calc_spline_course(path,dt)
@@ -82,7 +79,6 @@ def updatePathRoutine(ax,ay,waypoints,s_pose,v_n,dt):
         tmp.append(np.sqrt((s_pose[0]-rx[i])**2+(s_pose[1]-ry[i])**2))
         
     idx = tmp.index(min(tmp))
-  
     idx_motion = 0
 
     return path, idx_motion, idx, rx, ry, ryaw
@@ -93,9 +89,8 @@ def compute_cost(phi,len_y):
     for i in range(len_y):
         row = phi[i]
         tmp_phi[i,:] = [row[0],row[1],row[2],row[3]]
-    PHI = np.dot(np.transpose(tmp_phi[:,0:2]),tmp_phi[:,0:2])
-    cost = np.linalg.norm(np.linalg.inv(PHI),ord=2)*np.linalg.norm(PHI,ord=2)
-    return cost
+    PHI = np.dot(np.transpose(tmp_phi[:,0:2]),tmp_phi[:,0:2]) 
+    return np.linalg.norm(np.linalg.inv(PHI),ord=2)*np.linalg.norm(PHI,ord=2)
 
 def computeCov(y,phi):
 
@@ -140,28 +135,28 @@ def run_auv_node(pub,auv,obs,Ts,Tf, auvNum):
 
     # Init time variables and counters and lists
     t, count1, t_tdma = 0,0,0
-    dt = header.config.TIME_STEP*t_scaler
     meas_table, local_measures = [], []
     old_m = [0,0,0,0]
     path = None
 
     # Start listeners and init waypoints data structures
     listener(auvID)
-    ax = [s_state[0]]
+    ax = [s_state[0]] #the "first waypoint is the initial vehicle state"
     ay = [s_state[1]]
-    waypoints = np.zeros(header.config.H)
+    waypoints = np.zeros(header.config.H) #init waypoints data structure
 
-    # SIMULATION PARAMETERS (MOVE THEM FROM HERE)
-    thresh = 1
-    v_n = 1
+    # Load simulation params from config file
+    dt = header.config.TIME_STEP*t_scaler
+    DT = header.config.DT #Optimization Time Window
+    thresh = header.config.k_phi_thresh
+    v_n = header.config.AUV_VEL
     
     rospy.sleep(1)
     ## SIMULATION LOOP ############################################################################################################
     while not rospy.is_shutdown():
 
         if (count1 % (Hz/t_scaler))== 0:
-            
-            t_tdma += 1#TODO: SHOULD BE DIMENSIONED AFTER CHOOSING dt
+            t_tdma += 1
 
             if auvID*Ts == t_tdma:
                 rospy.loginfo('AUV ID: %s current state %s',auvID,s_state)
@@ -169,23 +164,19 @@ def run_auv_node(pub,auv,obs,Ts,Tf, auvNum):
                 
                 # Perform measurement 
                 [measure_, rel_bearing_, meas_pos] = auv.measureBearing(t_pose[0],t_pose[1],[s_state[0],s_state[1]],s_state[2])
-                arr = [t,measure_,meas_pos[0],meas_pos[1]]
-                local_measures.append(arr)
+                local_measures.append([t,measure_,meas_pos[0],meas_pos[1]])
                 for i in range(len(local_measures)):
                     pub[0].publish(np.array(local_measures[i],dtype=np.float32))
-
+                
                 pub[3].publish(ctrl_policy)
                 local_measures = []
                 if t_tdma == auvNum*Ts:
-
                     t_tdma = 0
 
             else:#for making measurements also outside the given timeslot 
                 [measure_, rel_bearing_, meas_pos] = auv.measureBearing(t_pose[0],t_pose[1],[s_state[0],s_state[1]],s_state[2])
-                arr = [t,measure_,meas_pos[0],meas_pos[1]]
-                local_measures.append(arr)
+                local_measures.append([t,measure_,meas_pos[0],meas_pos[1]])
 
-        # TODO: PUT MEASUREMENTS PROCESSING HERE
         if m_rx[0] - old_m[0] > 1:#check if the measurement is new
 
             meas_table.append(m_rx)
@@ -228,16 +219,11 @@ def run_auv_node(pub,auv,obs,Ts,Tf, auvNum):
                 # optimization do stuff
                 # for now we simply assign predefined waypoints and publish them for build policy of intent
                 
-                
-                path, idx_motion, idx, rx, ry, ryaw = updatePathRoutine(ax,ay,waypoints,s_state,v_n,dt)
+                path, idx_motion, idx, rx, ry, ryaw = updatePathRoutine(ax,ay,waypoints,s_state,v_n,dt,DT)
 
         # PUBLISH THE CTRL_CMD
         if path != None: 
-            msg = []
-            
-            msg = np.array([int(auvID),rx[idx_motion+idx],ry[idx_motion+idx],ryaw[idx_motion+idx]], dtype=np.float32)
-            pub[2].publish(msg)
-
+            pub[2].publish(np.array([int(auvID),rx[idx_motion+idx],ry[idx_motion+idx],ryaw[idx_motion+idx]], dtype=np.float32))
             idx_motion += 1
 
         if int(t) == (header.config.TIME_DURATION-1):
@@ -281,9 +267,10 @@ def callback2(data):
 
 
 def callback3(data):#probably better a service-client paradigm
+
     global ctrl_policy
-    tmp = data.data
-    ctrl_policy = tmp
+    ctrl_policy = data.data
+    
 
 def callback4(data):
     
@@ -329,7 +316,6 @@ def main():
 
     # Init Communication protocol parameters (TDMA)
     Tf = header.config.Ts*auvNum
-
 
     # Start simulation
     run_auv_node(pub,auv,obs,header.config.Ts,Tf,auvNum)

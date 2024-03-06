@@ -28,13 +28,13 @@ header = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(header)
 
 # Init lists for plot
-# Target and AUVs
 target_x_traj, target_y_traj, platform_x, platform_y = [], [], [], []
 auv1_x, auv1_y, auv2_x, auv2_y,auv3_x,auv3_y,auv4_x,auv4_y  = [], [], [], [], [], [], [], []
+# Init global variables for callbacks
 path1 = [None,None,None]
 path2 = [None,None,None]
 path3 = [None,None,None]
-path4 = [None,None,None] #TODO bug here probably
+path4 = [None,None,None] 
 paths = [None,None,None,None]
 
 def updatePathRoutine(rx,ry,s_pose):
