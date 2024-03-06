@@ -30,7 +30,7 @@ cov1, cov2, cov3, cov4, err = [], [], [], [], []
 s_state = [0,0,0] # --> Agent Pose
 t_pose = [0,0,0] # --> Target ground truth
 m_rx = [0,0,0,0] # --> received measurament
-ctrl_policy = np.zeros((3+header.config.H))
+ctrl_policy = np.zeros((len(s_state)+header.config.H))
 
 def updatePathRoutine(ax,ay,waypoints,s_pose,v_n,dt,DT):
 
