@@ -50,7 +50,7 @@ def updatePathRoutine(rx,ry,s_pose):
 
     return idx_motion, idx
 
-def run_simulation(target, auvNum, pub_s_state, pub_t_state):
+def run_simulation(target, auvNum, pub_s_state, pub_t_state, pub_init_opt):
 
     """Simulate the sensor platform and the moving header.target
     Input:  
@@ -74,22 +74,29 @@ def run_simulation(target, auvNum, pub_s_state, pub_t_state):
  
     # Init AUVs position and orientation
     auvs_xy = np.zeros((auvNum,3))
-           
-    
+    msg = []
     for i in range(len(auvs_xy)):
-        auvs_xy[i,0] = i*100
+        auvs_xy[i,0] = (i)*100#TODO: SOLVE THE BUG OF HAVING AUV1 IN POS [0,0,0]
         auvs_xy[i,1] = 0
-        auvs_xy[i,2] = -np.pi/2
-
+        auvs_xy[i,2] = np.pi/2
+        msg.append((i)*100)
+        msg.append(0)
+        msg.append(np.pi/2)
+    init_state = auvs_xy
+    
     rospy.loginfo('|---- KINEMATIC SIMULATION: Initial AUVs positions (m) --> %s',auvs_xy)
     rospy.loginfo('|---- KINEMATIC SIMULATION: Initial Target position (m) --> %s',[target.pose.x,target.pose.y,target.pose.theta])
 
     # Start listeners
     listener(auvNum)
+
     rospy.sleep(1)
     ## SIMULATION LOOP ############################################################################################################
     while not rospy.is_shutdown():
-
+        if count1 < 100:
+            #rospy.logerr('INIT STATE: %s',np.array([init_state[0],init_state[1],init_state[2],init_state[3]],dtype=np.float32))
+            
+            pub_init_opt.publish(np.array(msg,dtype=np.float32)) #ONE TIME PUBLISHER
         for i in range(auvNum):
             # Publish agents info
             a = np.array([auvs_xy[i,0],auvs_xy[i,1],auvs_xy[i,2]], dtype=np.float32)
@@ -205,13 +212,17 @@ def main():
     # Initialize publishers
     pub_t_state = []
     pub_s_state = []
-    
+    pub_init_opt = rospy.Publisher('/init_opt', numpy_msg(Floats), queue_size=100)
     for i in range(auvNum):
         tmp1 = rospy.Publisher('/'+str(i+1)+'/vehicle_state_'+str(i+1), numpy_msg(Floats), queue_size=10)
         tmp2 = rospy.Publisher('/'+str(i+1)+'/target_state', numpy_msg(Floats), queue_size=10)
+
         pub_s_state.append(tmp1)
         pub_t_state.append(tmp2)
+
        
+    # One time publisher or initialize the optmization node with all AUVs info
+    
     # Initialization object header.target
     target_obj = header.target.Target()
 
@@ -222,7 +233,7 @@ def main():
     np.savetxt(log_path+'/ctrl_set.txt',ctrl_set)
 
     # Start listeners and run simulation
-    run_simulation(target_obj, auvNum, pub_s_state, pub_t_state)  
+    run_simulation(target_obj, auvNum, pub_s_state, pub_t_state, pub_init_opt)  
     rospy.on_shutdown(shutdown_cllbk)
     rospy.spin()
 

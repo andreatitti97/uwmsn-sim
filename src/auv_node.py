@@ -30,7 +30,9 @@ cov1, cov2, cov3, cov4, err = [], [], [], [], []
 s_state = [0,0,0] # --> Agent Pose
 t_pose = [0,0,0] # --> Target ground truth
 m_rx = [0,0,0,0] # --> received measurament
-ctrl_policy = np.zeros((len(s_state)+header.config.H))
+ctrl_policy = []
+for i in range((len(s_state)+header.config.H)):
+    ctrl_policy.append(0)
 
 def updatePathRoutine(ax,ay,waypoints,s_pose,v_n,dt,DT):
 
@@ -50,7 +52,7 @@ def updatePathRoutine(ax,ay,waypoints,s_pose,v_n,dt,DT):
             
             ax.pop(-1)
             ay.pop(-1)
-            
+
     # Initialized starting position
     a_i = [s_state[0],s_state[1]]
     t_i = s_state[2]
@@ -144,6 +146,8 @@ def run_auv_node(pub,auv,obs,Ts,Tf, auvNum):
     ax = [s_state[0]] #the "first waypoint is the initial vehicle state"
     ay = [s_state[1]]
     waypoints = np.zeros(header.config.H) #init waypoints data structure
+    
+    old_pi_bar = ctrl_policy
 
     # Load simulation params from config file
     dt = header.config.TIME_STEP*t_scaler
@@ -168,7 +172,7 @@ def run_auv_node(pub,auv,obs,Ts,Tf, auvNum):
                 for i in range(len(local_measures)):
                     pub[0].publish(np.array(local_measures[i],dtype=np.float32))
                 
-                pub[3].publish(ctrl_policy)
+                pub[3].publish(np.array(ctrl_policy,dtype=np.float32))
                 local_measures = []
                 if t_tdma == auvNum*Ts:
                     t_tdma = 0
@@ -218,8 +222,13 @@ def run_auv_node(pub,auv,obs,Ts,Tf, auvNum):
                 #TODO: OPTIMIZATION OR OFFLINE PLANING MUST ACT HERE!
                 # optimization do stuff
                 # for now we simply assign predefined waypoints and publish them for build policy of intent
-                
-                path, idx_motion, idx, rx, ry, ryaw = updatePathRoutine(ax,ay,waypoints,s_state,v_n,dt,DT)
+        #if the optimization has produced somthing update path, do this control always to avoid unnecessary waitings.
+        if ctrl_policy[0] != old_pi_bar[0]:
+
+            waypoints = ctrl_policy[3:len(ctrl_policy)]
+            ax = [ctrl_policy[0]] #the "first waypoint is the initial vehicle state"
+            ay = [ctrl_policy[1]]
+            path, idx_motion, idx, rx, ry, ryaw = updatePathRoutine(ax,ay,waypoints,s_state,v_n,dt,DT)
 
         # PUBLISH THE CTRL_CMD
         if path != None: 
@@ -231,6 +240,7 @@ def run_auv_node(pub,auv,obs,Ts,Tf, auvNum):
             rospy.signal_shutdown('Simulation time limit reached')
 
         old_m = m_rx
+        old_pi_bar = ctrl_policy
         t += dt
         count1 += 1 
         if t_tdma >= Tf:

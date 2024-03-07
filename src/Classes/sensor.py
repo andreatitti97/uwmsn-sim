@@ -12,11 +12,13 @@ class Sensor:
         self.abs_bearing = 0
 
     def measureBearing(self,xt,yt,obs_pos, orientation):
-
-
+        #TODO BUG HERE!!
+        #print('----------------------------------------------------obs_pos',obs_pos)
+        #print('----------------------------------------------------obs_pos[0]',obs_pos[0])
+        #print('----------------------------------------------------orientation',orientation)
         vect = [xt-obs_pos[0],yt-obs_pos[1]]
         self.abs_bearing = atan2(vect[1],vect[0]) # abs bearing = rel_bearing - vehcile ori -> [-pi,+pi]
-
+        
         if orientation < 0:
             theta_tmp = 2*pi + orientation
         else:

@@ -79,6 +79,8 @@ TARGET_INIT = [+2000,-2500, pi, 2.5, 0.0, 0.0, 0.0] #[x(m),y(m),theta(rad),linea
 #TARGET_INIT = [-2000, +2000, 140*pi/180, 8.0, 0.002, 0.0, 0.0] #[x(m),y(m),theta(rad),v0(m/s),omega0,v_dot0,omega_dot0] - DINAMICA 6
 #TARGET_INIT = [-2000, -1800, pi/2, 6.0, -0.001, 0.0, 0.0] #[x(m),y(m),theta(rad),linear vel(m/s)] - DINAMICA 7
 #TARGET_INIT = [-1500, 2000, pi/8, 5.0, 0.0, 0.8, 0.0] #[x(m),y(m),theta(rad),linear vel(m/s)] - DINAMICA 8
+TARGET_INIT = [150,-10, pi, 2.5, 0.0, 0.0, 0.0] 
+
 
 alpha_0, omega_0,alpha_dot_0,omega_dot_0 = TARGET_INIT[3],TARGET_INIT[4],TARGET_INIT[5],TARGET_INIT[6]
 MAX_TARGET_VEL = 3 #(m/s) (only if target no costant vels)
