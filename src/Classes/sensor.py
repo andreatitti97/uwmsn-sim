@@ -12,10 +12,7 @@ class Sensor:
         self.abs_bearing = 0
 
     def measureBearing(self,xt,yt,obs_pos, orientation):
-        #TODO BUG HERE!!
-        #print('----------------------------------------------------obs_pos',obs_pos)
-        #print('----------------------------------------------------obs_pos[0]',obs_pos[0])
-        #print('----------------------------------------------------orientation',orientation)
+
         vect = [xt-obs_pos[0],yt-obs_pos[1]]
         self.abs_bearing = atan2(vect[1],vect[0]) # abs bearing = rel_bearing - vehcile ori -> [-pi,+pi]
         
@@ -36,6 +33,7 @@ class Sensor:
         # Create the noise and add the noise to the measurament
         self.noise = np.random.uniform(-self.variance, self.variance)
         self.abs_bearing = self.abs_bearing + self.noise #overwrite absolute bearing with the corrupted quantities
+
         return self.abs_bearing, rel_bearing, obs_pos
 
     

@@ -198,7 +198,7 @@ def run_auv_node(pub,auv,obs,Ts,Tf, auvNum):
                 obs.propagate_estimation(t) #you can now propagate
                 curr_est = obs.state
                 cov = computeCov(y,phi)
-                pub[1].publish(curr_est) #pub estimate of target state
+                pub[1].publish(np.array(curr_est,dtype=np.float32)) #pub estimate of target state
                 rospy.logout('%s|---- AUV '+str(auvID)+': Target state Estimation [m,m/s] --> %s%s',blue,curr_est,none)
                 
                 # Computte the tracking error

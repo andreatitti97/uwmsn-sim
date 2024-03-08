@@ -76,14 +76,13 @@ def run_simulation(target, auvNum, pub_s_state, pub_t_state, pub_init_opt):
     auvs_xy = np.zeros((auvNum,3))
     msg = []
     for i in range(len(auvs_xy)):
-        auvs_xy[i,0] = (i)*100#TODO: SOLVE THE BUG OF HAVING AUV1 IN POS [0,0,0]
+        auvs_xy[i,0] = (i+1)*100 #TODO: SOLVE THE BUG OF HAVING AUV1 IN POS [0,0,0]
         auvs_xy[i,1] = 0
         auvs_xy[i,2] = np.pi/2
-        msg.append((i)*100)
+        msg.append((i+1)*100)
         msg.append(0)
         msg.append(np.pi/2)
-    init_state = auvs_xy
-    
+        
     rospy.loginfo('|---- KINEMATIC SIMULATION: Initial AUVs positions (m) --> %s',auvs_xy)
     rospy.loginfo('|---- KINEMATIC SIMULATION: Initial Target position (m) --> %s',[target.pose.x,target.pose.y,target.pose.theta])
 
@@ -94,14 +93,13 @@ def run_simulation(target, auvNum, pub_s_state, pub_t_state, pub_init_opt):
     ## SIMULATION LOOP ############################################################################################################
     while not rospy.is_shutdown():
         if count1 < 100:
-            #rospy.logerr('INIT STATE: %s',np.array([init_state[0],init_state[1],init_state[2],init_state[3]],dtype=np.float32))
-            
             pub_init_opt.publish(np.array(msg,dtype=np.float32)) #ONE TIME PUBLISHER
         for i in range(auvNum):
             # Publish agents info
             a = np.array([auvs_xy[i,0],auvs_xy[i,1],auvs_xy[i,2]], dtype=np.float32)
             pub_s_state[i].publish(a)
             # Publish header.target info
+            tmp = []
             pub_t_state[i].publish(np.array([target.pose.x,target.pose.y,target.pose.theta], dtype=np.float32))
 
         # Move Agents
@@ -170,30 +168,25 @@ def shutdown_cllbk():
 def callback1(data):
     global paths,path1
     
-    tmp = data.data
-    #rospy.loginfo('----------------------------------------------------------------CALLBACK AUV1 %s',tmp)
-    
+    tmp = data.data   
     path1 = [tmp[1],tmp[2],tmp[3]]
 
 def callback2(data):
     global paths, path2    
 
     tmp = data.data
-    #rospy.loginfo('----------------------------------------------------------------CALLBACK AUV2 %s',tmp)
     path2 = [tmp[1],tmp[2],tmp[3]]
 
 def callback3(data):
     global paths, path3
 
     tmp = data.data
-    #rospy.loginfo('----------------------------------------------------------------CALLBACK AUV3 %s',tmp)
     path3 = [tmp[1],tmp[2],tmp[3]]
 
 def callback4(data):
     global paths, path4    
 
     tmp = data.data
-    #rospy.loginfo('----------------------------------------------------------------CALLBACK AUV4 %s',tmp)
     path4 = [tmp[1],tmp[2],tmp[3]]
 
 def listener(n_auv):
@@ -214,12 +207,11 @@ def main():
     pub_s_state = []
     pub_init_opt = rospy.Publisher('/init_opt', numpy_msg(Floats), queue_size=100)
     for i in range(auvNum):
-        tmp1 = rospy.Publisher('/'+str(i+1)+'/vehicle_state_'+str(i+1), numpy_msg(Floats), queue_size=10)
-        tmp2 = rospy.Publisher('/'+str(i+1)+'/target_state', numpy_msg(Floats), queue_size=10)
+        tmp1 = rospy.Publisher('/'+str(i+1)+'/vehicle_state_'+str(i+1), numpy_msg(Floats), queue_size=100)
+        tmp2 = rospy.Publisher('/'+str(i+1)+'/target_state', numpy_msg(Floats), queue_size=100)
 
         pub_s_state.append(tmp1)
         pub_t_state.append(tmp2)
-
        
     # One time publisher or initialize the optmization node with all AUVs info
     
