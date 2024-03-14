@@ -5,7 +5,7 @@ import importlib.util, pathlib
 
 # Import math modules
 import numpy as np
-
+from math import atan2
 #Import ROS modules
 import rospy
 from rospy_tutorials.msg import Floats
@@ -33,6 +33,34 @@ m_rx = [0,0,0,0] # --> received measurament
 ctrl_policy = []
 for i in range((len(s_state)+header.config.H)):
     ctrl_policy.append(0)
+
+def computePursuitVel(curr_est,s_pose,v_n):
+
+    predicted_pose = np.array(np.zeros(2))
+    predicted_pose[0] = curr_est[0,0] + header.config.DT*curr_est[2]
+    predicted_pose[1] = curr_est[1,0] + header.config.DT*curr_est[3]
+
+    tmp_x = s_pose[0]+header.config.DT*v_n*np.cos(atan2(s_pose[1],s_pose[0]))
+    tmp_y = s_pose[1]+header.config.DT*v_n*np.sin(atan2(s_pose[1],s_pose[0]))
+
+    p_eucl_dist = np.sqrt((predicted_pose[0]-tmp_x)**2+(predicted_pose[1]-tmp_y)**2)
+    eucl_dist = np.sqrt((curr_est[0,0]-s_pose[0])**2+(curr_est[1,0]-s_pose[1])**2)
+    
+    epsi = header.config.RANGE_TO_TARGET #DISTANCA VOLUTA DAL TARGET
+
+    if eucl_dist - epsi < 1:
+        v_n = 0.01
+    elif eucl_dist - epsi < -1:  
+        v_n = -0.01
+    else: 
+        v_n = (eucl_dist-epsi)/header.config.DT
+    
+    if v_n >= 0.2:#saturatet it
+        v_n = 0.2
+    elif v_n <= -0.2:
+        v_n = -0.2
+
+    return v_n
 
 def updatePathRoutine(ax,ay,waypoints,s_pose,v_n,dt,DT):
 
@@ -142,7 +170,7 @@ def run_auv_node(pub,auv,obs,Ts,Tf, auvNum):
     path = None
 
     # Start listeners and init waypoints data structures
-    listener(auvID)
+    
     ax = [s_state[0]] #the "first waypoint is the initial vehicle state"
     ay = [s_state[1]]
     waypoints = np.zeros(header.config.H) #init waypoints data structure
@@ -197,8 +225,16 @@ def run_auv_node(pub,auv,obs,Ts,Tf, auvNum):
             if compute_cost(phi,len(y)) >= thresh:
                 obs.propagate_estimation(t) #you can now propagate
                 curr_est = obs.state
-                cov = computeCov(y,phi)
-                pub[1].publish(np.array(curr_est,dtype=np.float32)) #pub estimate of target state
+                v_n = computePursuitVel(curr_est,s_state,v_n)
+                rospy.loginfo('OPTIMIZATION ID %s PURSUIT VEL: %s',auvID,v_n)
+                cov = computeCov(y,phi)# TODO change ak tu curr est
+                #pub[1].publish(np.array([t_pose[0],t_pose[1],np.cos(t_pose[2]),np.sin(t_pose[2])],dtype=np.float32)) #pub estimate of target state
+                tmp = []
+                for i in range(len(curr_est)):
+                    tmp.append(curr_est[i,0])
+
+                tmp.append(v_n)
+                pub[1].publish(np.array(tmp,dtype=np.float32)) #pub estimate of target state
                 rospy.logout('%s|---- AUV '+str(auvID)+': Target state Estimation [m,m/s] --> %s%s',blue,curr_est,none)
                 
                 # Computte the tracking error
@@ -225,15 +261,19 @@ def run_auv_node(pub,auv,obs,Ts,Tf, auvNum):
         #if the optimization has produced somthing update path, do this control always to avoid unnecessary waitings.
         if ctrl_policy[0] != old_pi_bar[0]:
 
-            waypoints = ctrl_policy[3:len(ctrl_policy)]
+            waypoints = ctrl_policy[3:(len(ctrl_policy)-1)]
             ax = [ctrl_policy[0]] #the "first waypoint is the initial vehicle state"
             ay = [ctrl_policy[1]]
             path, idx_motion, idx, rx, ry, ryaw = updatePathRoutine(ax,ay,waypoints,s_state,v_n,dt,DT)
 
-        # PUBLISH THE CTRL_CMD
+        
         if path != None: 
             pub[2].publish(np.array([int(auvID),rx[idx_motion+idx],ry[idx_motion+idx],ryaw[idx_motion+idx]], dtype=np.float32))
-            idx_motion += 1
+            # PUBLISH THE CTRL_CMD
+            if len(rx)-1 <= idx_motion+idx:
+                idx_motion += 0
+            else:
+                idx_motion += 1
 
         if int(t) == (header.config.TIME_DURATION-1):
             rospy.on_shutdown(shutdown_cllbk)
@@ -328,6 +368,7 @@ def main():
     Tf = header.config.Ts*auvNum
 
     # Start simulation
+    listener(auvID)
     run_auv_node(pub,auv,obs,header.config.Ts,Tf,auvNum)
     rospy.on_shutdown(shutdown_cllbk)
     rospy.spin()

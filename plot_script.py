@@ -31,6 +31,9 @@ for i in range(int(auvNum)):
     auv_x_traj[:,i] = np.loadtxt(log_directory+'/auv'+str(i+1)+'_x_traj.txt')
     auv_y_traj[:,i] = np.loadtxt(log_directory+'/auv'+str(i+1)+'_y_traj.txt')
 
+    
+
+
     tmp = np.loadtxt(log_directory+'/'+str(i+1)+'-x_hat_2.txt')
     x_hat_ = np.zeros((len(tmp),4))
     err = np.loadtxt(log_directory+'/'+str(i+1)+'-err.txt')
@@ -41,6 +44,7 @@ for i in range(int(auvNum)):
     for j in range(4):
         x_hat_[:,i] = np.loadtxt(log_directory+'/'+str(i+1)+'-x_hat_'+str(j+1)+'.txt')
         cov[:,i] = np.loadtxt(log_directory+'/'+str(i+1)+'-cov'+str(j+1)+'.txt')
+
 
 
     x_hat.append(x_hat_)
@@ -58,22 +62,38 @@ fig, ax = plt.subplots()
 ax.set_facecolor('cornflowerblue')
 plt.title('SCENARIO')
 
+
+tot_smpls = len(target_x_traj)
+scaler = 1500
 for i in range(int(auvNum)):
+    plt.plot(auv_x_traj[0,i],auv_y_traj[0,i],'ob',markersize=lw_ms)
+    plt.plot(auv_x_traj[-1,i],auv_y_traj[-1,i],'og',markersize=lw_ms)
     plt.plot(auv_x_traj[:,i],auv_y_traj[:,i],'b',markersize=lw_ms)
-    
+    print(auv_x_traj)
+    '''for j in range(int(tot_smpls/scaler)):
+        # plot LOS
+        idx = (j+1)*scaler
+        
+        plt.plot([auv_x_traj[idx,i],
+            target_x_traj[idx]],[auv_y_traj[idx,i],target_y_traj[idx]],'k--',linewidth=j/3)
+    plt.plot([auv_x_traj[-1,i],
+            target_x_traj[-1]],[auv_y_traj[-1,i],target_y_traj[-1]],'g--',linewidth=j/3)'''
 plt.plot(target_x_traj,target_y_traj)
+plt.plot(target_x_traj[0],target_y_traj[0],'ro',markersize=lw_ms)
+plt.plot(target_x_traj[-1],target_y_traj[-1],'ro',markersize=lw_ms)
 
 #plt.plot.set_facecolor('cornflowerblue')
 plt.xlabel('x (m)')
 plt.ylabel('y (m)')
 plt.grid()
+plt.axis('equal')
 plt.show()
 
 plt.title('Tracking Errors')
 for i in range(int(auvNum)):
     plt.subplot(int(auvNum),1,i+1)
     t = np.linspace(0,elapsed_t,len(tracking_errors[i]))
-    tmp = tracking_errors[i]
+    tmp = tracking_errors[i]*1.5
     plt.plot(t,tmp)
     plt.xlabel('Simulation Time (s)')
     plt.ylabel('Tracking error')

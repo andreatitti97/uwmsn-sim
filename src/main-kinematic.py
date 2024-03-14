@@ -5,7 +5,7 @@ import importlib.util, pathlib
 
 # Import math modules
 import numpy as np
-
+from math import atan2
 #Import ROS modules
 import rospy
 from rospy_tutorials.msg import Floats
@@ -37,19 +37,6 @@ path3 = [None,None,None]
 path4 = [None,None,None] 
 paths = [None,None,None,None]
 
-def updatePathRoutine(rx,ry,s_pose):
-
-    tmp = []
-    for i in range(len(rx)):
-        
-        tmp.append(np.sqrt((s_pose[0]-rx[i])**2+(s_pose[1]-ry[i])**2))
-        
-    idx = tmp.index(min(tmp))
-  
-    idx_motion = 0
-
-    return idx_motion, idx
-
 def run_simulation(target, auvNum, pub_s_state, pub_t_state, pub_init_opt):
 
     """Simulate the sensor platform and the moving header.target
@@ -75,24 +62,29 @@ def run_simulation(target, auvNum, pub_s_state, pub_t_state, pub_init_opt):
     # Init AUVs position and orientation
     auvs_xy = np.zeros((auvNum,3))
     msg = []
+    d = header.config.d
+    pos = [d/2,d/2,-d/2,d/2,-d/2,-d/2,d/2,-d/2]
     for i in range(len(auvs_xy)):
-        auvs_xy[i,0] = (i+1)*100 #TODO: SOLVE THE BUG OF HAVING AUV1 IN POS [0,0,0]
-        auvs_xy[i,1] = 0
-        auvs_xy[i,2] = np.pi/2
-        msg.append((i+1)*100)
-        msg.append(0)
-        msg.append(np.pi/2)
+  
+        auvs_xy[i,0] = pos[0] #TODO: SOLVE THE BUG OF HAVING AUV1 IN POS [0,0,0]
+        auvs_xy[i,1] = pos[1]
+        auvs_xy[i,2] = atan2(target.pose.y-auvs_xy[i,1],target.pose.x-auvs_xy[i,0])
+
+        msg.append(auvs_xy[i,0])
+        msg.append(auvs_xy[i,1])
+        msg.append(auvs_xy[i,2])
+        pos.pop(0)
+        pos.pop(0)
         
     rospy.loginfo('|---- KINEMATIC SIMULATION: Initial AUVs positions (m) --> %s',auvs_xy)
     rospy.loginfo('|---- KINEMATIC SIMULATION: Initial Target position (m) --> %s',[target.pose.x,target.pose.y,target.pose.theta])
 
-    # Start listeners
-    listener(auvNum)
+    
 
     rospy.sleep(1)
     ## SIMULATION LOOP ############################################################################################################
     while not rospy.is_shutdown():
-        if count1 < 100:
+        if count1 < Hz: #to be sure that the initalization setup is shared among nodes
             pub_init_opt.publish(np.array(msg,dtype=np.float32)) #ONE TIME PUBLISHER
         for i in range(auvNum):
             # Publish agents info
@@ -225,6 +217,7 @@ def main():
     np.savetxt(log_path+'/ctrl_set.txt',ctrl_set)
 
     # Start listeners and run simulation
+    listener(auvNum)
     run_simulation(target_obj, auvNum, pub_s_state, pub_t_state, pub_init_opt)  
     rospy.on_shutdown(shutdown_cllbk)
     rospy.spin()
