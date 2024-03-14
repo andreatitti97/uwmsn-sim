@@ -54,6 +54,8 @@ for i in range(int(auvNum)):
 # PLOTs
 print('SIMULATION INFO [auvNum - Simulation Time (s) - Slot Time (s)]',sim_info)   
 print('Acoustic Communication Stat [PDR AUV1,PDR AUV2,PDR AUV3,PDR AUV4]:',PDR)
+for i in range(int(auvNum)):
+    print('AUV ID %s RMSE (m):%s',i+1,(sum(tracking_errors[i])/len(tracking_errors[i])))
 lw_ms = 2*7
 #fig = plt.figure(1)
 #patch = fig.patch 
@@ -64,23 +66,26 @@ plt.title('SCENARIO')
 
 
 tot_smpls = len(target_x_traj)
-scaler = 1500
+scaler = 5000
+plt.plot(target_x_traj,target_y_traj)
+plt.plot(target_x_traj[0],target_y_traj[0],'ro',markersize=lw_ms)
+plt.plot(target_x_traj[-1],target_y_traj[-1],'ro',markersize=lw_ms)
 for i in range(int(auvNum)):
-    plt.plot(auv_x_traj[0,i],auv_y_traj[0,i],'ob',markersize=lw_ms)
     plt.plot(auv_x_traj[-1,i],auv_y_traj[-1,i],'og',markersize=lw_ms)
+    plt.plot([auv_x_traj[-1,i],
+            target_x_traj[-1]],[auv_y_traj[-1,i],target_y_traj[-1]],'g--',linewidth=2)
+    plt.plot(auv_x_traj[0,i],auv_y_traj[0,i],'ob',markersize=lw_ms)
+    
     plt.plot(auv_x_traj[:,i],auv_y_traj[:,i],'b',markersize=lw_ms)
-    print(auv_x_traj)
+    
     '''for j in range(int(tot_smpls/scaler)):
         # plot LOS
         idx = (j+1)*scaler
         
         plt.plot([auv_x_traj[idx,i],
-            target_x_traj[idx]],[auv_y_traj[idx,i],target_y_traj[idx]],'k--',linewidth=j/3)
-    plt.plot([auv_x_traj[-1,i],
-            target_x_traj[-1]],[auv_y_traj[-1,i],target_y_traj[-1]],'g--',linewidth=j/3)'''
-plt.plot(target_x_traj,target_y_traj)
-plt.plot(target_x_traj[0],target_y_traj[0],'ro',markersize=lw_ms)
-plt.plot(target_x_traj[-1],target_y_traj[-1],'ro',markersize=lw_ms)
+            target_x_traj[idx]],[auv_y_traj[idx,i],target_y_traj[idx]],'k--',linewidth=1)'''
+    
+
 
 #plt.plot.set_facecolor('cornflowerblue')
 plt.xlabel('x (m)')
@@ -93,10 +98,12 @@ plt.title('Tracking Errors')
 for i in range(int(auvNum)):
     plt.subplot(int(auvNum),1,i+1)
     t = np.linspace(0,elapsed_t,len(tracking_errors[i]))
-    tmp = tracking_errors[i]*1.5
+    tmp = tracking_errors[i]
     plt.plot(t,tmp)
     plt.xlabel('Simulation Time (s)')
     plt.ylabel('Tracking error')
+    max_value = tmp.max()
+    plt.text(len(t)/2,max_value-max_value/8,'RMSE (m):'+str((sum(tracking_errors[i])/len(tracking_errors[i]))))
     plt.grid()
 plt.show()
 

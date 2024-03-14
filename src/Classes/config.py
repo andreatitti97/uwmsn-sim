@@ -12,7 +12,7 @@ spec.loader.exec_module(utils)
 
 ############################################################ SIMULATION SETUP ########################################################
 # Simulation parameters
-TIME_DURATION = 200 # (s)
+TIME_DURATION = 300 # (s)
 TIME_STEP = 0.01
 TIME_SCALER = 1# in [1 - 10] values near 10 may be source of errors (to fast for ROS stack)
 c = 1500 #sound wave speed
@@ -21,7 +21,7 @@ OPTIMIZATION_ON = False
 # Estimation Parameters
 TP = 30 # regressor MAX length 40
 buffLen = 10 #buffer length for storing received meas
-SIGMA_MEAS = 0.02#0.08 #(rad^2) --> 4.5° (as assumed in DAMPS and by cassino)
+SIGMA_MEAS = 0.08#0.02 #(rad^2) --> 4.5° (as assumed in DAMPS and by cassino)
 
 # CHOOSE THE Distance and eventually the GEOMETRY BETWEEN THE AGENTS
 geometry = 'column2'
