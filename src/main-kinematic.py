@@ -85,7 +85,8 @@ def run_simulation(target, auvNum, pub_s_state, pub_t_state, pub_init_opt):
     ## SIMULATION LOOP ############################################################################################################
     while not rospy.is_shutdown():
         if count1 < Hz: #to be sure that the initalization setup is shared among nodes
-            pub_init_opt.publish(np.array(msg,dtype=np.float32)) #ONE TIME PUBLISHER
+            pub_init_opt[0].publish(np.array(msg,dtype=np.float32)) #ONE TIME PUBLISHER
+            pub_init_opt[1].publish(np.array([np.sqrt((target.pose.y-auvs_xy[0,1])**2+(target.pose.x-auvs_xy[0,0])**2)],dtype=np.float32))
         for i in range(auvNum):
             # Publish agents info
             a = np.array([auvs_xy[i,0],auvs_xy[i,1],auvs_xy[i,2]], dtype=np.float32)
@@ -195,9 +196,11 @@ def main():
     rospy.init_node('kinematic_sim') #log_level=rospy.DEBUG
     
     # Initialize publishers
-    pub_t_state = []
-    pub_s_state = []
-    pub_init_opt = rospy.Publisher('/init_opt', numpy_msg(Floats), queue_size=100)
+    pub_t_state, pub_s_state ,pub_init_opt= [], [], []
+    tmp1 = rospy.Publisher('/init_opt1', numpy_msg(Floats), queue_size=100)
+    tmp2 = rospy.Publisher('/init_opt2', numpy_msg(Floats), queue_size=100)
+    pub_init_opt.append(tmp1)
+    pub_init_opt.append(tmp2)
     for i in range(auvNum):
         tmp1 = rospy.Publisher('/'+str(i+1)+'/vehicle_state_'+str(i+1), numpy_msg(Floats), queue_size=100)
         tmp2 = rospy.Publisher('/'+str(i+1)+'/target_state', numpy_msg(Floats), queue_size=100)

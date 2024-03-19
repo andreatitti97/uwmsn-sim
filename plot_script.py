@@ -27,6 +27,17 @@ tracking_errors= []
 P = []
 PDR = np.zeros((int(auvNum),1))
 
+'''d_max = 200
+x = np.linspace(0,d_max)
+alpha = -0.08
+def sig(x):
+ return 1/(1 + np.exp(alpha*(-x+2*d_max/3)))
+y = sig(x)
+plt.plot(x,y)
+plt.grid()
+plt.show()'''
+
+
 for i in range(int(auvNum)):
     auv_x_traj[:,i] = np.loadtxt(log_directory+'/auv'+str(i+1)+'_x_traj.txt')
     auv_y_traj[:,i] = np.loadtxt(log_directory+'/auv'+str(i+1)+'_y_traj.txt')
@@ -78,6 +89,7 @@ for i in range(int(auvNum)):
     
     plt.plot(auv_x_traj[:,i],auv_y_traj[:,i],'b',markersize=lw_ms)
     
+
     '''for j in range(int(tot_smpls/scaler)):
         # plot LOS
         idx = (j+1)*scaler

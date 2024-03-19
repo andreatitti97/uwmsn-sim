@@ -10,7 +10,7 @@ from math import atan2
 import rospy
 from rospy_tutorials.msg import Floats
 from rospy.numpy_msg import numpy_msg
-
+import matplotlib.pyplot as plt
 # Environment: Define the relevant paths
 pkg_directory = os.path.dirname(pathlib.Path(__file__).parent.resolve())
 header_file = pkg_directory+'/include'+'/uwmsn-sim'
@@ -31,34 +31,38 @@ s_state = [0,0,0] # --> Agent Pose
 t_pose = [0,0,0] # --> Target ground truth
 m_rx = [0,0,0,0] # --> received measurament
 ctrl_policy = []
-for i in range((len(s_state)+header.config.H)):
+for i in range((len(s_state)+1+header.config.H)):
     ctrl_policy.append(0)
 
-def computePursuitVel(curr_est,s_pose,v_n):
+def computePursuitVel(curr_est,s_pose,d_max):
 
     predicted_pose = np.array(np.zeros(2))
     predicted_pose[0] = curr_est[0,0] + header.config.DT*curr_est[2]
     predicted_pose[1] = curr_est[1,0] + header.config.DT*curr_est[3]
 
-    tmp_x = s_pose[0]+header.config.DT*v_n*np.cos(atan2(s_pose[1],s_pose[0]))
-    tmp_y = s_pose[1]+header.config.DT*v_n*np.sin(atan2(s_pose[1],s_pose[0]))
-
-    p_eucl_dist = np.sqrt((predicted_pose[0]-tmp_x)**2+(predicted_pose[1]-tmp_y)**2)
-    eucl_dist = np.sqrt((curr_est[0,0]-s_pose[0])**2+(curr_est[1,0]-s_pose[1])**2)
-    
+    eucl_dist = np.sqrt((predicted_pose[0]-s_pose[0])**2+(predicted_pose[1]-s_pose[1])**2)
+    #eucl_dist = np.sqrt((curr_est[0,0]-s_pose[0])**2+(curr_est[1,0]-s_pose[1])**2)
     epsi = header.config.RANGE_TO_TARGET #DISTANCA VOLUTA DAL TARGET
 
-    if eucl_dist - epsi < 1:
-        v_n = 0.01
+    '''if eucl_dist - epsi < 1:
+        v_n = header.config.AUV_MIN_VEL
     elif eucl_dist - epsi < -1:  
-        v_n = -0.01
+        v_n = -header.config.AUV_MIN_VEL
     else: 
-        v_n = (eucl_dist-epsi)/header.config.DT
+        v_n = (eucl_dist-epsi)/header.config.DT'''
     
-    if v_n >= 0.2:#saturatet it
-        v_n = 0.2
-    elif v_n <= -0.2:
-        v_n = -0.2
+    alpha = 0.1
+    x = (eucl_dist-epsi)
+    
+    weigth = 1/(1 + np.exp(alpha*(-x+2*d_max/3)))
+    
+    '''if v_n >= header.config.AUV_MAX_VEL:#saturatet it
+        v_n = header.config.AUV_MAX_VEL
+    elif v_n <= -header.config.AUV_MAX_VEL:
+        v_n = -header.config.AUV_MAX_VEL'''
+
+    v_n = weigth*header.config.AUV_MAX_VEL
+    
 
     return v_n
 
@@ -181,12 +185,15 @@ def run_auv_node(pub,auv,obs,Ts,Tf, auvNum):
     dt = header.config.TIME_STEP*t_scaler
     DT = header.config.DT #Optimization Time Window
     thresh = header.config.k_phi_thresh
-    v_n = header.config.AUV_VEL
     
+    print(t_pose)
+    print(s_state)
     rospy.sleep(1)
     ## SIMULATION LOOP ############################################################################################################
     while not rospy.is_shutdown():
-
+        if count1 <= 100:
+            d_max = np.sqrt((t_pose[1]-s_state[1])**2+(t_pose[0]-s_state[0])**2)
+            
         if (count1 % (Hz/t_scaler))== 0:
             t_tdma += 1
 
@@ -225,7 +232,7 @@ def run_auv_node(pub,auv,obs,Ts,Tf, auvNum):
             if compute_cost(phi,len(y)) >= thresh:
                 obs.propagate_estimation(t) #you can now propagate
                 curr_est = obs.state
-                v_n = computePursuitVel(curr_est,s_state,v_n)
+                v_n = computePursuitVel(curr_est,s_state,d_max)
                 rospy.loginfo('OPTIMIZATION ID %s PURSUIT VEL: %s',auvID,v_n)
                 cov = computeCov(y,phi)# TODO change ak tu curr est
                 #pub[1].publish(np.array([t_pose[0],t_pose[1],np.cos(t_pose[2]),np.sin(t_pose[2])],dtype=np.float32)) #pub estimate of target state
@@ -261,7 +268,7 @@ def run_auv_node(pub,auv,obs,Ts,Tf, auvNum):
         #if the optimization has produced somthing update path, do this control always to avoid unnecessary waitings.
         if ctrl_policy[0] != old_pi_bar[0]:
 
-            waypoints = ctrl_policy[3:(len(ctrl_policy)-1)]
+            waypoints = ctrl_policy[4:(len(ctrl_policy)-1)]
             ax = [ctrl_policy[0]] #the "first waypoint is the initial vehicle state"
             ay = [ctrl_policy[1]]
             path, idx_motion, idx, rx, ry, ryaw = updatePathRoutine(ax,ay,waypoints,s_state,v_n,dt,DT)
