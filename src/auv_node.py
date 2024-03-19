@@ -2,15 +2,13 @@
 #Import basic system modules
 import os
 import importlib.util, pathlib
-
 # Import math modules
 import numpy as np
-from math import atan2
 #Import ROS modules
 import rospy
 from rospy_tutorials.msg import Floats
 from rospy.numpy_msg import numpy_msg
-import matplotlib.pyplot as plt
+
 # Environment: Define the relevant paths
 pkg_directory = os.path.dirname(pathlib.Path(__file__).parent.resolve())
 header_file = pkg_directory+'/include'+'/uwmsn-sim'
@@ -186,8 +184,6 @@ def run_auv_node(pub,auv,obs,Ts,Tf, auvNum):
     DT = header.config.DT #Optimization Time Window
     thresh = header.config.k_phi_thresh
     
-    print(t_pose)
-    print(s_state)
     rospy.sleep(1)
     ## SIMULATION LOOP ############################################################################################################
     while not rospy.is_shutdown():

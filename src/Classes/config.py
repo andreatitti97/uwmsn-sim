@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 from math import pi
 import numpy as np
 import os, pathlib
@@ -39,7 +40,7 @@ gamma = d*2 #Sigmoid parameter for packet loss --> depends on the distance (tune
 ''' One of the MAIN contribution is that optimization algorithm parameters can be fine tuned according to the expected 
     performances of the newtwork (PDR and latencies) AT PRIORI (using for example DESERT)'''
 
-DT = 20 #d*auvNum/10 sort of
+DT = 10 #d*auvNum/10 sort of
 k_phi_thresh = 1 #Thresh sul condizionamento del regressore per aggiornare la sitma
 
 # Team parameter: number of agents, baselines_XY, inital position, type of formation

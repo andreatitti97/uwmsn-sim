@@ -1,7 +1,7 @@
 #!+usr+bin+env python
 import matplotlib.pyplot as plt
 import numpy as np
-import os, importlib
+import os
 import pathlib
 from math import pi
 from matplotlib.lines import Line2D
@@ -19,12 +19,16 @@ Ts = sim_info[2]
 target_x_traj = np.loadtxt(log_directory+'/target_x_traj.txt')
 target_y_traj = np.loadtxt(log_directory+'/target_y_traj.txt')
 
+
+
 auv_x_traj = np.zeros((len(target_x_traj),int(auvNum)))
 auv_y_traj = np.zeros((len(target_y_traj),int(auvNum)))
+
 
 x_hat = []
 tracking_errors= []
 P = []
+avgNodes, avgTime = [], []
 PDR = np.zeros((int(auvNum),1))
 
 '''d_max = 200
@@ -42,7 +46,8 @@ for i in range(int(auvNum)):
     auv_x_traj[:,i] = np.loadtxt(log_directory+'/auv'+str(i+1)+'_x_traj.txt')
     auv_y_traj[:,i] = np.loadtxt(log_directory+'/auv'+str(i+1)+'_y_traj.txt')
 
-    
+    avgTime.append(np.loadtxt(log_directory+'/wall_times'+str(i+1)+'.txt')) 
+    avgNodes.append(np.loadtxt(log_directory+'/nodes'+str(i+1)+'.txt'))    
 
 
     tmp = np.loadtxt(log_directory+'/'+str(i+1)+'-x_hat_2.txt')
@@ -66,7 +71,9 @@ for i in range(int(auvNum)):
 print('SIMULATION INFO [auvNum - Simulation Time (s) - Slot Time (s)]',sim_info)   
 print('Acoustic Communication Stat [PDR AUV1,PDR AUV2,PDR AUV3,PDR AUV4]:',PDR)
 for i in range(int(auvNum)):
-    print('AUV ID %s RMSE (m):%s',i+1,(sum(tracking_errors[i])/len(tracking_errors[i])))
+    print('OPTIMIZATION STATS --> Average Optimization Time AUV ID:',i+1,sum(avgTime[i])/len(avgTime[i]))
+    print(avgTime[i])
+    print('AUV ID RMSE (m):',i+1,(sum(tracking_errors[i])/len(tracking_errors[i])))
 lw_ms = 2*7
 #fig = plt.figure(1)
 #patch = fig.patch 

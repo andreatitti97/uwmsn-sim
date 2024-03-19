@@ -2,7 +2,6 @@
 #Import basic system modules
 import os
 import importlib.util, pathlib
-
 # Import math modules
 import numpy as np
 from math import atan2
@@ -78,8 +77,6 @@ def run_simulation(target, auvNum, pub_s_state, pub_t_state, pub_init_opt):
         
     rospy.loginfo('|---- KINEMATIC SIMULATION: Initial AUVs positions (m) --> %s',auvs_xy)
     rospy.loginfo('|---- KINEMATIC SIMULATION: Initial Target position (m) --> %s',[target.pose.x,target.pose.y,target.pose.theta])
-
-    
 
     rospy.sleep(1)
     ## SIMULATION LOOP ############################################################################################################
