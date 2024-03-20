@@ -18,6 +18,14 @@ def saturateVel(linear_velocity):
         linear_velocity = config.MAX_TARGET_VEL
     return np.abs(linear_velocity)
 
+class Pose:
+    """2D pose"""
+
+    def __init__(self, x, y, theta):
+        self.x = x
+        self.y = y
+        self.theta = theta
+
 class Target:
     """
     Constructs an instantiate the AUV
@@ -37,7 +45,7 @@ class Target:
     def __init__(self): #path_finder_controller_target
 
         #self.target_controller = path_finder_controller_target # FOR FOLLOWING A POLYNOMIAL TRAJECTORY
-        self.pose = utils.Pose(config.TARGET_INIT[0], config.TARGET_INIT[1],  config.TARGET_INIT[2])
+        self.pose = Pose(config.TARGET_INIT[0], config.TARGET_INIT[1],  config.TARGET_INIT[2])
         self.lin_vel = config.alpha_0 #(m/s)
         self.ang_vel = config.omega_0 #(rad/sec)
         self.lin_acc = config.alpha_dot_0 #(m/sec^2)

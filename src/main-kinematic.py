@@ -83,7 +83,10 @@ def run_simulation(target, auvNum, pub_s_state, pub_t_state, pub_init_opt):
     while not rospy.is_shutdown():
         if count1 < Hz: #to be sure that the initalization setup is shared among nodes
             pub_init_opt[0].publish(np.array(msg,dtype=np.float32)) #ONE TIME PUBLISHER
-            pub_init_opt[1].publish(np.array([np.sqrt((target.pose.y-auvs_xy[0,1])**2+(target.pose.x-auvs_xy[0,0])**2)],dtype=np.float32))
+            tmp = []
+            for i in range(auvNum):
+                tmp.append(np.sqrt((target.pose.y-auvs_xy[i,1])**2+(target.pose.x-auvs_xy[i,0])**2))
+            pub_init_opt[1].publish(np.array(tmp,dtype=np.float32))
         for i in range(auvNum):
             # Publish agents info
             a = np.array([auvs_xy[i,0],auvs_xy[i,1],auvs_xy[i,2]], dtype=np.float32)

@@ -19,21 +19,17 @@ Ts = sim_info[2]
 target_x_traj = np.loadtxt(log_directory+'/target_x_traj.txt')
 target_y_traj = np.loadtxt(log_directory+'/target_y_traj.txt')
 
-
-
 auv_x_traj = np.zeros((len(target_x_traj),int(auvNum)))
 auv_y_traj = np.zeros((len(target_y_traj),int(auvNum)))
 
+x_hat, tracking_errors, P, avgNodes, avgTime = [], [], [], [], []
 
-x_hat = []
-tracking_errors= []
-P = []
-avgNodes, avgTime = [], []
 PDR = np.zeros((int(auvNum),1))
+
 
 '''d_max = 200
 x = np.linspace(0,d_max)
-alpha = -0.08
+alpha = 0.01
 def sig(x):
  return 1/(1 + np.exp(alpha*(-x+2*d_max/3)))
 y = sig(x)
@@ -49,7 +45,6 @@ for i in range(int(auvNum)):
     avgTime.append(np.loadtxt(log_directory+'/wall_times'+str(i+1)+'.txt')) 
     avgNodes.append(np.loadtxt(log_directory+'/nodes'+str(i+1)+'.txt'))    
 
-
     tmp = np.loadtxt(log_directory+'/'+str(i+1)+'-x_hat_2.txt')
     x_hat_ = np.zeros((len(tmp),4))
     err = np.loadtxt(log_directory+'/'+str(i+1)+'-err.txt')
@@ -61,8 +56,6 @@ for i in range(int(auvNum)):
         x_hat_[:,i] = np.loadtxt(log_directory+'/'+str(i+1)+'-x_hat_'+str(j+1)+'.txt')
         cov[:,i] = np.loadtxt(log_directory+'/'+str(i+1)+'-cov'+str(j+1)+'.txt')
 
-
-
     x_hat.append(x_hat_)
     P.append(cov)
     tracking_errors.append(err)
@@ -72,7 +65,6 @@ print('SIMULATION INFO [auvNum - Simulation Time (s) - Slot Time (s)]',sim_info)
 print('Acoustic Communication Stat [PDR AUV1,PDR AUV2,PDR AUV3,PDR AUV4]:',PDR)
 for i in range(int(auvNum)):
     print('OPTIMIZATION STATS --> Average Optimization Time AUV ID:',i+1,sum(avgTime[i])/len(avgTime[i]))
-    print(avgTime[i])
     print('AUV ID RMSE (m):',i+1,(sum(tracking_errors[i])/len(tracking_errors[i])))
 lw_ms = 2*7
 #fig = plt.figure(1)
@@ -125,8 +117,5 @@ for i in range(int(auvNum)):
     plt.text(len(t)/2,max_value-max_value/8,'RMSE (m):'+str((sum(tracking_errors[i])/len(tracking_errors[i]))))
     plt.grid()
 plt.show()
-
-
-    
 
 #ADD automated image saving

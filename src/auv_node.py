@@ -8,7 +8,7 @@ import numpy as np
 import rospy
 from rospy_tutorials.msg import Floats
 from rospy.numpy_msg import numpy_msg
-
+import matplotlib.pyplot as plt
 # Environment: Define the relevant paths
 pkg_directory = os.path.dirname(pathlib.Path(__file__).parent.resolve())
 header_file = pkg_directory+'/include'+'/uwmsn-sim'
@@ -31,38 +31,6 @@ m_rx = [0,0,0,0] # --> received measurament
 ctrl_policy = []
 for i in range((len(s_state)+1+header.config.H)):
     ctrl_policy.append(0)
-
-def computePursuitVel(curr_est,s_pose,d_max):
-
-    predicted_pose = np.array(np.zeros(2))
-    predicted_pose[0] = curr_est[0,0] + header.config.DT*curr_est[2]
-    predicted_pose[1] = curr_est[1,0] + header.config.DT*curr_est[3]
-
-    eucl_dist = np.sqrt((predicted_pose[0]-s_pose[0])**2+(predicted_pose[1]-s_pose[1])**2)
-    #eucl_dist = np.sqrt((curr_est[0,0]-s_pose[0])**2+(curr_est[1,0]-s_pose[1])**2)
-    epsi = header.config.RANGE_TO_TARGET #DISTANCA VOLUTA DAL TARGET
-
-    '''if eucl_dist - epsi < 1:
-        v_n = header.config.AUV_MIN_VEL
-    elif eucl_dist - epsi < -1:  
-        v_n = -header.config.AUV_MIN_VEL
-    else: 
-        v_n = (eucl_dist-epsi)/header.config.DT'''
-    
-    alpha = 0.1
-    x = (eucl_dist-epsi)
-    
-    weigth = 1/(1 + np.exp(alpha*(-x+2*d_max/3)))
-    
-    '''if v_n >= header.config.AUV_MAX_VEL:#saturatet it
-        v_n = header.config.AUV_MAX_VEL
-    elif v_n <= -header.config.AUV_MAX_VEL:
-        v_n = -header.config.AUV_MAX_VEL'''
-
-    v_n = weigth*header.config.AUV_MAX_VEL
-    
-
-    return v_n
 
 def updatePathRoutine(ax,ay,waypoints,s_pose,v_n,dt,DT):
 
@@ -115,32 +83,6 @@ def updatePathRoutine(ax,ay,waypoints,s_pose,v_n,dt,DT):
 
     return path, idx_motion, idx, rx, ry, ryaw
 
-def compute_cost(phi,len_y):
-
-    tmp_phi = np.zeros((len_y,4))
-    for i in range(len_y):
-        row = phi[i]
-        tmp_phi[i,:] = [row[0],row[1],row[2],row[3]]
-    PHI = np.dot(np.transpose(tmp_phi[:,0:2]),tmp_phi[:,0:2]) 
-    return np.linalg.norm(np.linalg.inv(PHI),ord=2)*np.linalg.norm(PHI,ord=2)
-
-def computeCov(y,phi):
-
-    # Compute Covariance of the target state
-    R = np.zeros((len(y),len(y))) #matrice diagonale perchè errori sulle singole misure indipendenti tra loro            
-    for i in range(len(y)): 
-        for j in range(len(y)):
-            if i == j:
-                R[i,j] = (header.config.SIGMA_MEAS)
-            else:
-                R[i,j] = 0 
-
-    a = header.config.SIGMA_MEAS
-    cov = np.linalg.inv(np.dot(np.dot(np.transpose(phi),np.linalg.inv(a*np.identity(len(y)))),phi))
-        
-    return cov
-
-
 def run_auv_node(pub,auv,obs,Ts,Tf, auvNum):
 
     """Simulate the header.sensor platform and the moving target
@@ -187,7 +129,7 @@ def run_auv_node(pub,auv,obs,Ts,Tf, auvNum):
     rospy.sleep(1)
     ## SIMULATION LOOP ############################################################################################################
     while not rospy.is_shutdown():
-        if count1 <= 100:
+        if count1 <= 100:#be sure to receive the target and sensor pose at the beginning of the sim
             d_max = np.sqrt((t_pose[1]-s_state[1])**2+(t_pose[0]-s_state[0])**2)
             
         if (count1 % (Hz/t_scaler))== 0:
@@ -225,12 +167,12 @@ def run_auv_node(pub,auv,obs,Ts,Tf, auvNum):
             meas_table = []
 
         # if good conditioning do estimation 
-            if compute_cost(phi,len(y)) >= thresh:
+            if header.utils.compute_cost(phi,len(y)) >= thresh:
                 obs.propagate_estimation(t) #you can now propagate
                 curr_est = obs.state
-                v_n = computePursuitVel(curr_est,s_state,d_max)
+                v_n = header.utils.computePursuitVel(curr_est,s_state,d_max)
                 rospy.loginfo('OPTIMIZATION ID %s PURSUIT VEL: %s',auvID,v_n)
-                cov = computeCov(y,phi)# TODO change ak tu curr est
+                cov = header.utils.computeCov(y,phi)# TODO change ak tu curr est
                 #pub[1].publish(np.array([t_pose[0],t_pose[1],np.cos(t_pose[2]),np.sin(t_pose[2])],dtype=np.float32)) #pub estimate of target state
                 tmp = []
                 for i in range(len(curr_est)):
@@ -258,17 +200,13 @@ def run_auv_node(pub,auv,obs,Ts,Tf, auvNum):
                 cov4.append(cov[3,3])
                 ############################################################################################################
             
-                #TODO: OPTIMIZATION OR OFFLINE PLANING MUST ACT HERE!
-                # optimization do stuff
-                # for now we simply assign predefined waypoints and publish them for build policy of intent
         #if the optimization has produced somthing update path, do this control always to avoid unnecessary waitings.
-        if ctrl_policy[0] != old_pi_bar[0]:
+        if ctrl_policy[0] != old_pi_bar[0] and v_n != -10**3:
 
             waypoints = ctrl_policy[4:(len(ctrl_policy)-1)]
             ax = [ctrl_policy[0]] #the "first waypoint is the initial vehicle state"
             ay = [ctrl_policy[1]]
             path, idx_motion, idx, rx, ry, ryaw = updatePathRoutine(ax,ay,waypoints,s_state,v_n,dt,DT)
-
         
         if path != None: 
             pub[2].publish(np.array([int(auvID),rx[idx_motion+idx],ry[idx_motion+idx],ryaw[idx_motion+idx]], dtype=np.float32))

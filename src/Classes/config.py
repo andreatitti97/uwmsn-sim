@@ -4,16 +4,9 @@ import numpy as np
 import os, pathlib
 import importlib.util
 
-pkg_directory = os.path.dirname(pathlib.Path(__file__).parent.resolve())
-class_path = pkg_directory+'/Classes'
-
-spec = importlib.util.spec_from_file_location("module.utils", class_path+"/utils.py")
-utils = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(utils)
-
 ############################################################ SIMULATION SETUP ########################################################
 # Simulation parameters
-TIME_DURATION = 300 # (s)
+TIME_DURATION = 200 # (s)
 TIME_STEP = 0.01
 TIME_SCALER = 1# in [1 - 10] values near 10 may be source of errors (to fast for ROS stack)
 c = 1500 #sound wave speed
@@ -40,7 +33,7 @@ gamma = d*2 #Sigmoid parameter for packet loss --> depends on the distance (tune
 ''' One of the MAIN contribution is that optimization algorithm parameters can be fine tuned according to the expected 
     performances of the newtwork (PDR and latencies) AT PRIORI (using for example DESERT)'''
 
-DT = 10 #d*auvNum/10 sort of
+DT = 20 #d*auvNum/10 sort of
 k_phi_thresh = 1 #Thresh sul condizionamento del regressore per aggiornare la sitma
 
 # Team parameter: number of agents, baselines_XY, inital position, type of formation
@@ -49,8 +42,8 @@ if geometry == 'column' or geometry == 'column2':
     PLATFORM_INIT_POSE = [d, 0, 0]
 
  
-AUV_MAX_VEL = 1.5 #(m/s) - max vel (if CPF active considering v_coop)
-AUV_MIN_VEL = 0.001
+AUV_MAX_VEL = 1.0#2.0 #(m/s) - max vel (if CPF active considering v_coop)
+
 RANGE_TO_TARGET = 10
 # Optimization Parameters
 DELTA = 10**15 #to start the BnB algorithm
@@ -85,7 +78,7 @@ TARGET_INIT = [+2000,-2500, pi, 2.5, 0.0, 0.0, 0.0] #[x(m),y(m),theta(rad),linea
 #TARGET_INIT = [-2000, -1800, pi/2, 6.0, -0.001, 0.0, 0.0] #[x(m),y(m),theta(rad),linear vel(m/s)] - DINAMICA 7
 #TARGET_INIT = [-1500, 2000, pi/8, 5.0, 0.0, 0.8, 0.0] #[x(m),y(m),theta(rad),linear vel(m/s)] - DINAMICA 8
 TARGET_INIT = [-100,-15, pi/2, 0.0, 0.0, 0.0, 0.0] 
-
+TARGET_INIT = [-70,+15, pi/2, 0.0, 0.0, 0.0, 0.0]
 
 alpha_0, omega_0,alpha_dot_0,omega_dot_0 = TARGET_INIT[3],TARGET_INIT[4],TARGET_INIT[5],TARGET_INIT[6]
 MAX_TARGET_VEL = 3 #(m/s) (only if target no costant vels)
