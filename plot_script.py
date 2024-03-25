@@ -29,9 +29,9 @@ PDR = np.zeros((int(auvNum),1))
 
 '''d_max = 200
 x = np.linspace(0,d_max)
-alpha = 0.01
+alpha = -0.01
 def sig(x):
- return 1/(1 + np.exp(alpha*(-x+2*d_max/3)))
+    return 1/(1 + np.exp(alpha*(-x+2*d_max/3)))
 y = sig(x)
 plt.plot(x,y)
 plt.grid()
