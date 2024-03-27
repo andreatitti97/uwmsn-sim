@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 #Import basic system modules
-import os
-import importlib.util, pathlib
+import os, importlib.util, pathlib
 # Import math modules
 import numpy as np
 from math import atan2

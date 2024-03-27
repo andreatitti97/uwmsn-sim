@@ -7,16 +7,6 @@ class_path = pkg_directory+'/Classes'
 spec = importlib.util.spec_from_file_location("module.config", class_path+"/config.py")
 config = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(config)
-spec = importlib.util.spec_from_file_location("module.utils", class_path+"/utils.py")
-utils = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(utils)
-
-def saturateVel(linear_velocity):
-    if config.MIN_TARGET_VEL < linear_velocity < config.MIN_TARGET_VEL:
-        linear_velocity = config.MIN_TARGET_VEL
-    if linear_velocity >= config.MAX_TARGET_VEL or linear_velocity <= -config.MAX_TARGET_VEL:
-        linear_velocity = config.MAX_TARGET_VEL
-    return np.abs(linear_velocity)
 
 class Pose:
     """2D pose"""
@@ -44,7 +34,6 @@ class Target:
 
     def __init__(self): #path_finder_controller_target
 
-        #self.target_controller = path_finder_controller_target # FOR FOLLOWING A POLYNOMIAL TRAJECTORY
         self.pose = Pose(config.TARGET_INIT[0], config.TARGET_INIT[1],  config.TARGET_INIT[2])
         self.lin_vel = config.alpha_0 #(m/s)
         self.ang_vel = config.omega_0 #(rad/sec)

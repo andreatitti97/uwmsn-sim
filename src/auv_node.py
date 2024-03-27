@@ -1,14 +1,13 @@
 #!/usr/bin/env python
 #Import basic system modules
-import os
-import importlib.util, pathlib
+import os, importlib.util, pathlib
 # Import math modules
 import numpy as np
 #Import ROS modules
 import rospy
 from rospy_tutorials.msg import Floats
 from rospy.numpy_msg import numpy_msg
-import matplotlib.pyplot as plt
+
 # Environment: Define the relevant paths
 pkg_directory = os.path.dirname(pathlib.Path(__file__).parent.resolve())
 header_file = pkg_directory+'/include'+'/uwmsn-sim'
@@ -129,7 +128,7 @@ def run_auv_node(pub,auv,obs,Ts,Tf, auvNum):
     rospy.sleep(1)
     ## SIMULATION LOOP ############################################################################################################
     while not rospy.is_shutdown():
-        if count1 <= 100:#be sure to receive the target and sensor pose at the beginning of the sim
+        if count1 <= (Hz/t_scaler):#be sure to receive the target and sensor pose at the beginning of the sim
             d_max = np.sqrt((t_pose[1]-s_state[1])**2+(t_pose[0]-s_state[0])**2)
             
         if (count1 % (Hz/t_scaler))== 0:

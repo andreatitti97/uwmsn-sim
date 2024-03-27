@@ -2,7 +2,7 @@
 import os, pathlib
 import importlib.util
 import numpy as np
-from numpy import append, matlib
+
 # Import Costum classes
 pkg_directory = os.path.dirname(pathlib.Path(__file__).parent.resolve())
 class_path = pkg_directory+'/Classes'
@@ -25,7 +25,7 @@ class Estimator:
         self.__x = []
         self.__phi = []
         self.__y = []
-        self.__C = matlib.zeros((1,4))
+        self.__C = np.zeros((1,4))
         self.__t = []
         self.t_prev = 0
 

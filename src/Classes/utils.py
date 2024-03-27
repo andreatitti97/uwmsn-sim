@@ -1,4 +1,4 @@
-import os, importlib, pathlib
+import importlib, pathlib
 import numpy as np
 
 # Environment: Define the relevant paths
@@ -34,17 +34,10 @@ def computePursuitVel(curr_est,s_pose,d_max):
     
     weigth = 1/(1 + np.exp(alpha*(-x+d_max/2)))
     v_n = weigth*config.AUV_MAX_VEL
-    '''if config.AUV_MIN_VEL <= v_n <= config.AUV_MIN_VEL:
-        if v_n >= 0:
-            v_n = config.AUV_MIN_VEL
-        elif v_n < 0:
-            v_n = -config.AUV_MIN_VEL'''
+
     if x < 1:
         v_n = -10**3
-    #d = np.linspace(0,d_max)
-    #plt.plot(d,1/(1 + np.exp(alpha*(-d+d_max/2))))
-    #plt.grid()
-    #plt.show()
+
     return v_n
 
 def compute_cost(phi,len_y):

@@ -1,10 +1,8 @@
 #!+usr+bin+env python
 import matplotlib.pyplot as plt
 import numpy as np
-import os
-import pathlib
-from math import pi
-from matplotlib.lines import Line2D
+import os, pathlib
+from matplotlib.lines import Line2D #can b used for costum legends
 
 pkg_directory = os.path.dirname(pathlib.Path(__file__).parent.resolve())+'/uwmsn-sim'
 log_directory = pkg_directory+'/logs'
@@ -25,17 +23,6 @@ auv_y_traj = np.zeros((len(target_y_traj),int(auvNum)))
 x_hat, tracking_errors, P, avgNodes, avgTime = [], [], [], [], []
 
 PDR = np.zeros((int(auvNum),1))
-
-
-'''d_max = 200
-x = np.linspace(0,d_max)
-alpha = -0.01
-def sig(x):
-    return 1/(1 + np.exp(alpha*(-x+2*d_max/3)))
-y = sig(x)
-plt.plot(x,y)
-plt.grid()
-plt.show()'''
 
 
 for i in range(int(auvNum)):
@@ -63,9 +50,9 @@ for i in range(int(auvNum)):
 # PLOTs
 print('SIMULATION INFO [auvNum - Simulation Time (s) - Slot Time (s)]',sim_info)   
 print('Acoustic Communication Stat [PDR AUV1,PDR AUV2,PDR AUV3,PDR AUV4]:',PDR)
-for i in range(int(auvNum)):
+'''for i in range(int(auvNum)):
     print('OPTIMIZATION STATS --> Average Optimization Time AUV ID:',i+1,sum(avgTime[i])/len(avgTime[i]))
-    print('AUV ID RMSE (m):',i+1,(sum(tracking_errors[i])/len(tracking_errors[i])))
+    print('AUV ID RMSE (m):',i+1,(sum(tracking_errors[i])/len(tracking_errors[i])))'''
 lw_ms = 2*7
 #fig = plt.figure(1)
 #patch = fig.patch 

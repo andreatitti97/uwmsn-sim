@@ -1,5 +1,4 @@
-import os, pathlib
-import importlib.util
+import os, pathlib, importlib.util
 
 pkg_directory = os.path.dirname(pathlib.Path(__file__).parent.resolve())
 class_path = pkg_directory+'/Classes'

@@ -4,9 +4,8 @@ Cubic spline planner
 Author: Andrea Tiranti
 
 """
-import math
+import math, bisect
 import numpy as np
-import bisect
 
 class CubicSpline1D:
     """
