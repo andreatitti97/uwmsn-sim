@@ -22,6 +22,7 @@ splinePlanner = header.planner
 # Init empy lists for saving simulation data
 x_hat_1,x_hat_2,x_hat_3,x_hat_4 = [], [], [], []
 cov1, cov2, cov3, cov4, err = [], [], [], [], []
+heading, surge_vel = [], []
 
 # Init Global Variables for ROS callbacks
 s_state = [0,0,0] # --> Agent Pose
@@ -41,7 +42,7 @@ def updatePathRoutine(ax,ay,waypoints,s_pose,v_n,dt,DT):
 
         for i in range(len(ax)):
             
-            tmp.append(np.sqrt((s_state[0]-ax[i])**2+(s_state[1]-ay[i])**2))
+            tmp.append(np.sqrt((s_pose[0]-ax[i])**2+(s_pose[1]-ay[i])**2))
             
         idx = tmp.index(min(tmp))
         
@@ -51,8 +52,8 @@ def updatePathRoutine(ax,ay,waypoints,s_pose,v_n,dt,DT):
             ay.pop(-1)
 
     # Initialized starting position
-    a_i = [s_state[0],s_state[1]]
-    t_i = s_state[2]
+    a_i = [s_pose[0],s_pose[1]]
+    t_i = s_pose[2]
 
     # Compute new waypoints according to the given heading change
     for i in range(len(waypoints)):
@@ -70,7 +71,7 @@ def updatePathRoutine(ax,ay,waypoints,s_pose,v_n,dt,DT):
 
     # Generate new path 
     path = splinePlanner.CubicSpline2D(ax, ay)
-    [rx, ry, ryaw, rk, s] = header.utils.calc_spline_course(path,dt)
+    [rx, ry, ryaw, rk, s, surge] = header.utils.calc_spline_course(path,dt)
 
     tmp = []
     for i in range(len(rx)):
@@ -80,7 +81,7 @@ def updatePathRoutine(ax,ay,waypoints,s_pose,v_n,dt,DT):
     idx = tmp.index(min(tmp))
     idx_motion = 0
 
-    return path, idx_motion, idx, rx, ry, ryaw
+    return path, idx_motion, idx, rx, ry, ryaw, surge
 
 def run_auv_node(pub,auv,obs,Ts,Tf, auvNum):
 
@@ -178,6 +179,7 @@ def run_auv_node(pub,auv,obs,Ts,Tf, auvNum):
                     tmp.append(curr_est[i,0])
 
                 tmp.append(v_n)
+                
                 pub[1].publish(np.array(tmp,dtype=np.float32)) #pub estimate of target state
                 rospy.logout('%s|---- AUV '+str(auvID)+': Target state Estimation [m,m/s] --> %s%s',blue,curr_est,none)
                 
@@ -202,12 +204,23 @@ def run_auv_node(pub,auv,obs,Ts,Tf, auvNum):
         #if the optimization has produced somthing update path, do this control always to avoid unnecessary waitings.
         if ctrl_policy[0] != old_pi_bar[0] and v_n != -10**3:
 
-            waypoints = ctrl_policy[4:(len(ctrl_policy)-1)]
-            ax = [ctrl_policy[0]] #the "first waypoint is the initial vehicle state"
-            ay = [ctrl_policy[1]]
-            path, idx_motion, idx, rx, ry, ryaw = updatePathRoutine(ax,ay,waypoints,s_state,v_n,dt,DT)
+            tmp = ctrl_policy[4:(len(ctrl_policy)-1)]
+            if -0.1 <= np.sum(tmp) <= +0.1:
+                waypoints = []
+                for i in range(len(tmp)):
+                    waypoints.append(0)
+            else:
+                waypoints = tmp
+
+
+            ax = [s_state[0]] #the "first waypoint is the initial vehicle state"
+            ay = [s_state[1]]
+            path, idx_motion, idx, rx, ry, ryaw, surge = updatePathRoutine(ax,ay,waypoints,s_state,v_n,dt,DT)
         
         if path != None: 
+            heading.append(ryaw[idx_motion+idx])
+            surge_vel.append(v_n)
+
             pub[2].publish(np.array([int(auvID),rx[idx_motion+idx],ry[idx_motion+idx],ryaw[idx_motion+idx]], dtype=np.float32))
             # PUBLISH THE CTRL_CMD
             if len(rx)-1 <= idx_motion+idx:
@@ -225,6 +238,7 @@ def run_auv_node(pub,auv,obs,Ts,Tf, auvNum):
         count1 += 1 
         if t_tdma >= Tf:
             t_tdma = 0
+        
         rate.sleep()
 
 def shutdown_cllbk():
@@ -241,6 +255,9 @@ def shutdown_cllbk():
     np.savetxt(log_path+'/'+str(auvID)+'-cov2.txt',cov2)
     np.savetxt(log_path+'/'+str(auvID)+'-cov3.txt',cov3)
     np.savetxt(log_path+'/'+str(auvID)+'-cov4.txt',cov4)
+
+    np.savetxt(log_path+'/'+str(auvID)+'surge_vel',surge_vel)
+    np.savetxt(log_path+'/'+str(auvID)+'heading',heading)
     magenta = "\033[0;35m"
     none = "\033[0m"
     rospy.loginfo('%s|---- AUV '+str(auvID)+': Simulation data saved --> Shutting down ...%s',magenta,none)

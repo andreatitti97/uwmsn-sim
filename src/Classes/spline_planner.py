@@ -239,4 +239,10 @@ class CubicSpline2D:
         dy = self.sy.calc_first_derivative(s)
         yaw = math.atan2(dy, dx)
         return yaw
+    
+    def calc_surge(self,s):
+        dx = self.sx.calc_first_derivative(s)
+        dy = self.sy.calc_first_derivative(s)
+        surge = np.sqrt(dx**2+dy**2)
+        return surge
 

@@ -3,7 +3,7 @@ from math import pi
 
 ############################################################ SIMULATION SETUP ########################################################
 # Simulation parameters
-TIME_DURATION = 250 # (s)
+TIME_DURATION = 500 # (s)
 TIME_STEP = 0.01
 TIME_SCALER = 1# in [1 - 10] values near 10 may be source of errors (to fast for ROS stack)
 c = 1500 #sound wave speed
@@ -16,13 +16,13 @@ SIGMA_MEAS = 0.08# (rad^2) --> 4.5° (as assumed in DAMPS and by cassino)
 
 # AUVs Team Settings
 d = 20 #vehicle distance
-AUV_MAX_VEL = 1.0 #(m/s) - max vel (if CPF active v_coop should be considered)
-RANGE_TO_TARGET = 10
+AUV_MAX_VEL = 1.0#1.0 #(m/s) - max vel (if CPF active v_coop should be considered)
+RANGE_TO_TARGET = 5
 
 # Communication Paramaters
 Ts = 2 #TDMA: slot time
-alpha = -0.003 #Sigmoid parameters for packet loss, if alpha << gamma --> more packet loss
-gamma = d*2 #Sigmoid parameter for packet loss --> depends on the distance (tune only alpha)
+alpha = -0.1 #0.01 #Sigmoid parameters for packet loss, if alpha << gamma --> more packet loss
+gamma = d*3 #Sigmoid parameter for packet loss --> depends on the distance (tune only alpha)
 
 DT = 10 #d*auvNum/10 sort of
 k_phi_thresh = 1 #Thresh sul condizionamento del regressore per aggiornare la sitma
@@ -36,8 +36,8 @@ MIN = 5*pi/180
 U = 3 #number of control choices
 H = 3 # planning horizon
 
-ctrl_cmd = [-u_max,-u_max*2/(U/2),-u_max/(U/2),0,
-                u_max/(U/2), u_max*2/(U/2), u_max] #set of control actions
+ctrl_cmd = [-u_max,-u_max*4/(U/2),-u_max/(U/2),0,
+                u_max/(U/2), u_max*4/(U/2), u_max] #set of control actions
 #ctrl_cmd = [-u_max, -u_max*8/(U) ,-u_max*6/(U) ,-u_max*4/(U),-u_max*2/(U),0,
                 #u_max*2/(U), u_max*4/(U), u_max*8/(U) , u_max*6/(U) ,u_max] #set of control actions
 ctrl_cmd = [-u_max,0,u_max]
@@ -58,7 +58,7 @@ TARGET_INIT = [+2000,-2500, pi, 2.5, 0.0, 0.0, 0.0] #[x(m),y(m),theta(rad),linea
 #TARGET_INIT = [-2000, -1800, pi/2, 6.0, -0.001, 0.0, 0.0] #[x(m),y(m),theta(rad),linear vel(m/s)] - DINAMICA 7
 #TARGET_INIT = [-1500, 2000, pi/8, 5.0, 0.0, 0.8, 0.0] #[x(m),y(m),theta(rad),linear vel(m/s)] - DINAMICA 8
 TARGET_INIT = [-100,-15, pi/2, 0.0, 0.0, 0.0, 0.0] 
-TARGET_INIT = [-70,+15, pi-pi/8, 0.0, 0.0, 0.0, 0.0]
+TARGET_INIT = [-70,+15, pi-pi/8, 0.5, 0.0, 0.0, 0.0]
 
 alpha_0, omega_0,alpha_dot_0,omega_dot_0 = TARGET_INIT[3],TARGET_INIT[4],TARGET_INIT[5],TARGET_INIT[6]
 MAX_TARGET_VEL = 3 #(m/s) (only if target no costant vels)

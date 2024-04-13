@@ -11,14 +11,18 @@ spec.loader.exec_module(config)
 def calc_spline_course(sp,ds):
     s = np.arange(0, sp.s[-1], ds)
 
-    rx, ry, ryaw, rk = [], [], [], []
+    rx, ry, ryaw, rk, surge = [], [], [], [], []
     for i_s in s:
         ix, iy = sp.calc_position(i_s)
+        iu = sp.calc_surge(i_s)
         rx.append(ix)
         ry.append(iy)
+        surge.append(iu)
+        
         ryaw.append(sp.calc_yaw(i_s))
         rk.append(sp.calc_curvature(i_s))
-    return rx, ry, ryaw, rk, s
+
+    return rx, ry, ryaw, rk, s, surge
 
 def computePursuitVel(curr_est,s_pose,d_max):
 
@@ -32,7 +36,8 @@ def computePursuitVel(curr_est,s_pose,d_max):
     alpha = 0.09
     x = (eucl_dist-epsi)
     
-    weigth = 1/(1 + np.exp(alpha*(-x+d_max/2)))
+    weigth = 1/(1 + np.exp(alpha*(-x+d_max/2))) #sigmoidal behaviour
+    #weight = alpha*x #linear behaviour
     v_n = weigth*config.AUV_MAX_VEL
 
     if x < 1:
