@@ -27,11 +27,11 @@ def calc_spline_course(sp,ds):
 def computePursuitVel(curr_est,s_pose,d_max):
 
     predicted_pose = np.array(np.zeros(2))
-    predicted_pose[0] = curr_est[0,0] + config.DT*curr_est[2]
+    predicted_pose[0] = curr_est[0,0] + config.DT*curr_est[2]#TODO: check how much time propagate
     predicted_pose[1] = curr_est[1,0] + config.DT*curr_est[3]
 
     eucl_dist = np.sqrt((predicted_pose[0]-s_pose[0])**2+(predicted_pose[1]-s_pose[1])**2)
-    epsi = config.RANGE_TO_TARGET #DISTANCA VOLUTA DAL TARGET
+    epsi = config.RANGE_TO_TARGET #DISTANZA VOLUTA DAL TARGET
     
     alpha = 0.09
     x = (eucl_dist-epsi)

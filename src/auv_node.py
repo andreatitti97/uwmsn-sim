@@ -29,7 +29,7 @@ s_state = [0,0,0] # --> Agent Pose
 t_pose = [0,0,0] # --> Target ground truth
 m_rx = [0,0,0,0] # --> received measurament
 ctrl_policy = []
-for i in range((len(s_state)+1+header.config.H)):
+for i in range((len(s_state)+((header.config.H+1)*2))):
     ctrl_policy.append(0)
 
 def updatePathRoutine(ax,ay,waypoints,s_pose,v_n,dt,DT):
@@ -203,14 +203,16 @@ def run_auv_node(pub,auv,obs,Ts,Tf, auvNum):
             
         #if the optimization has produced somthing update path, do this control always to avoid unnecessary waitings.
         if ctrl_policy[0] != old_pi_bar[0] and v_n != -10**3:
-
-            tmp = ctrl_policy[4:(len(ctrl_policy)-1)]
-            if -0.1 <= np.sum(tmp) <= +0.1:
+            
+            tmp = ctrl_policy[7:(len(ctrl_policy)-1)]
+            rospy.logerr('AUV ID %s ACTUAL CTRL POLICY %s:',auvID,ctrl_policy[7:(len(ctrl_policy)-1)])
+            if -0.1 <= np.sum(tmp) <= +0.1: #check if zig-zag trajectorys
                 waypoints = []
                 for i in range(len(tmp)):
                     waypoints.append(0)
             else:
                 waypoints = tmp
+            rospy.logerr('AUV ID %s APPLIED CTRL POLICY %s:',auvID,waypoints)
 
 
             ax = [s_state[0]] #the "first waypoint is the initial vehicle state"

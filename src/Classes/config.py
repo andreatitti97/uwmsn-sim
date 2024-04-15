@@ -3,7 +3,7 @@ from math import pi
 
 ############################################################ SIMULATION SETUP ########################################################
 # Simulation parameters
-TIME_DURATION = 500 # (s)
+TIME_DURATION = 250 # (s)
 TIME_STEP = 0.01
 TIME_SCALER = 1# in [1 - 10] values near 10 may be source of errors (to fast for ROS stack)
 c = 1500 #sound wave speed
@@ -24,7 +24,7 @@ Ts = 2 #TDMA: slot time
 alpha = -0.1 #0.01 #Sigmoid parameters for packet loss, if alpha << gamma --> more packet loss
 gamma = d*3 #Sigmoid parameter for packet loss --> depends on the distance (tune only alpha)
 
-DT = 10 #d*auvNum/10 sort of
+DT = 20 #d*auvNum/10 sort of
 k_phi_thresh = 1 #Thresh sul condizionamento del regressore per aggiornare la sitma
 
 # Optimization Parameters
@@ -58,7 +58,7 @@ TARGET_INIT = [+2000,-2500, pi, 2.5, 0.0, 0.0, 0.0] #[x(m),y(m),theta(rad),linea
 #TARGET_INIT = [-2000, -1800, pi/2, 6.0, -0.001, 0.0, 0.0] #[x(m),y(m),theta(rad),linear vel(m/s)] - DINAMICA 7
 #TARGET_INIT = [-1500, 2000, pi/8, 5.0, 0.0, 0.8, 0.0] #[x(m),y(m),theta(rad),linear vel(m/s)] - DINAMICA 8
 TARGET_INIT = [-100,-15, pi/2, 0.0, 0.0, 0.0, 0.0] 
-TARGET_INIT = [-70,+15, pi-pi/8, 0.5, 0.0, 0.0, 0.0]
+#TARGET_INIT = [-70,+15, pi-pi/8, 0.5, 0.0, 0.0, 0.0]
 
 alpha_0, omega_0,alpha_dot_0,omega_dot_0 = TARGET_INIT[3],TARGET_INIT[4],TARGET_INIT[5],TARGET_INIT[6]
 MAX_TARGET_VEL = 3 #(m/s) (only if target no costant vels)

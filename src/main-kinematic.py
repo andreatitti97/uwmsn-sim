@@ -62,10 +62,11 @@ def run_simulation(target, auvNum, pub_s_state, pub_t_state, pub_init_opt):
     msg = []
     d = header.config.d
     pos = [d/2,d/2,-d/2,d/2,-d/2,-d/2,d/2,-d/2]
+    pos = [15,7,-25,13,-20,-10,-13,26]
     for i in range(len(auvs_xy)):
   
-        auvs_xy[i,0] = pos[0] #TODO: SOLVE THE BUG OF HAVING AUV1 IN POS [0,0,0]
-        auvs_xy[i,1] = pos[1]
+        auvs_xy[i,0] = pos[0]+3*np.random.random() #TODO: SOLVE THE BUG OF HAVING AUV1 IN POS [0,0,0]
+        auvs_xy[i,1] = pos[1]-2*np.random.random()
         auvs_xy[i,2] = atan2(target.pose.y-auvs_xy[i,1],target.pose.x-auvs_xy[i,0])
 
         msg.append(auvs_xy[i,0])
