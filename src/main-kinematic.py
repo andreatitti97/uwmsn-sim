@@ -58,23 +58,16 @@ def run_simulation(target, auvNum, pub_s_state, pub_t_state, pub_init_opt):
     dt = header.config.TIME_STEP*t_scaler
  
     # Init AUVs position and orientation
-    auvs_xy = np.zeros((auvNum,3))
+    auvs_xy = header.config.AUV_XY
     msg = []
-    d = header.config.d
-    pos = [d/2,d/2,-d/2,d/2,-d/2,-d/2,d/2,-d/2]
-    
+
     for i in range(len(auvs_xy)):
-  
-        auvs_xy[i,0] = pos[0]#+3*np.random.random() #TODO: SOLVE THE BUG OF HAVING AUV1 IN POS [0,0,0]
-        auvs_xy[i,1] = pos[1]#-2*np.random.random()
-        auvs_xy[i,2] = atan2(target.pose.y-auvs_xy[i,1],target.pose.x-auvs_xy[i,0])
 
         msg.append(auvs_xy[i,0])
         msg.append(auvs_xy[i,1])
         msg.append(auvs_xy[i,2])
-        pos.pop(0)
-        pos.pop(0)
-        
+
+    rospy.loginfo('|---- OPTIMIZATION TIME WINDOW (s) --> %s',header.config.DT)
     rospy.loginfo('|---- KINEMATIC SIMULATION: Initial AUVs positions (m) --> %s',auvs_xy)
     rospy.loginfo('|---- KINEMATIC SIMULATION: Initial Target position (m) --> %s',[target.pose.x,target.pose.y,target.pose.theta])
 

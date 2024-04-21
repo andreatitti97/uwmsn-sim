@@ -14,7 +14,7 @@ class_directory = pkg_directory+'/src'+'/Classes'
 
 sim_info = np.loadtxt(log_directory+'/sim_info.txt')
 ctrl_set = np.loadtxt(log_directory+'/ctrl_set.txt')
-auvNum = sim_info[0]
+auvNum = sim_info[0] 
 elapsed_t = sim_info[1]
 
 Ts = sim_info[2]
@@ -24,8 +24,6 @@ target_y_traj = np.loadtxt(log_directory+'/target_y_traj.txt')
 
 target_x_traj2 = np.loadtxt(log_directory+'/target_x_traj.txt')
 target_y_traj2 = np.loadtxt(log_directory+'/target_y_traj.txt')
-
-
 
 auv_x_traj = np.zeros((len(target_x_traj),int(auvNum)))
 auv_y_traj = np.zeros((len(target_y_traj),int(auvNum)))
@@ -64,6 +62,10 @@ for i in range(int(auvNum)):
     P.append(cov)
     tracking_errors.append(err)
 
+'''print(auv_x_traj)
+auv_x_traj = np.delete(auv_x_traj,2)
+auv_y_traj = np.delete(auv_y_traj,2)
+print(auv_x_traj)'''
 
 
 cov_x = np.loadtxt(log_directory+'/'+str(1)+'-cov'+str(1)+'.txt')
@@ -84,8 +86,16 @@ def computeCost(phi):
 
     PHI = np.dot(np.transpose(phi),np.dot(np.linalg.inv(W),phi))
 
-    return np.linalg.norm(np.linalg.inv(PHI),ord=2)*np.linalg.norm(PHI,ord=2)
-    
+    return 1/np.linalg.norm(np.linalg.inv(PHI),ord=2)*np.linalg.norm(PHI,ord=2)
+'''    
+test_phi = np.zeros((3,2))
+test_phi[0] = [np.sin(0) -np.cos(0)]
+test_phi[1] = [np.sin(100*np.pi/180) -np.cos(100*np.pi/180)]
+test_phi[2] = [np.sin(-30*np.pi/180) -np.cos(-30*np.pi/180)]
+
+print(test_phi)
+cost = computeCost(test_phi)
+print(cost)'''
 
 # PLOTs
 
@@ -107,7 +117,7 @@ for i in range(int(auvNum)):
     print('AUV ID RMSE (m):',i+1,(sum(tracking_errors[i])/len(tracking_errors[i])))
 
 fig, ax = plt.subplots(1,1)
-ax.set_facecolor('lightskyblue')
+ax.set_facecolor('lightcyan')
 
 tot_smpls = len(target_x_traj)
 scaler = 5000
@@ -134,7 +144,7 @@ for j in range(int(auvNum)):
     tmp_x = tmp_x[::10]
     tmp_y = auv_y_traj[:,j]
     tmp_y = tmp_y[::10]
-    
+
     
     for i in range(len(tmp_x)):
         b = atan2(tmp_y[i]-target_y_traj[i],tmp_x[i]-target_x_traj[i])
@@ -170,9 +180,12 @@ for i in range(len(phi1)):
     phi[0] = phi1[i]
     phi[1] = phi2[i]
     phi[2] = phi3[i]
-    phi[3] = phi4[i]
+    #phi[3] = phi4[i]
+
     cost = computeCost(phi)
     list_phi.append(cost)
+
+#np.savetxt('/home/andrea/Desktop/logs_COMPARISON_ERRORS/cond_geom',list_phi)
 
 # Moving Plots - subplot1
 target = ax.plot(target_x_traj[0],target_y_traj[0],'r',markersize=lw_ms,label='x(t)')[0]
@@ -180,12 +193,12 @@ target = ax.plot(target_x_traj[0],target_y_traj[0],'r',markersize=lw_ms,label='x
 a1 = ax.plot(a1_x[0],a1_y[0],'b',label='s'+str(1)+'(t)')[0]
 a2 = ax.plot(a2_x[0],a2_y[0],'b',label='s'+str(2)+'(t)')[0]
 a3 = ax.plot(a3_x[0],a3_y[0],'b',label='s'+str(3)+'(t)')[0]
-a4 = ax.plot(a4_x[0],a4_y[0],'b',label='s'+str(4)+'(t)')[0]
+#a4 = ax.plot(a4_x[0],a4_y[0],'b',label='s'+str(4)+'(t)')[0]
 
 l1 = ax.plot(l1_x[0],l1_y[0],'g--',label='LOS')[0]
 l2 = ax.plot(l2_x[0],l2_y[0],'g--')[0]
 l3 = ax.plot(l3_x[0],l3_y[0],'g--')[0]
-l4 = ax.plot(l4_x[0],l4_y[0],'g--')[0]
+#l4 = ax.plot(l4_x[0],l4_y[0],'g--')[0]
 
 # Static plots - subplot1
 ax.plot(target_x_traj[0],target_y_traj[0],'ro',markersize=lw_ms,label='s(t0)')
@@ -193,12 +206,12 @@ ax.plot(target_x_traj[0],target_y_traj[0],'ro',markersize=lw_ms,label='s(t0)')
 for i in range(int(auvNum)):
     ax.plot(auv_x_traj[0,i],auv_y_traj[0,i],'ob',markersize=lw_ms,label='s'+str(i+1)+'(t0)')
 
-estimation = ax.scatter(x_hat_x[0],x_hat_y[0],c='lightskyblue',edgecolors='r',label='x_hat(t)')
+estimation = ax.scatter(x_hat_x[0],x_hat_y[0],c='lightcyan',edgecolors='r',label='x_hat(t)')
 
 # Moving plots - suplot2
 '''
 fig2, ax2 = plt.subplots(1,1)
-ax2.set_facecolor('lightskyblue')
+ax2.set_facecolor('lightcyan')
 t_axis = np.linspace(0,elapsed_t,len(list_phi))
 obj_func = ax2.plot(t_axis[0],list_phi[0],label='Objective Function')[0]
 ax2.set(xlim=[0,elapsed_t],ylim=[0,1],xlabel='t [s]', ylabel='y [m]')
@@ -218,12 +231,12 @@ def update(frame):
     a1.set_data(a1_x[:frame],a1_y[:frame])
     a2.set_data(a2_x[:frame],a2_y[:frame])
     a3.set_data(a3_x[:frame],a3_y[:frame])
-    a4.set_data(a4_x[:frame],a4_y[:frame])
+    #a4.set_data(a4_x[:frame],a4_y[:frame])
     
     l1.set_data(l1_x[frame],l1_y[frame])
     l2.set_data(l2_x[frame],l2_y[frame])
     l3.set_data(l3_x[frame],l3_y[frame])
-    l4.set_data(l4_x[frame],l4_y[frame])
+    #l4.set_data(l4_x[frame],l4_y[frame])
 
     
     if frame % 100 == 0:  
@@ -235,9 +248,9 @@ def update(frame):
     #plt.gca().autoscale_view()
 
 
-    return (target, a1,a2,a3,a4,l1,l2,l3,l4,estimation)
+    return (target, a1,a2,a3,l1,l2,l3,estimation)#a4
 
-ax.set(xlim=[-250,250],ylim=[-250,250],xlabel='x [m]', ylabel='y [m]')
+ax.set(xlim=[-400,250],ylim=[-250,400],xlabel='x [m]', ylabel='y [m]')
 
 ax.legend()
 ax.grid()
@@ -250,8 +263,8 @@ ani2 = animation.FuncAnimation(fig=fig2, func=update2,
 ani = animation.FuncAnimation(fig=fig, func=update,
                                frames=len(target_x_traj), interval=1, blit=True)
 
-plt.xlim([-250,250])
-plt.ylim([-250,250])
+plt.xlim([-400,250])
+plt.ylim([-250,400])
 #manager = plt.get_current_fig_manager()
 #manager.full_screen_toggle()
 plt.show()
@@ -259,7 +272,7 @@ plt.show()
 ##########################################################
 fs = 40
 lw = 4
-math_vars = ['\\sigma_m','\\xi','\\bar{d}_r']
+math_vars = ['\\sigma_m','\\{d}','\\{d}_r','\\bar{e}','\\xi','s_i']
 #PLOT OBJECTIV FUNCTION
 
 fig, ax = plt.subplots(1,1)
@@ -272,7 +285,7 @@ for i in range(len(list_phi)):
 ax.plot(t_axis,list_phi,label='Objective Function',linewidth=lw)
 ax.grid()
 
-ax.set_xlabel('t(s)', fontsize = fs)
+ax.set_xlabel('t (s)', fontsize = fs)
 ax.set_ylabel(r'$ %s $'%math_vars[0], fontsize=fs)
 plt.yticks(fontsize=fs/2, rotation=0)#to set dimension and orientation of tick labels
 plt.xticks(fontsize=fs/2, rotation=0)#to set dimension and orientation of tick labels
@@ -281,21 +294,32 @@ plt.show()
 
 fig, ax = plt.subplots()
 
-ax.set_facecolor('lightskyblue')
-plt.title('Simulation Scenario')
-
+#time_vars = ['\']
 tot_smpls = len(target_x_traj)
 scaler = 5000
-plt.plot(target_x_traj,target_y_traj)
-plt.plot(target_x_traj[0],target_y_traj[0],'ro',markersize=lw_ms)
-plt.plot(target_x_traj[-1],target_y_traj[-1],'ro',markersize=lw_ms)
+plt.plot(target_x_traj,target_y_traj,label=r'$ %s $'%math_vars[4]+'(t)',color='r')
+plt.plot(target_x_traj[-1],target_y_traj[-1],'ro',markersize=lw_ms,markerfacecolor='g',label=r'$ %s $'%math_vars[4]+'(tf)')
+plt.plot(target_x_traj[0],target_y_traj[0],'ro',markersize=lw_ms,markerfacecolor='r',label=r'$ %s $'%math_vars[4]+'(t0)')
+auvNum = 3
 for i in range(int(auvNum)):
-    plt.plot(auv_x_traj[-1,i],auv_y_traj[-1,i],'og',markersize=lw_ms)
-    plt.plot([auv_x_traj[-1,i],
-            target_x_traj[-1]],[auv_y_traj[-1,i],target_y_traj[-1]],'g--',linewidth=lw)
-    plt.plot(auv_x_traj[0,i],auv_y_traj[0,i],'ob',markersize=lw_ms)
     
-    plt.plot(auv_x_traj[:,i],auv_y_traj[:,i],'b',markersize=lw_ms)
+
+    plt.text(auv_x_traj[0,i]+3,auv_y_traj[0,i]+3,'s'+str(i+1),fontsize=fs/2)
+    
+    if i == 0:
+        plt.plot([auv_x_traj[-1,i],
+            target_x_traj[-1]],[auv_y_traj[-1,i],target_y_traj[-1]],'g--',linewidth=lw/2,label='LOS')
+        plt.plot(auv_x_traj[0,i],auv_y_traj[0,i],'ob',markersize=lw_ms,label=r'$ %s $'%math_vars[5]+'(t0)')
+        plt.plot(auv_x_traj[:,i],auv_y_traj[:,i],'b',markersize=lw_ms,label=r'$ %s $'%math_vars[5]+'(t)')
+        plt.plot(auv_x_traj[-1,i],auv_y_traj[-1,i],'og',markersize=lw_ms,label=r'$ %s $'%math_vars[5]+'(tf)')
+    else:
+        plt.plot([auv_x_traj[-1,i],
+            target_x_traj[-1]],[auv_y_traj[-1,i],target_y_traj[-1]],'g--',linewidth=lw/2)
+        plt.plot(auv_x_traj[0,i],auv_y_traj[0,i],'ob',markersize=lw_ms)
+        plt.plot(auv_x_traj[:,i],auv_y_traj[:,i],'b',markersize=lw_ms)
+        plt.plot(auv_x_traj[-1,i],auv_y_traj[-1,i],'og',markersize=lw_ms)
+    
+    
     
 
     '''for j in range(int(tot_smpls/scaler)):
@@ -312,31 +336,34 @@ plt.xlabel('x (m)',fontsize=fs)
 plt.ylabel('y (m)',fontsize=fs)
 plt.grid()
 plt.axis('equal')
-
+plt.legend(fontsize=fs/2)
 plt.yticks(fontsize=fs/2, rotation=0)#to set dimension and orientation of tick labels
 plt.xticks(fontsize=fs/2, rotation=0)#to set dimension and orientation of tick labels
 plt.show()
 
 ##########################################################
-plt.title('Speed and Heading profiles')
 
 from scipy.interpolate import make_interp_spline
-plt.title('Surge Velocity profiles')
-# PLot surge vel during the mission
+
 for i in range(int(auvNum)):
     #plt.subplot(int(auvNum),1,i+1)
-    
+    x = np.linspace(0,elapsed_t,int(len(surge_vel[i])/1000)+1) #subsampled set
+    tmp = surge_vel[i]
+    model = make_interp_spline(x, tmp[::1000])
+
+    t = np.linspace(0,elapsed_t,len(surge_vel[i]))#original samples length but interpolated
+    y = model(t)
     t = np.linspace(0,elapsed_t,len(surge_vel[i]))
     plt.plot(t,surge_vel[i],label='u'+str(i+1),linewidth=lw)
     
-plt.ylabel('u', fontsize=fs)
+plt.ylabel('u (m/s)', fontsize=fs)
 
 
-plt.xlabel('t(s)', fontsize = fs)
+plt.xlabel('t (s)', fontsize = fs)
 
 plt.yticks(fontsize=fs/2, rotation=0)#to set dimension and orientation of tick labels
 plt.xticks(fontsize=fs/2, rotation=0)#to set dimension and orientation of tick labels
-
+plt.legend(fontsize=fs/2)
 plt.grid()
 plt.show()
 
@@ -361,21 +388,27 @@ for i in range(int(auvNum)):
 plt.show()'''
 # Plot relative distance between auvs and target
 
+math_vars = ['d_1','d_2','d_3','d_4','d_{-}^{r}','d_{+}^{r}']
 for i in range(int(auvNum)):
     #plt.subplot(int(auvNum),1,i+1)
     dist = []
-    thresh = []
+    low_thresh = []
+    high_thresh = []
     tmp_x = auv_x_traj[:,i]
     tmp_y = auv_y_traj[:,i]
-    #tmp_x = tmp_x[::10]        
-    #tmp_y = tmp_y[::10]
+    
     for j in range(len(target_x_traj2)):
 
-        thresh.append(20)
+        low_thresh.append(50)
+        high_thresh.append(150)
         dist.append(np.sqrt((target_x_traj2[j]-tmp_x[j])**2+(target_y_traj2[j]-tmp_y[j])**2))
 
-    t = np.linspace(0,elapsed_t,len(target_x_traj2))
-    plt.ylabel('d'+str(i+1),fontsize=fs)
+    x = np.linspace(0,elapsed_t,int(len(target_x_traj2)/500)+1) #subsampled set
+    
+    model = make_interp_spline(x, dist[::500])
+
+    t = np.linspace(0,elapsed_t,len(target_x_traj2))#original samples length but interpolated
+    y = model(t)
     plt.yticks(fontsize=fs/2, rotation=0)#to set dimension and orientation of tick labels
     #plt.ylim([0,90])
     
@@ -396,14 +429,17 @@ for i in range(int(auvNum)):
 
     
     
-    plt.plot(t,dist,linewidth=lw,label='d'+str(i+1))
-plt.plot(t,thresh,'r--',linewidth=lw/2,label=r'$ %s $'%math_vars[2])
-plt.legend()
+    plt.plot(t,y,linewidth=lw,label=r'$ %s $'%math_vars[i])
+
+
+plt.ylabel(r'$ %s $'%math_vars[1],fontsize=fs)
+plt.plot(t,low_thresh,'g--',linewidth=lw/2,label=r'$ %s $'%math_vars[4])
+plt.plot(t,high_thresh,'r--',linewidth=lw/2,label=r'$ %s $'%math_vars[5])
+plt.legend(fontsize=fs/2)
 plt.grid()
 #plt.axis('equal')
 plt.xlabel('t (s)',fontsize=fs)
-plt.xlim([0,450])
-plt.ylim([0,200])
+
 plt.xticks(fontsize=fs/2, rotation=0)#to set dimension and orientation of tick labels
 plt.show()
 
@@ -428,18 +464,22 @@ for i in range(4):
     plt.grid()
     
 plt.show()
-
-plt.title('Tracking Errors')
+'''
+math_vars = ['AUV1','AUV2','AUV3']
+#plt.title('Tracking Errors')
 for i in range(int(auvNum)):
-    plt.subplot(int(auvNum),1,i+1)
+    #plt.subplot(int(auvNum),1,i+1)
     t = np.linspace(0,elapsed_t,len(tracking_errors[i]))
     tmp = tracking_errors[i]
-    plt.plot(t,tmp)
-    plt.xlabel('Simulation Time (s)')
-    plt.ylabel('Tracking error')
+    plt.plot(t,tmp,label=r'$ %s $'%math_vars[i],linewidth=lw/2)
+    plt.xlabel('Simulation Time (s)', fontsize=fs)
+    plt.ylabel('RMSE (m)',fontsize=fs)
     max_value = tmp.max()
-    plt.text(len(t)/2,max_value-max_value/8,'RMSE (m):'+str((sum(tracking_errors[i])/len(tracking_errors[i]))))
-    plt.grid()
-plt.show()'''
+    #plt.text(len(t)/2,max_value-max_value/8,'RMSE (m):'+str((sum(tracking_errors[i])/len(tracking_errors[i]))))
+plt.legend(fontsize=fs/2)
+plt.yticks(fontsize=fs/2, rotation=0)#to set dimension and orientation of tick labels
+plt.xticks(fontsize=fs/2, rotation=0)#to set dimension and orientation of tick labels
+plt.grid()
+plt.show()
 
 #ADD automated image saving

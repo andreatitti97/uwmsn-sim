@@ -127,6 +127,8 @@ def run_auv_node(pub,auv,obs,Ts,Tf, auvNum):
     thresh = header.config.k_phi_thresh
     
     rospy.sleep(1)
+
+    opt_counter = 0
     ## SIMULATION LOOP ############################################################################################################
     while not rospy.is_shutdown():
         if count1 <= (Hz/t_scaler):#be sure to receive the target and sensor pose at the beginning of the sim
@@ -171,6 +173,7 @@ def run_auv_node(pub,auv,obs,Ts,Tf, auvNum):
                 obs.propagate_estimation(t) #you can now propagate
                 curr_est = obs.state
                 v_n = header.utils.computePursuitVel(curr_est,s_state,d_max)
+                
                 rospy.loginfo('OPTIMIZATION ID %s PURSUIT VEL: %s',auvID,v_n)
                 cov = header.utils.computeCov(y,phi)# TODO change ak tu curr est
                 #pub[1].publish(np.array([t_pose[0],t_pose[1],np.cos(t_pose[2]),np.sin(t_pose[2])],dtype=np.float32)) #pub estimate of target state
@@ -180,7 +183,14 @@ def run_auv_node(pub,auv,obs,Ts,Tf, auvNum):
 
                 tmp.append(v_n)
                 
-                pub[1].publish(np.array(tmp,dtype=np.float32)) #pub estimate of target state
+                pub[1].publish(np.array(tmp,dtype=np.float32))
+                '''if t < 50:
+                    pub[1].publish(np.array(tmp,dtype=np.float32))
+                elif opt_counter == 2 and t >= 50:
+                    pub[1].publish(np.array(tmp,dtype=np.float32)) #pub estimate of target state
+                    opt_counter = 0
+                else:
+                    opt_counter += 1'''
                 rospy.logout('%s|---- AUV '+str(auvID)+': Target state Estimation [m,m/s] --> %s%s',blue,curr_est,none)
                 
                 # Computte the tracking error
@@ -211,7 +221,10 @@ def run_auv_node(pub,auv,obs,Ts,Tf, auvNum):
         
         if path != None: 
             heading.append(ryaw[idx_motion+idx])
+
             surge_vel.append(v_n)
+
+
 
             pub[2].publish(np.array([int(auvID),rx[idx_motion+idx],ry[idx_motion+idx],ryaw[idx_motion+idx]], dtype=np.float32))
             # PUBLISH THE CTRL_CMD

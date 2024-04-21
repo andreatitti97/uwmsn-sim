@@ -37,11 +37,16 @@ def computePursuitVel(curr_est,s_pose,d_max):
     x = (eucl_dist-epsi)
     
     weigth = 1/(1 + np.exp(alpha*(-x+d_max/2))) #sigmoidal behaviour
-    #weight = alpha*x #linear behaviour
+    #weigth = -alpha*x #linear behaviour
     v_n = weigth*config.AUV_MAX_VEL
+
 
     if x < 1:
         v_n = -10**3
+    elif 1 < x < epsi:
+        v_n = np.sqrt((curr_est[2,0])**2+(curr_est[3,0])**2)
+    elif v_n > config.AUV_MAX_VEL:
+        v_n = config.AUV_MAX_VEL
 
     return v_n
 
