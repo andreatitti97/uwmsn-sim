@@ -86,7 +86,7 @@ def computeCost(phi):
 
     PHI = np.dot(np.transpose(phi),np.dot(np.linalg.inv(W),phi))
 
-    return 1/np.linalg.norm(np.linalg.inv(PHI),ord=2)*np.linalg.norm(PHI,ord=2)
+    return np.linalg.norm(np.linalg.inv(PHI),ord=2)*np.linalg.norm(PHI,ord=2)
 '''    
 test_phi = np.zeros((3,2))
 test_phi[0] = [np.sin(0) -np.cos(0)]
@@ -185,7 +185,7 @@ for i in range(len(phi1)):
     cost = computeCost(phi)
     list_phi.append(cost)
 
-#np.savetxt('/home/andrea/Desktop/logs_COMPARISON_ERRORS/cond_geom',list_phi)
+np.savetxt('/home/andrea/Desktop/logs_COMPARISON_ERRORS/cond_range2',list_phi)
 
 # Moving Plots - subplot1
 target = ax.plot(target_x_traj[0],target_y_traj[0],'r',markersize=lw_ms,label='x(t)')[0]
