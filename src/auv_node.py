@@ -32,12 +32,12 @@ ctrl_policy = []
 for i in range((len(s_state)+((header.config.H+1)*2))):
     ctrl_policy.append(0)
 
-def updatePathRoutine(ax,ay,waypoints,s_pose,v_n,dt,DT):
+def updatePathRoutine(ax,ay,waypoints,s_pose,v_n,dt,DT,auvID):
 
     n_samples = 4
     max_wp_queue = 10
 
-    if len(ax) >= n_samples:
+    '''if len(ax) >= n_samples:
         tmp = []
 
         for i in range(len(ax)):
@@ -49,7 +49,7 @@ def updatePathRoutine(ax,ay,waypoints,s_pose,v_n,dt,DT):
         for i in range(len(ax[idx:len(ax)])):
             
             ax.pop(-1)
-            ay.pop(-1)
+            ay.pop(-1)'''
 
     # Initialized starting position
     a_i = [s_pose[0],s_pose[1]]
@@ -64,11 +64,16 @@ def updatePathRoutine(ax,ay,waypoints,s_pose,v_n,dt,DT):
             a_i = [ax[-1],ay[-1]]
             t_i = t_f
             
-    if len(ax)>max_wp_queue:
+    '''if len(ax)>max_wp_queue:
         # Remove first waypoints (fixed path dimensions-->computational load)
         ax.pop(0)
-        ay.pop(0)
-
+        ay.pop(0)'''
+    if auvID == 1:
+        rospy.logwarn('s_state: %s',s_state)
+        rospy.logwarn('ax %s ay %s',ax,ay)
+        
+        #print('rx',rx[idx+idx_motion])
+        #print('ry',ry[idx+idx_motion])
     # Generate new path 
     path = splinePlanner.CubicSpline2D(ax, ay)
     [rx, ry, ryaw, rk, s, surge] = header.utils.calc_spline_course(path,dt)
@@ -210,22 +215,21 @@ def run_auv_node(pub,auv,obs,Ts,Tf, auvNum):
                 cov3.append(cov[2,2])
                 cov4.append(cov[3,3])
                 ############################################################################################################
-            
+  
         #if the optimization has produced somthing update path, do this control always to avoid unnecessary waitings.
         if ctrl_policy[0] != old_pi_bar[0] and v_n != -10**3:
             
             waypoints = ctrl_policy[7:(len(ctrl_policy)-1)]
             ax = [s_state[0]] #the "first waypoint is the initial vehicle state"
             ay = [s_state[1]]
-            path, idx_motion, idx, rx, ry, ryaw, surge = updatePathRoutine(ax,ay,waypoints,s_state,v_n,dt,DT)
-        
+
+            path, idx_motion, idx, rx, ry, ryaw, surge = updatePathRoutine(ax,ay,waypoints,s_state,v_n,dt,DT,auvID)
+            
+
         if path != None: 
             heading.append(ryaw[idx_motion+idx])
-
             surge_vel.append(v_n)
-
-
-
+            
             pub[2].publish(np.array([int(auvID),rx[idx_motion+idx],ry[idx_motion+idx],ryaw[idx_motion+idx]], dtype=np.float32))
             # PUBLISH THE CTRL_CMD
             if len(rx)-1 <= idx_motion+idx:

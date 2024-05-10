@@ -32,7 +32,7 @@ def generate_random_points(area, min_distance, max_distance, center_x, center_y)
 
 ############################################################ SIMULATION SETUP ########################################################
 # Simulation parameters
-TIME_DURATION = 150 # (s)
+TIME_DURATION = 500 # (s)
 TIME_STEP = 0.01
 TIME_SCALER = 1# in [1 - 10] values near 10 may be source of errors (to fast for ROS stack)
 c = 1500 #sound wave speed
@@ -41,12 +41,12 @@ OPTIMIZATION_ON = False
 # Estimation Parameters
 TP = 30 # regressor MAX length 40
 buffLen = 10 #buffer length for storing received meas
-SIGMA_MEAS = 0.08# (rad^2) --> 4.5° (as assumed in DAMPS and by cassino)
+SIGMA_MEAS = 0.05#0.1#0.08# (rad^2) --> 4.5° (as assumed in DAMPS and by cassino)
 
 # AUVs Team Settings
 
-AUV_MAX_VEL = 1.0#1.5  #(m/s) - max vel (if CPF active v_coop should be considered)
-RANGE_TO_TARGET = 20 #1 (far mission), 10 near mission
+AUV_MAX_VEL = 2.5#2.0#0.6  #(m/s) -
+RANGE_TO_TARGET = 1 #(far mission), 10 near mission
 
 
 # Optimization Parameters
@@ -78,9 +78,9 @@ TARGET_INIT = [+2000,-2500, math.pi, 2.5, 0.0, 0.0, 0.0] #[x(m),y(m),theta(rad),
 #TARGET_INIT = [-2000, -1800, math.pi/2, 6.0, -0.001, 0.0, 0.0] #[x(m),y(m),theta(rad),linear vel(m/s)] - DINAMICA 7
 #TARGET_INIT = [-1500, 2000, math.pi/8, 5.0, 0.0, 0.8, 0.0] #[x(m),y(m),theta(rad),linear vel(m/s)] - DINAMICA 8
 
-TARGET_INIT = [-100,-30, math.pi/2, 0.0, 0.0, 0.0, 0.0] #static
+#TARGET_INIT = [-100,-30, math.pi/2, 0.0, 0.0, 0.0, 0.0] #static
 #TARGET_INIT = [-70,+15, math.pi-math.pi/8, 0.8, 0.0, 0.0, 0.0] #ideal moving
-#TARGET_INIT = [-300,+150, math.pi+math.pi/2-math.pi/6, 0.8, 0.0, 0.0, 0.0] #realistic moving
+TARGET_INIT = [-300,0, math.pi+math.pi/2-math.pi/6, 0.5, 0.0, 0.0, 0.0] #realistic moving
 
 alpha_0, omega_0,alpha_dot_0,omega_dot_0 = TARGET_INIT[3],TARGET_INIT[4],TARGET_INIT[5],TARGET_INIT[6]
 MAX_TARGET_VEL = 3 #(m/s) (only if target no costant vels)
@@ -94,16 +94,17 @@ AUV_XY = np.zeros((4,3))
 area = (200, 200) #(500,500) # Area dimensions (width, height)
 center = (0,0)
 
-min_distance = 50#50 realistic  # Minimum distance between points
-max_distance = 100#200 realistic  # Maximum distance between points
+min_distance = 80#50 realistic  # Minimum distance between points
+max_distance = 200#200 realistic  # Maximum distance between points
 
+'''
 random_points = generate_random_points(area, min_distance, max_distance, center[0],center[1])
-'''print("Generated random points:")
+print("Generated random points:")
 for i, point in enumerate(random_points):
     print(f"Point {i+1}: ({point[0]:.2f}, {point[1]:.2f})")
     
 
-'''
+
 dist = []
 for i, point in enumerate(random_points):
 
@@ -113,19 +114,27 @@ for i, point in enumerate(random_points):
     AUV_XY[i,2] = math.atan2(TARGET_INIT[1]-AUV_XY[i,1],TARGET_INIT[0]-AUV_XY[i,0])
     tmp1 = (AUV_XY[i,0],AUV_XY[i,1])
     tmp2 = (TARGET_INIT[0],TARGET_INIT[1])
-    dist.append(distance_between_points(tmp1,tmp2))
-'''
-AUV_XY[0,1] = -50
-AUV_XY[0,2] = 37
+    dist.append(distance_between_points(tmp1,tmp2))'''
 
-AUV_XY[1,1] = -26
-AUV_XY[1,2] = 9
 
-AUV_XY[2,1] = -6
-AUV_XY[2,2] = -56
+
+AUV_XY[0,0] = -25
+AUV_XY[0,1] = -41
+
+AUV_XY[1,0] = 41
+AUV_XY[1,1] = -12
+
+AUV_XY[2,0] = -100
+AUV_XY[2,1] = 48
+
+dist = []
+
 for i in range(3):
     AUV_XY[i,2] = math.atan2(TARGET_INIT[1]-AUV_XY[i,1],TARGET_INIT[0]-AUV_XY[i,0])
-'''
+    tmp1 = (AUV_XY[i,0],AUV_XY[i,1])
+    tmp2 = (TARGET_INIT[0],TARGET_INIT[1])
+    dist.append(distance_between_points(tmp1,tmp2))
+
 avg_d = sum(dist)/len(dist)-10
 d = avg_d
 DT = ((avg_d/(AUV_MAX_VEL/2))/H)/2
