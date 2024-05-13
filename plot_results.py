@@ -86,9 +86,6 @@ for i in range(int(auvNum)):
     heading[i] = tmp[::sampling]
 
 
-
-
-
 # Utils functions
 def computeCost(phi):
 
@@ -134,8 +131,8 @@ for i in range(len(phi1)):
 
     cost = computeCost(phi)
     list_phi.append(cost)
-np.savetxt('/home/andrea/Documents/controlo_paper_results/official_results/validation1/logs/logs_COMPARISON_ERRORS/cond_range3',list_phi)
-np.savetxt('/home/andrea/Documents/controlo_paper_results/official_results/validation1/logs/logs_COMPARISON_ERRORS/err_range3',tracking_errors[0])
+#np.savetxt('/home/andrea/Documents/controlo_paper_results/official_results/validation1/logs/logs_COMPARISON_ERRORS/cond_range3',list_phi)
+#np.savetxt('/home/andrea/Documents/controlo_paper_results/official_results/validation1/logs/logs_COMPARISON_ERRORS/err_range3',tracking_errors[0])
 
 ##########################################################
 # PLOT SETUP
@@ -276,13 +273,13 @@ math_vars = ['AUV1','AUV2','AUV3','\\epsilon']
 for i in range(int(auvNum)):
 
     t = np.linspace(0,500,len(tracking_errors[i]))
-    tmp = tracking_errors[i]*10
+    tmp = tracking_errors[i]
     ax.plot(t,tmp,label=r'$ %s $'%math_vars[i],linewidth=lw)
     max_value = tmp.max()
 
 epsi = []    
-for i in range(len(tracking_errors[0])):
-    epsi.append(10.5)
+for i in range(len(t)):
+    epsi.append(0.0)
 ax.plot(t,epsi,'r--',linewidth=lw,label=r'$ %s $'%math_vars[-1])    
 ax.set_xlabel('t (s)', fontsize=fs)
 ax.set_ylabel('RMSE (m)',fontsize=fs)

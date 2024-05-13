@@ -63,17 +63,7 @@ def updatePathRoutine(ax,ay,waypoints,s_pose,v_n,dt,DT,auvID):
             ay.append(np.sin(t_f)*v_n*(DT/n_samples)+a_i[1])
             a_i = [ax[-1],ay[-1]]
             t_i = t_f
-            
-    '''if len(ax)>max_wp_queue:
-        # Remove first waypoints (fixed path dimensions-->computational load)
-        ax.pop(0)
-        ay.pop(0)'''
-    if auvID == 1:
-        rospy.logwarn('s_state: %s',s_state)
-        rospy.logwarn('ax %s ay %s',ax,ay)
-        
-        #print('rx',rx[idx+idx_motion])
-        #print('ry',ry[idx+idx_motion])
+
     # Generate new path 
     path = splinePlanner.CubicSpline2D(ax, ay)
     [rx, ry, ryaw, rk, s, surge] = header.utils.calc_spline_course(path,dt)
@@ -189,13 +179,6 @@ def run_auv_node(pub,auv,obs,Ts,Tf, auvNum):
                 tmp.append(v_n)
                 
                 pub[1].publish(np.array(tmp,dtype=np.float32))
-                '''if t < 50:
-                    pub[1].publish(np.array(tmp,dtype=np.float32))
-                elif opt_counter == 2 and t >= 50:
-                    pub[1].publish(np.array(tmp,dtype=np.float32)) #pub estimate of target state
-                    opt_counter = 0
-                else:
-                    opt_counter += 1'''
                 rospy.logout('%s|---- AUV '+str(auvID)+': Target state Estimation [m,m/s] --> %s%s',blue,curr_est,none)
                 
                 # Computte the tracking error

@@ -41,7 +41,7 @@ OPTIMIZATION_ON = False
 # Estimation Parameters
 TP = 30 # regressor MAX length 40
 buffLen = 10 #buffer length for storing received meas
-SIGMA_MEAS = 0.05#0.1#0.08# (rad^2) --> 4.5° (as assumed in DAMPS and by cassino)
+SIGMA_MEAS = 0.1# #0.08# (rad^2) --> 4.5° (as assumed in DAMPS and by cassino)
 
 # AUVs Team Settings
 
@@ -80,7 +80,7 @@ TARGET_INIT = [+2000,-2500, math.pi, 2.5, 0.0, 0.0, 0.0] #[x(m),y(m),theta(rad),
 
 #TARGET_INIT = [-100,-30, math.pi/2, 0.0, 0.0, 0.0, 0.0] #static
 #TARGET_INIT = [-70,+15, math.pi-math.pi/8, 0.8, 0.0, 0.0, 0.0] #ideal moving
-TARGET_INIT = [-300,0, math.pi+math.pi/2-math.pi/6, 0.5, 0.0, 0.0, 0.0] #realistic moving
+TARGET_INIT = [-300,0, math.pi+math.pi/2-math.pi/6, 0.3, 0.0, 0.0, 0.0] #realistic moving
 
 alpha_0, omega_0,alpha_dot_0,omega_dot_0 = TARGET_INIT[3],TARGET_INIT[4],TARGET_INIT[5],TARGET_INIT[6]
 MAX_TARGET_VEL = 3 #(m/s) (only if target no costant vels)
@@ -95,7 +95,7 @@ area = (200, 200) #(500,500) # Area dimensions (width, height)
 center = (0,0)
 
 min_distance = 80#50 realistic  # Minimum distance between points
-max_distance = 200#200 realistic  # Maximum distance between points
+max_distance = 500#200 realistic  # Maximum distance between points
 
 '''
 random_points = generate_random_points(area, min_distance, max_distance, center[0],center[1])
@@ -118,14 +118,14 @@ for i, point in enumerate(random_points):
 
 
 
-AUV_XY[0,0] = -25
-AUV_XY[0,1] = -41
+AUV_XY[0,0] = 5
+AUV_XY[0,1] = 75
 
-AUV_XY[1,0] = 41
-AUV_XY[1,1] = -12
+AUV_XY[1,0] = +75
+AUV_XY[1,1] = 10
 
-AUV_XY[2,0] = -100
-AUV_XY[2,1] = 48
+AUV_XY[2,0] = 5
+AUV_XY[2,1] = -75
 
 dist = []
 
@@ -141,6 +141,9 @@ DT = ((avg_d/(AUV_MAX_VEL/2))/H)/2
 
 # Communication Paramaters
 Ts = 2 #TDMA: slot time
+n = 3 #auv num
+DT = Ts*3*2
+
 alpha = -0.1 #0.01 #Sigmoid parameters for packet loss, if alpha << gamma --> more packet loss
 gamma = avg_d*3 #Sigmoid parameter for packet loss --> depends on the distance (tune only alpha)
 
