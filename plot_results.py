@@ -7,7 +7,7 @@ from scipy.interpolate import make_interp_spline
 
 # Environment initialization
 pkg_directory = os.path.dirname(pathlib.Path(__file__).parent.resolve())+'/uwmsn-sim'
-log_directory = pkg_directory+'/logs'
+log_directory = os.path.dirname(pathlib.Path(__file__).parent.resolve())+'/logs'
 class_directory = pkg_directory+'/src'+'/Classes'
 
 # Load simulation info

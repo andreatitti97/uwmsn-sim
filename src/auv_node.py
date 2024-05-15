@@ -11,7 +11,7 @@ from rospy.numpy_msg import numpy_msg
 # Environment: Define the relevant paths
 pkg_directory = os.path.dirname(pathlib.Path(__file__).parent.resolve())
 header_file = pkg_directory+'/include'+'/uwmsn-sim'
-log_path = pkg_directory+'/logs'
+log_path = os.path.dirname(pkg_directory)+'/logs'
 
 # Load the header file as a Python module 
 spec = importlib.util.spec_from_file_location("module.header", header_file+'/auv_node_h.py')

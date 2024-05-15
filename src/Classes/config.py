@@ -44,13 +44,11 @@ buffLen = 10 #buffer length for storing received meas
 SIGMA_MEAS = 0.1# #0.08# (rad^2) --> 4.5° (as assumed in DAMPS and by cassino)
 
 # AUVs Team Settings
-
 AUV_MAX_VEL = 2.5#2.0#0.6  #(m/s) -
-RANGE_TO_TARGET = 1 #(far mission), 10 near mission
-
+RANGE_TO_TARGET = 30 #(far mission), 10 near mission
 
 # Optimization Parameters
-DELTA = 10 #to start the BnB algorithm
+DELTA = 200 #to start the BnB algorithm
 u_max = 20*math.pi/180
 delta_u = 10*math.pi/180
 MAX = 60*math.pi/180
@@ -140,7 +138,7 @@ d = avg_d
 DT = ((avg_d/(AUV_MAX_VEL/2))/H)/2
 
 # Communication Paramaters
-Ts = 2 #TDMA: slot time
+Ts = 4 #TDMA: slot time
 n = 3 #auv num
 DT = Ts*3*2
 

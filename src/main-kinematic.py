@@ -14,7 +14,7 @@ from rospy.numpy_msg import numpy_msg
 os.path.dirname: output is a string with the path (sum strings using '+')'''
 
 pkg_directory = os.path.dirname(pathlib.Path(__file__).parent.resolve())
-log_path = pkg_directory+'/logs'
+log_path = os.path.dirname(pkg_directory)+'/logs'
 class_path = pkg_directory+'/src/Classes'
 
 # Load the header file as a Python module 
