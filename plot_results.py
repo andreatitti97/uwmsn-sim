@@ -212,7 +212,7 @@ for i in range(int(auvNum)):
     ax.scatter(auv_x[:,i],auv_y[:,i],c=test,cmap='autumn_r',linewidths=sw)
     ax.text(auv_x[0,i]+a,auv_y[0,i]+b,r'$ %s $'%agents_vars[i]+r'$ %s $'%time_vars[0],fontsize=tw)
     ax.scatter(auv_x[0,i],auv_y[0,i],c='y',linewidths=sw*8)
-    ax.text(auv_x[-1,i]+c,auv_y[-1,i]+d,r'$ %s $'%agents_vars[i]+r'$ %s $'%time_vars[1],fontsize=tw)
+    #ax.text(auv_x[-1,i]+c,auv_y[-1,i]+d,r'$ %s $'%agents_vars[i]+r'$ %s $'%time_vars[1],fontsize=tw)
     ax.scatter(auv_x[-1,i],auv_y[-1,i],c='r',linewidths=sw*8)
 
 
@@ -289,6 +289,7 @@ plt.yticks(fontsize=(fs*2)/3, rotation = 0)#to set dimension and orientation of 
 plt.xticks(fontsize=(fs*2)/3, rotation=0)#to set dimension and orientation of tick labels
 #plt.show()
 
+
 ##########################################################
 # Plot relative distance between auvs and target
 
@@ -305,8 +306,7 @@ for i in range(int(auvNum)):
     dist = []
     low_thresh = []
     high_thresh = []
-    tmp_x = auv_x[:,i]
-    tmp_y = auv_y[:,i]
+    
     
     for j in range(samples):
 
@@ -358,8 +358,48 @@ ax.legend(fontsize=fs)
 ax.grid()
 plt.yticks(fontsize=(fs*2)/3, rotation = 0)#to set dimension and orientation of tick labels
 plt.xticks(fontsize=(fs*2)/3, rotation=0)#to set dimension and orientation of tick labels
-plt.show()
 
+##########################################################
+# Plot distances between the AUVs
+#fig6, (ax1, ax2, ax3) = plt.subplots(int(auvNum),1)
+fig6, ax = plt.subplots()
+sampling = 1
+math_vars = ['d_{ij}']
+for i in range(int(auvNum)):
+    
+    dist_ij1= []
+    dist_ij2 = []
+    
+    if i == 0:
+        idx1 = 1
+        idx2 = 2
+    elif i == 1:
+        idx1 = 1
+        idx2 = 2
+    else:
+        idx1 = 1
+        idx2 = 2
+    tmp_x_i = auv_x[:,i]
+    tmp_y_i = auv_y[:,i]
+    tmp_x_j1 = auv_x[:,idx1]
+    tmp_y_j1 = auv_y[:,idx1]
+    tmp_x_j2 = auv_x[:,idx2]
+    tmp_y_j2 = auv_y[:,idx2]
+    loops = len(tmp_x)
+    for j in range(loops):
+        dist_ij1.append(np.sqrt((tmp_y_i[j]-tmp_x_j1[j])**2+(tmp_y_i[j]-tmp_y_j1[j])**2))
+        dist_ij2.append(np.sqrt((tmp_y_i[j]-tmp_x_j2[j])**2+(tmp_y_i[j]-tmp_y_j2[j])**2))
+    
+    ax.plot(t,dist_ij1,label='dist AUV'+str(i+1)+'--'+str(idx1+1))
+    ax.plot(t,dist_ij2,label='dist AUV'+str(i+1)+'--'+str(idx2+1))
+
+ax.set_ylabel(r'$ %s $'%math_vars[0], fontsize=fs)
+ax.set_xlabel('t (s)', fontsize =fs)
+ax.legend(fontsize=fs)
+ax.grid()
+plt.yticks(fontsize=(fs)/3, rotation = 0)#to set dimension and orientation of tick labels
+plt.xticks(fontsize=(fs)/3, rotation=0)#to set dimension and orientation of tick labels
+plt.show()
 ##########################################################
 # Plot heading 
 fig4, ax = plt.subplots()

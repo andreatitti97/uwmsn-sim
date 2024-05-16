@@ -48,8 +48,8 @@ AUV_MAX_VEL = 2.5#2.0#0.6  #(m/s) -
 RANGE_TO_TARGET = 30 #(far mission), 10 near mission
 
 # Optimization Parameters
-DELTA = 200 #to start the BnB algorithm
-u_max = 20*math.pi/180
+DELTA = 10 #to start the BnB algorithm
+u_max = 15*math.pi/180
 delta_u = 10*math.pi/180
 MAX = 60*math.pi/180
 MIN = 5*math.pi/180
@@ -92,7 +92,7 @@ AUV_XY = np.zeros((4,3))
 area = (200, 200) #(500,500) # Area dimensions (width, height)
 center = (0,0)
 
-min_distance = 80#50 realistic  # Minimum distance between points
+min_distance = 30#50 realistic  # Minimum distance between points
 max_distance = 500#200 realistic  # Maximum distance between points
 
 '''
