@@ -296,7 +296,7 @@ plt.xticks(fontsize=(fs*2)/3, rotation=0)#to set dimension and orientation of ti
 fig5, ax = plt.subplots()
 sampling = 1
 math_vars = ['d_1','d_2','d_3','d_4','d_{-}^{r}','d_{+}^{r}']
-lthres = 50
+lthres = 30
 hthresh = 150
 
 x = np.linspace(0,elapsed_t,int(samples/sampling)) #subsampled set
@@ -306,16 +306,14 @@ for i in range(int(auvNum)):
     dist = []
     low_thresh = []
     high_thresh = []
-    
+    tmp_x = auv_x[:,i]
+    tmp_y = auv_y[:,i]
     
     for j in range(samples):
 
         low_thresh.append(lthres)
         high_thresh.append(hthresh)
-        if i == 0 or i == 2:
-            a = 25
-        else:
-            a = 0
+        
         dist.append(np.sqrt((target_x_traj[j]-tmp_x[j])**2+(target_y_traj[j]-tmp_y[j])**2)-a)
 
     
@@ -364,7 +362,7 @@ plt.xticks(fontsize=(fs*2)/3, rotation=0)#to set dimension and orientation of ti
 #fig6, (ax1, ax2, ax3) = plt.subplots(int(auvNum),1)
 fig6, ax = plt.subplots()
 sampling = 1
-math_vars = ['d_{ij}']
+math_vars = ['d_{ij}','d_{12}','d_{23}','d_{31}']
 for i in range(int(auvNum)):
     
     dist_ij1= []
@@ -374,11 +372,11 @@ for i in range(int(auvNum)):
         idx1 = 1
         idx2 = 2
     elif i == 1:
-        idx1 = 1
+        idx1 = 0
         idx2 = 2
     else:
-        idx1 = 1
-        idx2 = 2
+        idx1 = 0
+        idx2 = 1
     tmp_x_i = auv_x[:,i]
     tmp_y_i = auv_y[:,i]
     tmp_x_j1 = auv_x[:,idx1]
@@ -387,19 +385,23 @@ for i in range(int(auvNum)):
     tmp_y_j2 = auv_y[:,idx2]
     loops = len(tmp_x)
     for j in range(loops):
-        dist_ij1.append(np.sqrt((tmp_y_i[j]-tmp_x_j1[j])**2+(tmp_y_i[j]-tmp_y_j1[j])**2))
-        dist_ij2.append(np.sqrt((tmp_y_i[j]-tmp_x_j2[j])**2+(tmp_y_i[j]-tmp_y_j2[j])**2))
-    
-    ax.plot(t,dist_ij1,label='dist AUV'+str(i+1)+'--'+str(idx1+1))
-    ax.plot(t,dist_ij2,label='dist AUV'+str(i+1)+'--'+str(idx2+1))
+        dist_ij1.append(np.sqrt((tmp_x_i[j]-tmp_x_j1[j])**2+(tmp_y_i[j]-tmp_y_j1[j])**2))
+        dist_ij2.append(np.sqrt((tmp_x_i[j]-tmp_x_j2[j])**2+(tmp_y_i[j]-tmp_y_j2[j])**2))
+    if i == 0:
+        ax.plot(t,dist_ij1,label=r'$ %s $'%math_vars[1],linewidth=lw) 
+    if i == 1:
+        ax.plot(t,dist_ij2,label=r'$ %s $'%math_vars[2],linewidth=lw)
+    if i == 0:
+        ax.plot(t,dist_ij2,label=r'$ %s $'%math_vars[3],linewidth=lw) 
+ 
 
 ax.set_ylabel(r'$ %s $'%math_vars[0], fontsize=fs)
 ax.set_xlabel('t (s)', fontsize =fs)
 ax.legend(fontsize=fs)
 ax.grid()
 plt.yticks(fontsize=(fs)/3, rotation = 0)#to set dimension and orientation of tick labels
-plt.xticks(fontsize=(fs)/3, rotation=0)#to set dimension and orientation of tick labels
-plt.show()
+plt.xticks(fontsize=(fs)/3, rotation = 0)#to set dimension and orientation of tick labels
+#plt.show()
 ##########################################################
 # Plot heading 
 fig4, ax = plt.subplots()
@@ -425,7 +427,7 @@ ax.legend(fontsize=fs)
 ax.grid()
 plt.yticks(fontsize=(fs*2)/3, rotation = 0)#to set dimension and orientation of tick labels
 plt.xticks(fontsize=(fs*2)/3, rotation=0)#to set dimension and orientation of tick labels
-#plt.show()
+plt.show()
 
 '''Interpolation script
 x = np.linspace(0,elapsed_t,int(len(target_x_traj)/500)+1) #subsampled set

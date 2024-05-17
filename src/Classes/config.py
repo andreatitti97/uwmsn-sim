@@ -45,10 +45,10 @@ SIGMA_MEAS = 0.1# #0.08# (rad^2) --> 4.5° (as assumed in DAMPS and by cassino)
 
 # AUVs Team Settings
 AUV_MAX_VEL = 2.5#2.0#0.6  #(m/s) -
-RANGE_TO_TARGET = 30 #(far mission), 10 near mission
+RANGE_TO_TARGET = 50 #(far mission), 10 near mission
 
 # Optimization Parameters
-DELTA = 10 #to start the BnB algorithm
+#DELTA = 10 #to start the BnB algorithm
 u_max = 15*math.pi/180
 delta_u = 10*math.pi/180
 MAX = 60*math.pi/180
@@ -78,7 +78,8 @@ TARGET_INIT = [+2000,-2500, math.pi, 2.5, 0.0, 0.0, 0.0] #[x(m),y(m),theta(rad),
 
 #TARGET_INIT = [-100,-30, math.pi/2, 0.0, 0.0, 0.0, 0.0] #static
 #TARGET_INIT = [-70,+15, math.pi-math.pi/8, 0.8, 0.0, 0.0, 0.0] #ideal moving
-TARGET_INIT = [-300,0, math.pi+math.pi/2-math.pi/6, 0.3, 0.0, 0.0, 0.0] #realistic moving
+TARGET_INIT = [-300,0, math.pi+math.pi/2-math.pi/6, 0.3, 0.0, 0.0, 0.0] #realistic moving 1
+#TARGET_INIT = [-150,+300, math.pi, 0.4, 0.0, 0.0, 0.0] #realistic moving 2
 
 alpha_0, omega_0,alpha_dot_0,omega_dot_0 = TARGET_INIT[3],TARGET_INIT[4],TARGET_INIT[5],TARGET_INIT[6]
 MAX_TARGET_VEL = 3 #(m/s) (only if target no costant vels)
@@ -92,18 +93,18 @@ AUV_XY = np.zeros((4,3))
 area = (200, 200) #(500,500) # Area dimensions (width, height)
 center = (0,0)
 
-min_distance = 30#50 realistic  # Minimum distance between points
-max_distance = 500#200 realistic  # Maximum distance between points
+min_distance = 50#50 realistic  # Minimum distance between points
+max_distance = 300#200 realistic  # Maximum distance between points
 
-'''
+
 random_points = generate_random_points(area, min_distance, max_distance, center[0],center[1])
-print("Generated random points:")
+'''print("Generated random points:")
 for i, point in enumerate(random_points):
-    print(f"Point {i+1}: ({point[0]:.2f}, {point[1]:.2f})")
+    print(f"Point {i+1}: ({point[0]:.2f}, {point[1]:.2f})")'''
     
 
 
-dist = []
+'''dist = []
 for i, point in enumerate(random_points):
 
     AUV_XY[i,0] = point[0]#TODO: SOLVE THE BUG OF HAVING AUV1 IN POS [0,0,0]
@@ -135,12 +136,11 @@ for i in range(3):
 
 avg_d = sum(dist)/len(dist)-10
 d = avg_d
-DT = ((avg_d/(AUV_MAX_VEL/2))/H)/2
 
 # Communication Paramaters
-Ts = 4 #TDMA: slot time
+Ts = 4 #TDMA: slot time # time sampling always equal to Ts/2
 n = 3 #auv num
-DT = Ts*3*2
+DT = Ts*n*2
 
 alpha = -0.1 #0.01 #Sigmoid parameters for packet loss, if alpha << gamma --> more packet loss
 gamma = avg_d*3 #Sigmoid parameter for packet loss --> depends on the distance (tune only alpha)
