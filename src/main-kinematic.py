@@ -59,18 +59,30 @@ def run_simulation(target, auvNum, pub_s_state, pub_t_state, pub_init_opt):
  
     # Init AUVs position and orientation
     auvs_xy = header.config.AUV_XY
-    msg = []
+    msg, sensors, meas_table = [], [], []
 
     for i in range(len(auvs_xy)):
 
         msg.append(auvs_xy[i,0])
         msg.append(auvs_xy[i,1])
         msg.append(auvs_xy[i,2])
+        sensors.append(header.sensor.Sensor(str(i),1,0,0.000))
+    
+    for i in range(int(auvNum)):
+        
+        [measure_, rel_bearing_, meas_pos] = sensors[i].measureBearing(target.pose.x,target.pose.y,
+                                                                       [auvs_xy[i,0],auvs_xy[i,1]],
+                                                                       auvs_xy[i,2])
+        arr = [measure_,meas_pos[0],meas_pos[1]]
+        meas_table.append(arr)
 
+    
+    estimator = header.estimator_module.Estimation()
+    estimator.computeState(meas_table)
     rospy.loginfo('|---- OPTIMIZATION TIME WINDOW (s) --> %s',header.config.DT)
     rospy.loginfo('|---- KINEMATIC SIMULATION: Initial AUVs positions (m) --> %s',auvs_xy)
     rospy.loginfo('|---- KINEMATIC SIMULATION: Initial Target position (m) --> %s',[target.pose.x,target.pose.y,target.pose.theta])
-
+    rospy.loginfo('|---- INITIAL OBJECTIVE(CONDITION) --> %s',1/header.utils.compute_cost(estimator.phi))
     rospy.sleep(1)
     ## SIMULATION LOOP ############################################################################################################
     while not rospy.is_shutdown():

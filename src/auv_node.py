@@ -164,7 +164,7 @@ def run_auv_node(pub,auv,obs,Ts,Tf, auvNum):
             meas_table = []
 
         # if good conditioning do estimation 
-            if header.utils.compute_cost(phi,len(y)) >= thresh:
+            if header.utils.compute_cost(phi) >= thresh:
                 obs.propagate_estimation(t) #you can now propagate
                 curr_est = obs.state
                 v_n = header.utils.computePursuitVel(curr_est,s_state,d_max)

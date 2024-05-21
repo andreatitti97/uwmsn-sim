@@ -24,3 +24,9 @@ spec.loader.exec_module(tracker)
 spec = importlib.util.spec_from_file_location("module.target", class_path+'/target.py')
 target = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(target)
+
+
+class_path = os.path.dirname(os.path.dirname(os.path.dirname(class_path)))+'/uwmsn-motion_opt'+'/src'+'/Classes'
+spec = importlib.util.spec_from_file_location("module.estimator", class_path+'/estimator.py')
+estimator_module = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(estimator_module)

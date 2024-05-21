@@ -48,20 +48,28 @@ def computePursuitVel(curr_est,s_pose,d_max):
     if config.TARGET_INIT[3] == 0:
         if x < 1: #ONLY IF THE TARGET IS STATIC
             v_n = -10**3
-    if 1 < x < epsi:
+    if 0 < eucl_dist < epsi:
         v_n = np.sqrt((curr_est[2,0])**2+(curr_est[3,0])**2)
     elif v_n > config.AUV_MAX_VEL:
         v_n = config.AUV_MAX_VEL
 
     return v_n
 
-def compute_cost(phi,len_y):
 
-    tmp_phi = np.zeros((len_y,4))
-    for i in range(len_y):
-        row = phi[i]
-        tmp_phi[i,:] = [row[0],row[1],row[2],row[3]]
-    PHI = np.dot(np.transpose(tmp_phi[:,0:2]),tmp_phi[:,0:2]) 
+def compute_cost(phi):
+
+    length_y = len(phi)
+    tmp_phi = np.zeros((length_y,2))
+    for i in range(length_y):
+        a = phi[i]
+        tmp_phi[i,:] = [a[0],a[1]]
+    
+    W = np.zeros((length_y,length_y))
+    for i in range(length_y):
+        W[i,i] = 1.0
+
+    PHI = np.dot(np.transpose(tmp_phi),np.dot(np.linalg.inv(W),tmp_phi))
+
     return np.linalg.norm(np.linalg.inv(PHI),ord=2)*np.linalg.norm(PHI,ord=2)
 
 def computeCov(y,phi):

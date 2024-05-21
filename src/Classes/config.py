@@ -49,18 +49,20 @@ RANGE_TO_TARGET = 50 #(far mission), 10 near mission
 
 # Optimization Parameters
 #DELTA = 10 #to start the BnB algorithm
-u_max = 15*math.pi/180
-delta_u = 10*math.pi/180
+u_max = 40*math.pi/180
+delta_u = 0#10*math.pi/180
 MAX = 60*math.pi/180
-MIN = 5*math.pi/180
-U = 3 #number of control choices
+MIN = 10*math.pi/180
+U = 7 #number of control choices
 H = 3 # planning horizon
 
-ctrl_cmd = [-u_max,-u_max*4/(U/2),-u_max/(U/2),0,
-                u_max/(U/2), u_max*4/(U/2), u_max] #set of control actions
-#ctrl_cmd = [-u_max, -u_max*8/(U) ,-u_max*6/(U) ,-u_max*4/(U),-u_max*2/(U),0,
-                #u_max*2/(U), u_max*4/(U), u_max*8/(U) , u_max*6/(U) ,u_max] #set of control actions
-ctrl_cmd = [-u_max,0,u_max]
+if U == 7:
+    ctrl_cmd = [-u_max,-u_max*2/((U-1)/2),-u_max/((U-1)/2),0,
+                u_max/((U-1)/2), u_max*2/((U-1)/2), u_max] #set of control actions
+elif U == 5:
+    ctrl_cmd = [-u_max,-u_max/2,0,u_max/2,u_max] #set of control actions
+else:
+    ctrl_cmd = [-u_max,0,u_max]
 
 ######## CHOOSE TARGET DYNAMIC ###################################################################################################
 # CHOOSE Target parameter: start, goal, min max vels
@@ -93,8 +95,8 @@ AUV_XY = np.zeros((4,3))
 area = (200, 200) #(500,500) # Area dimensions (width, height)
 center = (0,0)
 
-min_distance = 50#50 realistic  # Minimum distance between points
-max_distance = 300#200 realistic  # Maximum distance between points
+min_distance = 50#50 realistic  # Minimum distance between AUVs
+max_distance = 200#200 realistic  # Maximum distance between AUVs
 
 
 random_points = generate_random_points(area, min_distance, max_distance, center[0],center[1])
@@ -145,4 +147,5 @@ DT = Ts*n*2
 alpha = -0.1 #0.01 #Sigmoid parameters for packet loss, if alpha << gamma --> more packet loss
 gamma = avg_d*3 #Sigmoid parameter for packet loss --> depends on the distance (tune only alpha)
 
+# IN REALTÀ PERME CONVIENE METTERE IL CONDIZIONAMENTO INIZIALE COME THRESH
 k_phi_thresh = 1 #Thresh sul condizionamento del regressore per aggiornare la sitma
