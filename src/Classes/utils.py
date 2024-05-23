@@ -33,24 +33,12 @@ def computePursuitVel(curr_est,s_pose,d_max):
     eucl_dist = np.sqrt((predicted_pose[0]-s_pose[0])**2+(predicted_pose[1]-s_pose[1])**2)
     epsi = config.RANGE_TO_TARGET #DISTANZA VOLUTA DAL TARGET
     
-    alpha = 0.09
     beta = 1/d_max #coeficente angolare retta per due punti m = y2-y1/x1-x2 
-    '''x = np.linspace(0,d_max)
-    plt.plot(x,1/(1 + np.exp(alpha*(-x+d_max/2))))
-    plt.plot(x,beta*x)
-    plt.grid()
-    plt.show()'''
-    x = (eucl_dist-epsi)
-    #weigth = 1/(1 + np.exp(alpha*(-x+d_max/2))) #sigmoidal behaviour
-    #weigth = -alpha*x #linear behaviour
-    v_n = beta*x#weigth*config.AUV_MAX_VEL
 
-    if config.TARGET_INIT[3] == 0:
-        if x < 1: #ONLY IF THE TARGET IS STATIC
-            v_n = -10**3
-    if 0 < eucl_dist < epsi:
-        v_n = np.sqrt((curr_est[2,0])**2+(curr_est[3,0])**2)
-    elif v_n > config.AUV_MAX_VEL:
+    x = (eucl_dist-epsi)
+    v_n = beta*x + np.sqrt((curr_est[2,0])**2+(curr_est[3,0])**2)
+
+    if v_n > config.AUV_MAX_VEL:
         v_n = config.AUV_MAX_VEL
 
     return v_n

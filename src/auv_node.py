@@ -122,8 +122,6 @@ def run_auv_node(pub,auv,obs,Ts,Tf, auvNum):
     thresh = header.config.k_phi_thresh
     
     rospy.sleep(1)
-
-    opt_counter = 0
     ## SIMULATION LOOP ############################################################################################################
     while not rospy.is_shutdown():
         if count1 <= (Hz/t_scaler):#be sure to receive the target and sensor pose at the beginning of the sim

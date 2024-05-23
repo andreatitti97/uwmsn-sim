@@ -49,8 +49,8 @@ RANGE_TO_TARGET = 50 #(far mission), 10 near mission
 
 # Optimization Parameters
 #DELTA = 10 #to start the BnB algorithm
-u_max = 40*math.pi/180
-delta_u = 0#10*math.pi/180
+u_max = 35*math.pi/180
+delta_u = 10*math.pi/180
 MAX = 60*math.pi/180
 MIN = 10*math.pi/180
 U = 7 #number of control choices

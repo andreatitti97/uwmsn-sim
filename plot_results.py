@@ -102,7 +102,7 @@ def computeCost(phi):
 print('SIMULATION INFO [auvNum - Simulation Time (s) - Slot Time (s)]',sim_info)   
 print('Acoustic Communication Stat [PDR AUV1,PDR AUV2,PDR AUV3,PDR AUV4]:',PDR)
 for i in range(int(auvNum)):
-    print('OPTIMIZATION STATS --> Average Optimization Time AUV ID:',i+1,sum(avgTime[i])/len(avgTime[i]))
+    #print('OPTIMIZATION STATS --> Average Optimization Time AUV ID:',i+1,sum(avgTime[i])/len(avgTime[i]))
     print('AUV ID RMSE (m):',i+1,(sum(tracking_errors[i])/len(tracking_errors[i])))
 
 # Compute the trend of k(Phi)
