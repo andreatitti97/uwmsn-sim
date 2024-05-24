@@ -183,7 +183,7 @@ def run_auv_node(pub,auv,obs,Ts,Tf, auvNum):
                 err_x = (t_pose[0] - curr_est[0,0])
                 err_y = (t_pose[1] - curr_est[1,0])
                 e = np.sqrt(err_x**2+err_y**2)
-
+                
                 # Save Estimation Data #####################################################################################
                 x_hat_1.append(curr_est[0,0])
                 x_hat_2.append(curr_est[1,0])

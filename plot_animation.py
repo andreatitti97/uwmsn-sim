@@ -226,7 +226,7 @@ for i in range(int(auvNum)):
     ax.scatter(auv_x_traj[0,i],auv_y_traj[0,i],c='b',linewidths=lw)
 
 ax.scatter(auv_x_traj[0,-1],auv_y_traj[0,-1],c='b',linewidths=lw,label=r'$ %s $'%math_vars[2]+r'$ %s $'%time_vars[0])
-estimation = ax.scatter(x_hat_x[0],x_hat_y[0],c='azure',edgecolors='r',label=r'$ %s $'%math_vars[1]+'(t)',linewidths=lw)
+estimation = ax.scatter(x_hat_x[0],x_hat_y[0],c='azure',edgecolors='y',label=r'$ %s $'%math_vars[1]+'(t)',linewidths=lw)
 
 def update(frame):
     

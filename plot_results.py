@@ -1,5 +1,6 @@
 #!+usr+bin+env python
 import matplotlib.pyplot as plt
+import os, importlib.util, pathlib
 import numpy as np
 from math import atan2
 import os, pathlib
@@ -9,6 +10,13 @@ from scipy.interpolate import make_interp_spline
 pkg_directory = os.path.dirname(pathlib.Path(__file__).parent.resolve())+'/uwmsn-sim'
 log_directory = os.path.dirname(pathlib.Path(__file__).parent.resolve())+'/logs'
 class_directory = pkg_directory+'/src'+'/Classes'
+
+# Import config file 
+module_dir = os.path.dirname(pathlib.Path(__file__).parent.resolve())
+header_file = pkg_directory+'/include'+'/uwmsn-sim'
+spec = importlib.util.spec_from_file_location("module.header", header_file+'/main-kinematic_h.py')
+header = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(header)
 
 # Load simulation info
 sim_info = np.loadtxt(log_directory+'/sim_info.txt')
@@ -296,24 +304,19 @@ plt.xticks(fontsize=(fs*2)/3, rotation=0)#to set dimension and orientation of ti
 fig5, ax = plt.subplots()
 sampling = 1
 math_vars = ['d_1','d_2','d_3','d_4','d_{-}^{r}','d_{+}^{r}']
-lthres = 30
-hthresh = 150
-
+lthres = header.config.RANGE_TO_TARGET
 x = np.linspace(0,elapsed_t,int(samples/sampling)) #subsampled set
 
 for i in range(int(auvNum)):
     #plt.subplot(int(auvNum),1,i+1)
     dist = []
     low_thresh = []
-    high_thresh = []
     tmp_x = auv_x[:,i]
     tmp_y = auv_y[:,i]
     
     for j in range(samples):
 
         low_thresh.append(lthres)
-        high_thresh.append(hthresh)
-        
         dist.append(np.sqrt((target_x_traj[j]-tmp_x[j])**2+(target_y_traj[j]-tmp_y[j])**2)-a)
 
     
@@ -326,7 +329,6 @@ for i in range(int(auvNum)):
 ax.set_xlabel('t (s)',fontsize=fs)
 ax.set_ylabel('d (m)',fontsize=fs)
 ax.plot(t,low_thresh,'r--',linewidth=lw/2,label=r'$ %s $'%math_vars[4])
-ax.plot(t,high_thresh,'g--',linewidth=lw/2,label=r'$ %s $'%math_vars[5])
 ax.legend(fontsize=fs*2/3)
 ax.grid()
 plt.yticks(fontsize=(fs*2)/3, rotation = 0)#to set dimension and orientation of tick labels

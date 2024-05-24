@@ -82,7 +82,7 @@ def run_simulation(target, auvNum, pub_s_state, pub_t_state, pub_init_opt):
     rospy.loginfo('|---- OPTIMIZATION TIME WINDOW (s) --> %s',header.config.DT)
     rospy.loginfo('|---- KINEMATIC SIMULATION: Initial AUVs positions (m) --> %s',auvs_xy)
     rospy.loginfo('|---- KINEMATIC SIMULATION: Initial Target position (m) --> %s',[target.pose.x,target.pose.y,target.pose.theta])
-    rospy.loginfo('|---- INITIAL OBJECTIVE(CONDITION) --> %s',1/header.utils.compute_cost(estimator.phi))
+    rospy.loginfo('|---- INITIAL OBJECTIVE(CONDITION) --> %s',header.utils.compute_cost(estimator.phi))
     rospy.sleep(1)
     ## SIMULATION LOOP ############################################################################################################
     while not rospy.is_shutdown():
