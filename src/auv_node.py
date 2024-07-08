@@ -210,7 +210,8 @@ def run_auv_node(pub,auv,obs,Ts,Tf, auvNum):
         if path != None: 
             heading.append(ryaw[idx_motion+idx])
             surge_vel.append(v_n)
-            
+            #if auvID != 2:#for fized node scenario
+
             pub[2].publish(np.array([int(auvID),rx[idx_motion+idx],ry[idx_motion+idx],ryaw[idx_motion+idx]], dtype=np.float32))
             # PUBLISH THE CTRL_CMD
             if len(rx)-1 <= idx_motion+idx:

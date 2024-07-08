@@ -32,7 +32,7 @@ def generate_random_points(area, min_distance, max_distance, center_x, center_y)
 
 ############################################################ SIMULATION SETUP ########################################################
 # Simulation parameters
-TIME_DURATION = 500 # (s)
+TIME_DURATION = 300 # (s)
 TIME_STEP = 0.01
 TIME_SCALER = 1# in [1 - 10] values near 10 may be source of errors (to fast for ROS stack)
 c = 1500 #sound wave speed
@@ -45,7 +45,9 @@ SIGMA_MEAS = 0.1# #0.08# (rad^2) --> 4.5° (as assumed in DAMPS and by cassino)
 
 # AUVs Team Settings
 AUV_MAX_VEL = 2.5#2.0#0.6  #(m/s) -
-RANGE_TO_TARGET = 100 #(far mission), 10 near mission
+RANGE_TO_TARGET = 20#100 #(far mission), 10 near mission
+
+
 
 # Optimization Parameters
 
@@ -54,7 +56,7 @@ delta_u = 10*math.pi/180
 MAX = 60*math.pi/180
 MIN = 10*math.pi/180
 U = 7 #number of control choices
-H = 4 # planning horizon
+H = 3 # planning horizon
 
 if U == 7:
     ctrl_cmd = [-u_max,-u_max*2/((U-1)/2),-u_max/((U-1)/2),0,
@@ -139,5 +141,12 @@ DT = Ts*n*2
 alpha = -0.1 #0.01 #Sigmoid parameters for packet loss, if alpha << gamma --> more packet loss
 gamma = avg_d*3 #Sigmoid parameter for packet loss --> depends on the distance (tune only alpha)
 
+# Acoustic Parameters
+SL = 200 #db
+NL = 30 #db
+DI = 0 #directivity index a-dimensional
+DThresh = 0 #db
+f = 1#Hx ( frequency of the modem)
+
 # IN REALTÀ PERME CONVIENE METTERE IL CONDIZIONAMENTO INIZIALE COME THRESH
-k_phi_thresh = 1 #Thresh sul condizionamento del regressore per aggiornare la sitma
+k_phi_thresh = 1 #Thresh sul condizionamento del regressore per aggiornare la stima

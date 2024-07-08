@@ -70,6 +70,7 @@ original_samples = len(target_x_traj)
 sampling = 200#100 ideal #200 realistic scneario
 tmp_x = target_x_traj
 target_x_traj = tmp_x[::sampling]
+
 tmp_y = target_y_traj
 target_y_traj = tmp_y[::sampling]
 samples = len(target_x_traj)
