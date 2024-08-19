@@ -31,15 +31,17 @@ def computePursuitVel(curr_est,s_pose,d_max):
     predicted_pose[1] = curr_est[1,0] + config.DT*curr_est[3,0]
 
     eucl_dist = np.sqrt((curr_est[0,0]-s_pose[0])**2+(curr_est[1,0]-s_pose[1])**2)
-    epsi = config.RANGE_TO_TARGET #DISTANZA VOLUTA DAL TARGET
+    epsi = 0#config.RANGE_TO_TARGET #DISTANZA VOLUTA DAL TARGET
     
     beta = 1/d_max #coeficente angolare retta per due punti m = y2-y1/x1-x2 
 
     x = (eucl_dist-epsi)
-    v_n = beta*x + np.sqrt((curr_est[2,0])**2+(curr_est[3,0])**2)
+    v_n = beta*x + np.sqrt((curr_est[2,0])**2+(curr_est[3,0])**2)#feed forward the estimated velocity of the target
 
     if v_n > config.AUV_MAX_VEL:
         v_n = config.AUV_MAX_VEL
+    '''if 0 < eucl_dist <= config.RANGE_TO_TARGET:
+        v_n = np.sqrt((curr_est[2,0])**2+(curr_est[3,0])**2)'''
 
     return v_n
 

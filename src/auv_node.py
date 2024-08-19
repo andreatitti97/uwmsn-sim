@@ -25,7 +25,7 @@ cov1, cov2, cov3, cov4, err = [], [], [], [], []
 heading, surge_vel = [], []
 
 # Init Global Variables for ROS callbacks
-s_state = [0,0,0] # --> Agent Pose
+s_state = [0,0,0]
 t_pose = [0,0,0] # --> Target ground truth
 m_rx = [0,0,0,0] # --> received measurament
 ctrl_policy = []
@@ -110,6 +110,8 @@ def run_auv_node(pub,auv,obs,Ts,Tf, auvNum):
 
     # Start listeners and init waypoints data structures
     
+
+
     ax = [s_state[0]] #the "first waypoint is the initial vehicle state"
     ay = [s_state[1]]
     waypoints = np.zeros(header.config.H) #init waypoints data structure
@@ -176,6 +178,7 @@ def run_auv_node(pub,auv,obs,Ts,Tf, auvNum):
 
                 tmp.append(v_n)
                 
+                
                 pub[1].publish(np.array(tmp,dtype=np.float32))
                 rospy.logout('%s|---- AUV '+str(auvID)+': Target state Estimation [m,m/s] --> %s%s',blue,curr_est,none)
                 
@@ -201,6 +204,7 @@ def run_auv_node(pub,auv,obs,Ts,Tf, auvNum):
         if ctrl_policy[0] != old_pi_bar[0] and v_n != -10**3:
             
             waypoints = ctrl_policy[7:(len(ctrl_policy)-1)]
+            #s_state = [ctrl_policy[0],ctrl_policy[1],ctrl_policy[2]]
             ax = [s_state[0]] #the "first waypoint is the initial vehicle state"
             ay = [s_state[1]]
 
@@ -294,6 +298,14 @@ def main():
     auvID = rospy.get_param(params_path+'/auvID')
     auvNum = rospy.get_param(params_path+'/auvNum')
 
+    # Init Global Variables for ROS callbacks
+    AUV_XY = header.config.AUV_XY
+    s_state = [AUV_XY[auvID-1,0],[auvID-1,1],[auvID-1,2]] # --> Agent Pose
+    t_pose = [0,0,0] # --> Target ground truth
+    m_rx = [0,0,0,0] # --> received measurament
+    ctrl_policy = []
+    for i in range((len(s_state)+((header.config.H+1)*2))):
+        ctrl_policy.append(0)
     # Node Init
     rospy.init_node('auv'+str(auvID)) #TO ADD debug prints --> log_level=rospy.DEBUG
 

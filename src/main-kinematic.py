@@ -162,7 +162,9 @@ def shutdown_cllbk():
     magenta = "\033[0;35m"
     none = "\033[0m"
     rospy.loginfo('|---- %sKINEMATIC SIMULATION: Simulation data saved --> Shutting down ...%s',magenta,none)
-    
+    rospy.loginfo('|---- Simulation Info: alhpa %s gama %s NL %s DThresh %s desired range %s',
+                  header.config.alpha_w,header.config.gamma_w, header.config.NL,
+                  header.config.DThresh, header.config.RANGE_TO_TARGET)
 def callback1(data):
     global paths,path1
     

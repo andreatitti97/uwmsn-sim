@@ -32,7 +32,7 @@ def generate_random_points(area, min_distance, max_distance, center_x, center_y)
 
 ############################################################ SIMULATION SETUP ########################################################
 # Simulation parameters
-TIME_DURATION = 300 # (s)
+TIME_DURATION = 600 # (s)
 TIME_STEP = 0.01
 TIME_SCALER = 1# in [1 - 10] values near 10 may be source of errors (to fast for ROS stack)
 c = 1500 #sound wave speed
@@ -41,18 +41,17 @@ OPTIMIZATION_ON = False
 # Estimation Parameters
 TP = 30 # regressor MAX length 40
 buffLen = 10 #buffer length for storing received meas
-SIGMA_MEAS = 0.1# #0.08# (rad^2) --> 4.5° (as assumed in DAMPS and by cassino)
+SIGMA_MEAS = 0.1#0.2 # (rad^2) --> 4.5° (as assumed in DAMPS and by cassino)
 
 # AUVs Team Settings
-AUV_MAX_VEL = 2.5#2.0#0.6  #(m/s) -
-RANGE_TO_TARGET = 20#100 #(far mission), 10 near mission
-
-
+AUV_MAX_VEL = 1.5 #(m/s) -
+RANGE_TO_TARGET = 50 #100 #(far mission), 20 near mission
 
 # Optimization Parameters
-
+alpha_w = 0.60
+gamma_w = 0.80 #maybe a little it more
 u_max = 35*math.pi/180
-delta_u = 10*math.pi/180
+delta_u = 0#10*math.pi/180
 MAX = 60*math.pi/180
 MIN = 10*math.pi/180
 U = 7 #number of control choices
@@ -79,12 +78,16 @@ TARGET_INIT = [+2000,-2500, math.pi, 2.5, 0.0, 0.0, 0.0] #[x(m),y(m),theta(rad),
 #TARGET_INIT = [-2000, +2000, 140*math.pi/180, 8.0, 0.002, 0.0, 0.0] #[x(m),y(m),theta(rad),v0(m/s),omega0,v_dot0,omega_dot0] - DINAMICA 6
 #TARGET_INIT = [-2000, -1800, math.pi/2, 6.0, -0.001, 0.0, 0.0] #[x(m),y(m),theta(rad),linear vel(m/s)] - DINAMICA 7
 #TARGET_INIT = [-1500, 2000, math.pi/8, 5.0, 0.0, 0.8, 0.0] #[x(m),y(m),theta(rad),linear vel(m/s)] - DINAMICA 8
-
+# PAPER CONTROLO
 #TARGET_INIT = [-100,-30, math.pi/2, 0.0, 0.0, 0.0, 0.0] #static
 #TARGET_INIT = [-70,+15, math.pi-math.pi/8, 0.8, 0.0, 0.0, 0.0] #ideal moving
-TARGET_INIT = [-150,0, math.pi+math.pi/2-math.pi/6, 0.3, 0.0, 0.0, 0.0] #realistic moving 1
+TARGET_INIT = [-150,0, math.pi+math.pi/2-math.pi/6, 0.5, 0.0, 0.0, 0.0] #realistic moving 1
 #TARGET_INIT = [-150,+300, math.pi, 0.4, 0.0, 0.0, 0.0] #realistic moving 2
 #TARGET_INIT = [-200,+10, math.pi, 0.4, 0.0, 0.0, 0.0] #ideal moving 2
+# PAPER JOURNAL
+TARGET_INIT = [-150,0, math.pi+math.pi/2-math.pi/6, 0.5, 0.0, 0.0, 0.0] # validation 1
+TARGET_INIT = [-250,55, np.pi/2-np.pi/8, 0.5, 0.0, 0.0, 0.0] # validation 2
+
 
 alpha_0, omega_0,alpha_dot_0,omega_dot_0 = TARGET_INIT[3],TARGET_INIT[4],TARGET_INIT[5],TARGET_INIT[6]
 MAX_TARGET_VEL = 3 #(m/s) (only if target no costant vels)
@@ -98,29 +101,38 @@ AUV_XY = np.zeros((4,3))
 area = (200, 200) #(500,500) # Area dimensions (width, height)
 center = (0,0)
 
-min_distance = 50# Minimum distance between AUVs
+random_init = False
+min_distance = 35# Minimum distance between AUVs
 max_distance = 250# Maximum distance between AUVs
 
-random_points = generate_random_points(area, min_distance, max_distance, center[0],center[1])
-dist = []
-for i, point in enumerate(random_points):
+if random_init == True:
+    random_points = generate_random_points(area, min_distance, max_distance, center[0],center[1])
+    
+    for i, point in enumerate(random_points):
 
-    AUV_XY[i,0] = point[0]#TODO: SOLVE THE BUG OF HAVING AUV1 IN POS [0,0,0]
-    AUV_XY[i,1] = point[1]
+        AUV_XY[i,0] = point[0]#TODO: SOLVE THE BUG OF HAVING AUV1 IN POS [0,0,0]
+        AUV_XY[i,1] = point[1]
 
-    AUV_XY[i,2] = math.atan2(TARGET_INIT[1]-AUV_XY[i,1],TARGET_INIT[0]-AUV_XY[i,0])
-    tmp1 = (AUV_XY[i,0],AUV_XY[i,1])
-    tmp2 = (TARGET_INIT[0],TARGET_INIT[1])
-    dist.append(distance_between_points(tmp1,tmp2))
+else:
 
-AUV_XY[0,0] = 5
-AUV_XY[0,1] = 75
+    # VALIDATION 2
+    AUV_XY[0,0] = -38
+    AUV_XY[0,1] = 45
 
-AUV_XY[1,0] = +75
-AUV_XY[1,1] = 10
+    AUV_XY[1,0] = +45
+    AUV_XY[1,1] = +35
 
-AUV_XY[2,0] = 5
-AUV_XY[2,1] = -75
+    AUV_XY[2,0] = 5
+    AUV_XY[2,1] = -74
+    # VALIDATION 1
+    '''AUV_XY[0,0] = -20
+    AUV_XY[0,1] = 10
+
+    AUV_XY[1,0] = 100
+    AUV_XY[1,1] = 10
+
+    AUV_XY[2,0] = 200
+    AUV_XY[2,1] = 10'''
 
 dist = []
 
@@ -143,10 +155,23 @@ gamma = avg_d*3 #Sigmoid parameter for packet loss --> depends on the distance (
 
 # Acoustic Parameters
 SL = 200 #db
-NL = 30 #db
+NL = 10 #db
 DI = 0 #directivity index a-dimensional
-DThresh = 0 #db
-f = 1#Hx ( frequency of the modem)
+DThresh = 40 #dB (minimum connectivity requirement)
+
+f = 10 #kHx ( frequency of the modem)
+
+def alpha_f(f):
+    
+    return 0.11*(f**2/(1+f**2))+44*(f**2/(4100+f**2))+(2.75*(1e-4)*(f**2))+0.003
+
+#print('INITIAL EXPECTED TRANSIMISSION LOSS BETWEEN NODES')
+for i in range(len(dist)):
+    acoustic_loss = alpha_f(f) #f is in kHz
+    TL = 20*np.log(dist[i]) + (dist[i]*acoustic_loss*1e-3)
+    
+
+TL_ideal = 20*np.log(min_distance) + (min_distance*acoustic_loss*1e-3)#dB (transmission loss that if happens is "ideal")
 
 # IN REALTÀ PERME CONVIENE METTERE IL CONDIZIONAMENTO INIZIALE COME THRESH
 k_phi_thresh = 1 #Thresh sul condizionamento del regressore per aggiornare la stima

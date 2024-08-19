@@ -296,18 +296,14 @@ ax.legend(fontsize=fs*2/3)
 ax.grid()
 plt.yticks(fontsize=(fs*2)/3, rotation = 0)#to set dimension and orientation of tick labels
 plt.xticks(fontsize=(fs*2)/3, rotation=0)#to set dimension and orientation of tick labels
-#plt.show()
-
 
 ##########################################################
-# Plot relative distance between auvs and target
-
+#plot distance to target
 fig5, ax = plt.subplots()
 sampling = 1
 math_vars = ['d_1','d_2','d_3','d_4','d_{-}^{r}','d_{+}^{r}']
 lthres = header.config.RANGE_TO_TARGET
 x = np.linspace(0,elapsed_t,int(samples/sampling)) #subsampled set
-
 for i in range(int(auvNum)):
     #plt.subplot(int(auvNum),1,i+1)
     dist = []
@@ -319,8 +315,8 @@ for i in range(int(auvNum)):
 
         low_thresh.append(lthres)
         dist.append(np.sqrt((target_x_traj[j]-tmp_x[j])**2+(target_y_traj[j]-tmp_y[j])**2)-a)
-
-    
+        
+        
     model = make_interp_spline(x, dist[::sampling])
     t = np.linspace(0,elapsed_t,samples)#original samples length but interpolated
     y = model(t)
@@ -335,31 +331,144 @@ ax.grid()
 plt.yticks(fontsize=(fs*2)/3, rotation = 0)#to set dimension and orientation of tick labels
 plt.xticks(fontsize=(fs*2)/3, rotation=0)#to set dimension and orientation of tick labels
 
-
-##########################################################
-# Plot Surge Velocities
-
-sampling = 1
-fig3, ax = plt.subplots()
-
-for i in range(int(auvNum)):
-
-    tmp = surge_vel[i]
-
-    x = np.linspace(0,elapsed_t,int(len(tmp)/sampling)) #subsampled set
-    model = make_interp_spline(x, tmp[::sampling])
-    t = np.linspace(0,elapsed_t,samples)#original samples length but interpolated
-    y = model(t)
-
-    ax.plot(t,y,label='AUV'+str(i+1),linewidth=lw)
-    
-ax.set_ylabel('u (m/s)', fontsize=fs)
-ax.set_xlabel('t (s)', fontsize =fs)
-ax.legend(fontsize=fs)
+fig5, ax = plt.subplots()
+ax.plot(list_phi,y,linewidth=lw/2)
+ax.scatter(list_phi[-1],y[-1],linewidths=lw/2)
+ax.grid()
+ax.legend(fontsize=fs*2/3)
 ax.grid()
 plt.yticks(fontsize=(fs*2)/3, rotation = 0)#to set dimension and orientation of tick labels
 plt.xticks(fontsize=(fs*2)/3, rotation=0)#to set dimension and orientation of tick labels
 
+
+##########################################################
+# Plot SNR between the AUVs given the desired topology
+
+fig6, ax = plt.subplots()
+sampling = 1
+math_vars = ['snr_{ij}(dB)','snr_{12}','snr_{23}','thresh snr']
+
+f = header.config.f
+acoustic_loss =  0.11*(f**2/(1+f**2))+44*(f**2/(4100+f**2))+(2.75*(1e-4)*(f**2))+0.003 #f is in kHz
+
+
+snr_12= []
+snr_23 = []
+
+
+tmp_x_1 = auv_x[:,0]
+tmp_y_1 = auv_y[:,0]
+tmp_x_2 = auv_x[:,1]
+tmp_y_2 = auv_y[:,1]
+tmp_x_3 = auv_x[:,2]
+tmp_y_3 = auv_y[:,2]
+NL = 0#header.config.NL
+loops = len(tmp_x)
+for j in range(loops):
+    if j == loops/2:
+        NL = 0#80
+    dist_12 = np.sqrt((tmp_x_1[j]-tmp_x_2[j])**2+(tmp_y_1[j]-tmp_y_2[j])**2)
+    dist_23 = np.sqrt((tmp_x_2[j]-tmp_x_3[j])**2+(tmp_y_2[j]-tmp_y_3[j])**2)
+
+    TL_12 = 20*np.log(dist_12) + (dist_12*acoustic_loss*1e-3)
+    TL_23 = 20*np.log(dist_23) + (dist_23*acoustic_loss*1e-3)
+                    
+    snr_12.append(header.config.SL - NL - TL_12 + header.config.DI)
+    snr_23.append(header.config.SL - NL - TL_23 + header.config.DI)
+
+ax.plot(t,snr_12,label=r'$ %s $'%math_vars[1],linewidth=lw) 
+ax.plot(t,snr_23,label=r'$ %s $'%math_vars[2],linewidth=lw)
+desired_snr = []
+noise_change = []
+for i in range(loops):
+    desired_snr.append(header.config.DThresh)
+    noise_change.append(header.config.TIME_DURATION/2)
+ax.plot(t,desired_snr,'r--',label=r'$ %s $'%math_vars[2],linewidth=lw)
+plt.axvline(x=header.config.TIME_DURATION/2,color='k',label='NOISE CHANGE',linewidth=lw)
+
+ax.set_ylabel(r'$ %s $'%math_vars[0], fontsize=fs)
+ax.set_xlabel('t (s)', fontsize =fs)
+ax.legend(fontsize=fs)
+ax.grid()
+plt.yticks(fontsize=(fs)/3, rotation = 0)#to set dimension and orientation of tick labels
+plt.xticks(fontsize=(fs)/3, rotation = 0)#to set dimension and orientation of tick labels
+
+
+########################################################################
+# Plot COST FUNCTIONS SUM
+#plot distance to target
+fig5, ax = plt.subplots()
+sampling = 1
+math_vars = ['loss function 1','loss function 2','loss function 3']
+lthres = header.config.RANGE_TO_TARGET
+x = np.linspace(0,elapsed_t,int(samples/sampling)) #subsampled set
+for i in range(int(auvNum)):
+    #plt.subplot(int(auvNum),1,i+1)
+    reward_func = []
+    tmp_x = auv_x[:,i]
+    tmp_y = auv_y[:,i]
+
+  
+    for j in range(samples):
+        tmp_phi = list_phi[j]
+
+        dist = np.sqrt((target_x_traj[j]-tmp_x[j])**2+(target_y_traj[j]-tmp_y[j])**2)
+        reward_func.append(dist+tmp_phi+snr_12[j]+snr_23[j])
+        
+        
+    model = make_interp_spline(x, reward_func[::sampling])
+    t = np.linspace(0,elapsed_t,samples)#original samples length but interpolated
+    y = model(t)
+    
+    ax.plot(t,y,linewidth=lw,label=r'$ %s $'%math_vars[i])
+
+ax.set_xlabel('t (s)',fontsize=fs)
+ax.set_ylabel('d (m)',fontsize=fs)
+
+ax.legend(fontsize=fs*2/3)
+ax.grid()
+plt.yticks(fontsize=(fs*2)/3, rotation = 0)#to set dimension and orientation of tick labels
+plt.xticks(fontsize=(fs*2)/3, rotation=0)#to set dimension and orientation of tick labels
+
+fig5, ax = plt.subplots()
+ax.plot(list_phi,y,linewidth=lw/2)
+ax.scatter(list_phi[-1],y[-1],linewidths=lw/2)
+ax.grid()
+ax.legend(fontsize=fs*2/3)
+ax.grid()
+plt.yticks(fontsize=(fs*2)/3, rotation = 0)#to set dimension and orientation of tick labels
+plt.xticks(fontsize=(fs*2)/3, rotation=0)#to set dimension and orientation of tick labels
+
+plt.show()
+
+
+'''Interpolation script
+x = np.linspace(0,elapsed_t,int(len(target_x_traj)/500)+1) #subsampled set
+    
+    model = make_interp_spline(x, dist[::500])
+
+    t = np.linspace(0,elapsed_t,len(target_x_traj))#original samples length but interpolated
+    y = model(t)
+    '''
+
+'''MOdify Ticks scripts
+if i+1 < auvNum:
+        plt.tick_params(
+            axis='x',          # changes apply to the x-axis
+            which='both',      # both major and minor ticks are affected
+            bottom=False,      # ticks along the bottom edge are off
+            top=False,         # ticks along the top edge are off
+            labelbottom=False) # labels along the bottom edge are off
+    else:
+        plt.tick_params(
+            axis='x',          # changes apply to the x-axis
+            which='both',      # both major and minor ticks are affected
+            bottom=True,      # ticks along the bottom edge are off
+            top=True,         # ticks along the top edge are off
+            labelbottom=True) # labels along the bottom edge are off
+'''
+
+'''
 ##########################################################
 # Plot distances between the AUVs
 #fig6, (ax1, ax2, ax3) = plt.subplots(int(auvNum),1)
@@ -404,8 +513,35 @@ ax.legend(fontsize=fs)
 ax.grid()
 plt.yticks(fontsize=(fs)/3, rotation = 0)#to set dimension and orientation of tick labels
 plt.xticks(fontsize=(fs)/3, rotation = 0)#to set dimension and orientation of tick labels
-#plt.show()
-##########################################################
+#plt.show()'''
+
+'''##########################################################
+# Plot Surge Velocities
+
+sampling = 1
+fig3, ax = plt.subplots()
+
+for i in range(int(auvNum)):
+
+    tmp = surge_vel[i]
+
+    x = np.linspace(0,elapsed_t,int(len(tmp)/sampling)) #subsampled set
+    model = make_interp_spline(x, tmp[::sampling])
+    t = np.linspace(0,elapsed_t,samples)#original samples length but interpolated
+    y = model(t)
+
+    ax.plot(t,y,label='AUV'+str(i+1),linewidth=lw)
+    
+ax.set_ylabel('u (m/s)', fontsize=fs)
+ax.set_xlabel('t (s)', fontsize =fs)
+ax.legend(fontsize=fs)
+ax.grid()
+plt.yticks(fontsize=(fs*2)/3, rotation = 0)#to set dimension and orientation of tick labels
+plt.xticks(fontsize=(fs*2)/3, rotation=0)#to set dimension and orientation of tick labels
+
+'''
+
+'''##########################################################
 # Plot heading 
 fig4, ax = plt.subplots()
 theta_var = ['\\theta_{s}']
@@ -431,29 +567,4 @@ ax.grid()
 plt.yticks(fontsize=(fs*2)/3, rotation = 0)#to set dimension and orientation of tick labels
 plt.xticks(fontsize=(fs*2)/3, rotation=0)#to set dimension and orientation of tick labels
 plt.show()
-
-'''Interpolation script
-x = np.linspace(0,elapsed_t,int(len(target_x_traj)/500)+1) #subsampled set
-    
-    model = make_interp_spline(x, dist[::500])
-
-    t = np.linspace(0,elapsed_t,len(target_x_traj))#original samples length but interpolated
-    y = model(t)
-    '''
-
-'''MOdify Ticks scripts
-if i+1 < auvNum:
-        plt.tick_params(
-            axis='x',          # changes apply to the x-axis
-            which='both',      # both major and minor ticks are affected
-            bottom=False,      # ticks along the bottom edge are off
-            top=False,         # ticks along the top edge are off
-            labelbottom=False) # labels along the bottom edge are off
-    else:
-        plt.tick_params(
-            axis='x',          # changes apply to the x-axis
-            which='both',      # both major and minor ticks are affected
-            bottom=True,      # ticks along the bottom edge are off
-            top=True,         # ticks along the top edge are off
-            labelbottom=True) # labels along the bottom edge are off
 '''
