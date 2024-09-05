@@ -40,16 +40,16 @@ OPTIMIZATION_ON = False
 
 # Estimation Parameters
 TP = 30 # regressor MAX length 40
-buffLen = 10 #buffer length for storing received meas
+buffLen = 10 #buffer length for storing received pkts
 SIGMA_MEAS = 0.1#0.2 # (rad^2) --> 4.5° (as assumed in DAMPS and by cassino)
 
 # AUVs Team Settings
 AUV_MAX_VEL = 1.5 #(m/s) -
-RANGE_TO_TARGET = 50 #100 #(far mission), 20 near mission
+RANGE_TO_TARGET = 50 
 
-# Optimization Parameters
-alpha_w = 0.60
-gamma_w = 0.80 #maybe a little it more
+# Optimization Parameters --- alpha = 0.15, gamma = 1.0 (almost fixed formation)
+alpha_w = 0.34#0.15
+gamma_w = 1.0#0.25#1.0
 u_max = 35*math.pi/180
 delta_u = 0#10*math.pi/180
 MAX = 60*math.pi/180
@@ -81,12 +81,13 @@ TARGET_INIT = [+2000,-2500, math.pi, 2.5, 0.0, 0.0, 0.0] #[x(m),y(m),theta(rad),
 # PAPER CONTROLO
 #TARGET_INIT = [-100,-30, math.pi/2, 0.0, 0.0, 0.0, 0.0] #static
 #TARGET_INIT = [-70,+15, math.pi-math.pi/8, 0.8, 0.0, 0.0, 0.0] #ideal moving
+
 TARGET_INIT = [-150,0, math.pi+math.pi/2-math.pi/6, 0.5, 0.0, 0.0, 0.0] #realistic moving 1
 #TARGET_INIT = [-150,+300, math.pi, 0.4, 0.0, 0.0, 0.0] #realistic moving 2
 #TARGET_INIT = [-200,+10, math.pi, 0.4, 0.0, 0.0, 0.0] #ideal moving 2
 # PAPER JOURNAL
-TARGET_INIT = [-150,0, math.pi+math.pi/2-math.pi/6, 0.5, 0.0, 0.0, 0.0] # validation 1
-TARGET_INIT = [-250,55, np.pi/2-np.pi/8, 0.5, 0.0, 0.0, 0.0] # validation 2
+#TARGET_INIT = [-150,0, math.pi+math.pi/2-math.pi/6, 0.5, 0.0, 0.0, 0.0] # validation 1
+#TARGET_INIT = [-450,105, np.pi/2+np.pi/8, 0.45, 0.0, 0.0, 0.0] # validation 2
 
 
 alpha_0, omega_0,alpha_dot_0,omega_dot_0 = TARGET_INIT[3],TARGET_INIT[4],TARGET_INIT[5],TARGET_INIT[6]
@@ -103,7 +104,7 @@ center = (0,0)
 
 random_init = False
 min_distance = 35# Minimum distance between AUVs
-max_distance = 250# Maximum distance between AUVs
+max_distance = 500# Maximum distance between AUVs
 
 if random_init == True:
     random_points = generate_random_points(area, min_distance, max_distance, center[0],center[1])
@@ -117,22 +118,30 @@ else:
 
     # VALIDATION 2
     AUV_XY[0,0] = -38
-    AUV_XY[0,1] = 45
+    AUV_XY[0,1] = 200
 
-    AUV_XY[1,0] = +45
-    AUV_XY[1,1] = +35
+    AUV_XY[1,0] = +10
+    AUV_XY[1,1] = 10
 
     AUV_XY[2,0] = 5
-    AUV_XY[2,1] = -74
+    AUV_XY[2,1] = -200
     # VALIDATION 1
-    '''AUV_XY[0,0] = -20
+    AUV_XY[0,0] = -20
     AUV_XY[0,1] = 10
 
     AUV_XY[1,0] = 100
     AUV_XY[1,1] = 10
 
     AUV_XY[2,0] = 200
-    AUV_XY[2,1] = 10'''
+    AUV_XY[2,1] = 10
+
+    AUV_XY[0,0] = -17
+    AUV_XY[0,1] = 20
+    AUV_XY[2,0] = -8
+
+    AUV_XY[0,1] = -23
+    AUV_XY[1,1] = -2.5
+    AUV_XY[2,1] = 3
 
 dist = []
 
@@ -155,9 +164,9 @@ gamma = avg_d*3 #Sigmoid parameter for packet loss --> depends on the distance (
 
 # Acoustic Parameters
 SL = 200 #db
-NL = 10 #db
+NL = 20 #db
 DI = 0 #directivity index a-dimensional
-DThresh = 40 #dB (minimum connectivity requirement)
+DThresh = 20 #dB (minimum connectivity requirement)
 
 f = 10 #kHx ( frequency of the modem)
 
@@ -172,6 +181,8 @@ for i in range(len(dist)):
     
 
 TL_ideal = 20*np.log(min_distance) + (min_distance*acoustic_loss*1e-3)#dB (transmission loss that if happens is "ideal")
-
+TL_worse = 20*np.log(max_distance) + (max_distance*acoustic_loss*1e-3)
+#print('TL ideal', TL_ideal) #c.a. 80 dB
+#print('TL worse', TL_worse) #c.a. 130 dB
 # IN REALTÀ PERME CONVIENE METTERE IL CONDIZIONAMENTO INIZIALE COME THRESH
 k_phi_thresh = 1 #Thresh sul condizionamento del regressore per aggiornare la stima

@@ -39,6 +39,7 @@ class Target:
         self.ang_vel = config.omega_0 #(rad/sec)
         self.lin_acc = config.alpha_dot_0 #(m/sec^2)
         self.ang_acc = config.omega_dot_0 #(rad/sec^2)
+        self.t = 0
 
     def set_start_target_poses(self, pose):
         """
@@ -63,10 +64,11 @@ class Target:
         dt : (float)
             time step
         """
-    
-        self.pose.theta = self.pose.theta + (self.ang_vel+self.ang_acc * dt)*dt
+        self.t += dt
+        self.pose.theta = self.pose.theta + (self.ang_vel+self.ang_acc * dt)*dt 
         self.pose.x = self.pose.x + (self.lin_vel+self.lin_acc*dt) * \
-            np.cos(self.pose.theta) * dt 
+            np.cos(self.pose.theta) * dt #self.pose.x+0.001*np.sin(0.01*self.t+np.pi)#
         self.pose.y = self.pose.y + (self.lin_vel+self.lin_acc*dt) * \
-            np.sin(self.pose.theta) * dt
+            np.sin(self.pose.theta) * dt 
+        
         

@@ -64,7 +64,6 @@ for i in range(int(auvNum)):
     #Optimization Data
     PDR[i] = np.loadtxt(log_directory+'/'+str(i+1)+'-PDR')
 
-
 # Downsampling script
 original_samples = len(target_x_traj)
 sampling = 200#100 ideal #200 realistic scneario
@@ -413,7 +412,7 @@ for i in range(int(auvNum)):
         tmp_phi = list_phi[j]
 
         dist = np.sqrt((target_x_traj[j]-tmp_x[j])**2+(target_y_traj[j]-tmp_y[j])**2)
-        reward_func.append(dist+tmp_phi+snr_12[j]+snr_23[j])
+        reward_func.append(dist+tmp_phi)
         
         
     model = make_interp_spline(x, reward_func[::sampling])

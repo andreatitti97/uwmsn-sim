@@ -25,11 +25,12 @@ cov1, cov2, cov3, cov4, err = [], [], [], [], []
 heading, surge_vel = [], []
 
 # Init Global Variables for ROS callbacks
+AUV_XY = header.config.AUV_XY
 s_state = [0,0,0]
 t_pose = [0,0,0] # --> Target ground truth
 m_rx = [0,0,0,0] # --> received measurament
 ctrl_policy = []
-for i in range((len(s_state)+((header.config.H+1)*2))):
+for i in range(((len(s_state)+(header.config.H+1)*2))):
     ctrl_policy.append(0)
 
 def updatePathRoutine(ax,ay,waypoints,s_pose,v_n,dt,DT,auvID):
@@ -115,7 +116,7 @@ def run_auv_node(pub,auv,obs,Ts,Tf, auvNum):
     ax = [s_state[0]] #the "first waypoint is the initial vehicle state"
     ay = [s_state[1]]
     waypoints = np.zeros(header.config.H) #init waypoints data structure
-    
+
     old_pi_bar = ctrl_policy
 
     # Load simulation params from config file
@@ -126,9 +127,12 @@ def run_auv_node(pub,auv,obs,Ts,Tf, auvNum):
     rospy.sleep(1)
     ## SIMULATION LOOP ############################################################################################################
     while not rospy.is_shutdown():
+
+        
         if count1 <= (Hz/t_scaler):#be sure to receive the target and sensor pose at the beginning of the sim
             d_max = np.sqrt((t_pose[1]-s_state[1])**2+(t_pose[0]-s_state[0])**2)
-            
+
+
         if (count1 % (Hz/t_scaler))== 0:
             t_tdma += 1
 
@@ -218,10 +222,20 @@ def run_auv_node(pub,auv,obs,Ts,Tf, auvNum):
 
             pub[2].publish(np.array([int(auvID),rx[idx_motion+idx],ry[idx_motion+idx],ryaw[idx_motion+idx]], dtype=np.float32))
             # PUBLISH THE CTRL_CMD
+            
             if len(rx)-1 <= idx_motion+idx:
                 idx_motion += 0
             else:
                 idx_motion += 1
+            if t > header.config.TIME_DURATION/2:
+                if auvID == 2:
+                    idx_motion += 0
+            
+            
+
+            
+                
+
 
         if int(t) == (header.config.TIME_DURATION-1):
             rospy.on_shutdown(shutdown_cllbk)
@@ -299,13 +313,12 @@ def main():
     auvNum = rospy.get_param(params_path+'/auvNum')
 
     # Init Global Variables for ROS callbacks
-    AUV_XY = header.config.AUV_XY
+    
     s_state = [AUV_XY[auvID-1,0],[auvID-1,1],[auvID-1,2]] # --> Agent Pose
     t_pose = [0,0,0] # --> Target ground truth
     m_rx = [0,0,0,0] # --> received measurament
-    ctrl_policy = []
-    for i in range((len(s_state)+((header.config.H+1)*2))):
-        ctrl_policy.append(0)
+    
+
     # Node Init
     rospy.init_node('auv'+str(auvID)) #TO ADD debug prints --> log_level=rospy.DEBUG
 

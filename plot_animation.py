@@ -111,7 +111,7 @@ for i in range(int(auvNum)):
 # Parameters
 lw = 8
 fs = 50
-
+tw = 40
 # Initialize data structures
 a1_x, a2_x, a3_x, a4_x = [], [], [], []
 a1_y, a2_y, a3_y, a4_y = [], [], [], []
@@ -168,6 +168,7 @@ for i in range(len(phi1)):
 
 math_vars = ['\\xi','\\hat{\\xi}','s_i','\\kappa(\\Phi)']
 time_vars = ['(t_{0})','(t_{f})']
+sensors_vars = ['s_1','s_2','s_3']
 
 # Conditioning - Figure 2
 fig2, ax2 = plt.subplots(1,1)
@@ -209,10 +210,18 @@ plt.xticks(fontsize=fs/2, rotation=0)#to set dimension and orientation of tick l
 ax.set_facecolor('azure')
 target = ax.plot(target_x_traj[0],target_y_traj[0],'r',linewidth=lw,label=r'$ %s $'%math_vars[0]+'(t)')[0]
 
-a1 = ax.plot(a1_x[0],a1_y[0],'b',label=r'$ %s $'%math_vars[2]+'(t)',linewidth=lw)[0]
-a2 = ax.plot(a2_x[0],a2_y[0],'b',linewidth=lw)[0]
-a3 = ax.plot(a3_x[0],a3_y[0],'b',linewidth=lw)[0]
+a1 = ax.plot(a1_x[0],a1_y[0],'b',label=r'$ %s $'%math_vars[2]+'(t)',linewidth=lw/2)[0]
+a2 = ax.plot(a2_x[0],a2_y[0],'b',linewidth=lw/2)[0]
+a3 = ax.plot(a3_x[0],a3_y[0],'b',linewidth=lw/2)[0]
+
+s1 = ax.scatter(a3_x[0],a3_y[0],c='b',linewidths=lw)
+s2 = ax.scatter(a3_x[0],a3_y[0],c='b',linewidths=lw)
+s3 = ax.scatter(a3_x[0],a3_y[0],c='b',linewidths=lw)
+
 #a4 = ax.plot(a4_x[0],a4_y[0],'b',linewidth=lw)[0]
+ax.text(a1_x[0],a1_y[0],r'$ %s $'%sensors_vars[0]+r'$ %s $'%time_vars[0],fontsize=tw)
+ax.text(a2_x[0],a2_y[0],r'$ %s $'%sensors_vars[1]+r'$ %s $'%time_vars[0],fontsize=tw)
+ax.text(a3_x[0],a3_y[0],r'$ %s $'%sensors_vars[2]+r'$ %s $'%time_vars[0],fontsize=tw)
 
 l1 = ax.plot(l1_x[0],l1_y[0],'g--',linewidth=lw/4,label='LOS')[0]
 l2 = ax.plot(l2_x[0],l2_y[0],'g--',linewidth=lw/4)[0]
@@ -236,7 +245,13 @@ def update(frame):
     a2.set_data(a2_x[:frame],a2_y[:frame]) #if you use : the plot remain
     a3.set_data(a3_x[:frame],a3_y[:frame])
     #a4.set_data(a4_x[:frame],a4_y[:frame])
-    
+    data = np.stack([a1_x[frame], a1_y[frame]]).T
+    s1.set_offsets(data)
+    data = np.stack([a2_x[frame], a2_y[frame]]).T
+    s2.set_offsets(data)
+    data = np.stack([a3_x[frame], a3_y[frame]]).T
+    s3.set_offsets(data)
+
     l1.set_data(l1_x[frame],l1_y[frame]) # if you dont use : the plot is deleted each iteration
     l2.set_data(l2_x[frame],l2_y[frame])
     l3.set_data(l3_x[frame],l3_y[frame])
@@ -251,7 +266,7 @@ def update(frame):
     #plt.gca().relim()
     #plt.gca().autoscale_view()
 
-    return (target, a1,a2,a3,l1,l2,l3,estimation)#a4
+    return (target, a1,a2,a3,s1,s2,s3,l1,l2,l3,estimation)#a4
 
 print(len(target_x_traj))
 # you can animate multiple fiures simultaneosuly
