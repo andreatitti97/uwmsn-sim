@@ -110,8 +110,7 @@ def run_auv_node(pub,auv,obs,Ts,Tf, auvNum):
     path = None
 
     # Start listeners and init waypoints data structures
-    
-
+    AUV_failure = header.config.AUV_failure
 
     ax = [s_state[0]] #the "first waypoint is the initial vehicle state"
     ay = [s_state[1]]
@@ -226,16 +225,15 @@ def run_auv_node(pub,auv,obs,Ts,Tf, auvNum):
             if len(rx)-1 <= idx_motion+idx:
                 idx_motion += 0
             else:
-                idx_motion += 1
-            if t > header.config.TIME_DURATION/2:
-                if auvID == 2:
-                    idx_motion += 0
-            
-            
-
-            
-                
-
+                #SIMULATE AUVA_failure
+                if auvID != 2:
+                    idx_motion += 1  
+                else:
+                    if t > header.config.TIME_DURATION/2 and AUV_failure == True:
+                        idx_motion += 0
+                    else:
+                        idx_motion += 1  
+        
 
         if int(t) == (header.config.TIME_DURATION-1):
             rospy.on_shutdown(shutdown_cllbk)

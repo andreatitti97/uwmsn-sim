@@ -7,7 +7,7 @@ import matplotlib.animation as animation
 
 # Environment initialization
 pkg_directory = os.path.dirname(pathlib.Path(__file__).parent.resolve())+'/uwmsn-sim'
-log_directory = os.path.dirname(pathlib.Path(__file__).parent.resolve())+'/logs'
+log_directory = os.path.dirname(pathlib.Path(__file__).parent.resolve())+'/logs_FAILURE'#/logs_FIXED_FORM'
 class_directory = pkg_directory+'/src'+'/Classes'
 
 # Load simulation info
@@ -54,7 +54,7 @@ for i in range(int(auvNum)):
     tracking_errors.append(err)
 
     #Optimization Data
-    PDR[i] = np.loadtxt(log_directory+'/'+str(i+1)+'-PDR')
+    #PDR[i] = np.loadtxt(log_directory+'/'+str(i+1)+'-PDR')
 
 # LOAD FILES FOR PLOT ESTIMATION (temporary)
 cov_x = np.loadtxt(log_directory+'/'+str(1)+'-cov'+str(1)+'.txt')
@@ -258,10 +258,11 @@ def update(frame):
     #l4.set_data(l4_x[frame],l4_y[frame])
 
 
-    if frame % est_samples == 0:  
-
-        data = np.stack([x_hat_x[:int(frame/est_samples)], x_hat_y[:int(frame/est_samples)]]).T
-        estimation.set_offsets(data)
+    '''if frame % est_samples == 0:  
+      
+        data = np.stack([x_hat_x[:int(frame/est_sa
+        mples)], x_hat_y[:int(frame/est_samples)]]).T
+        estimation.set_offsets(data)'''
         
     #plt.gca().relim()
     #plt.gca().autoscale_view()

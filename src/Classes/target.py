@@ -66,8 +66,8 @@ class Target:
         """
         self.t += dt
         self.pose.theta = self.pose.theta + (self.ang_vel+self.ang_acc * dt)*dt 
-        self.pose.x = self.pose.x + (self.lin_vel+self.lin_acc*dt) * \
-            np.cos(self.pose.theta) * dt #self.pose.x+0.001*np.sin(0.01*self.t+np.pi)#
+        self.pose.x = self.pose.x + 0.001*np.sin(0.01*self.t+np.pi)# (self.lin_vel+self.lin_acc*dt) * \
+            #np.cos(self.pose.theta) * dt 
         self.pose.y = self.pose.y + (self.lin_vel+self.lin_acc*dt) * \
             np.sin(self.pose.theta) * dt 
         

@@ -23,6 +23,7 @@ sim_info = np.loadtxt(log_directory+'/sim_info.txt')
 ctrl_set = np.loadtxt(log_directory+'/ctrl_set.txt')
 auvNum = sim_info[0] 
 elapsed_t = sim_info[1]
+elapsed_t = 600
 Ts = sim_info[2]
 
 # Load target data - TO DOWNSAMPLE
@@ -62,11 +63,11 @@ for i in range(int(auvNum)):
     tracking_errors.append(err)
 
     #Optimization Data
-    PDR[i] = np.loadtxt(log_directory+'/'+str(i+1)+'-PDR')
+    #PDR[i] = np.loadtxt(log_directory+'/'+str(i+1)+'-PDR')
 
 # Downsampling script
 original_samples = len(target_x_traj)
-sampling = 200#100 ideal #200 realistic scneario
+sampling = 50#100 ideal #200 realistic scneario
 tmp_x = target_x_traj
 target_x_traj = tmp_x[::sampling]
 
@@ -132,23 +133,31 @@ for j in range(int(auvNum)):
             phi4.append([np.sin(b), -np.cos(b)])
 
 for i in range(len(phi1)):
-    phi[0] = phi1[i]
-    phi[1] = phi2[i]
-    phi[2] = phi3[i]
-    #phi[3] = phi4[i]
+    if i < samples/2:
+        phi[0] = phi1[i]
+        phi[1] = phi2[i]
+        phi[2] = phi3[i]
+        #phi[3] = phi4[i]
+    else:
+        print('prova')
+        print(i)
+        phi[0] = phi1[i]
+        phi[1] = phi2[i]
 
     cost = computeCost(phi)
     list_phi.append(cost)
+
 #np.savetxt('/home/andrea/Documents/controlo_paper_results/official_results/validation1/logs/logs_COMPARISON_ERRORS/cond_range3',list_phi)
 #np.savetxt('/home/andrea/Documents/controlo_paper_results/official_results/validation1/logs/logs_COMPARISON_ERRORS/err_range3',tracking_errors[0])
-
+#np.savetxt('/home/andrea/Desktop/cost_gamma=0.3',list_phi)
 ##########################################################
 # PLOT SETUP
 fs = 42
 lw = 5
 sw = 1
 tw = 40
-math_vars = ['\\kappa(\\Phi)','\\xi']
+math_vars = ['\\kappa(\\Phi)','\\xi','C^{(d)}+C^{(g)}']
+
 agents_vars = ['s_1','s_2','s_3','s_4']
 time_vars = ['(t_{0})','(t_{f})','(t_{0}=t_{f})']
 
@@ -162,13 +171,13 @@ tmp = []
 for i in range(samples):
     tmp.append(list_phi[i]/max)
 
-ax.plot(t_axis,list_phi,label=r'$ %s $'%math_vars[0],linewidth=lw)
+ax.plot(t_axis,list_phi,label='loss function',linewidth=lw)
 opt_value = []
 for i in range(samples):
     opt_value.append(1)
 ax.plot(t_axis,opt_value,'r--',label='Optimal Value',linewidth=lw)
 ax.set_xlabel('t (s)', fontsize = fs)
-ax.set_ylabel(r'$ %s $'%math_vars[0], fontsize=fs)
+ax.set_ylabel(r'$ %s $'%math_vars[2], fontsize=fs)
 ax.legend(fontsize=fs*2/3)
 ax.grid()
 plt.yticks(fontsize=(fs*2)/3, rotation = 0)#to set dimension and orientation of tick labels
@@ -192,10 +201,12 @@ ax.scatter(target_x_traj[0],target_y_traj[0],c='y',marker='o',linewidths=sw*8)
 ax.scatter(target_x_traj[-1],target_y_traj[-1],c='k',linewidths=sw*12)
 ax.scatter(target_x_traj[-1],target_y_traj[-1],c='r',linewidths=sw*8)
 
-#ax.text(target_x_traj[-1],target_y_traj[-1]-23,r'$ %s $'%math_vars[1]+r'$ %s $'%time_vars[2],fontsize=(tw/3)*2)
-ax.text(target_x_traj[-1]+6,target_y_traj[-1]-18,r'$ %s $'%math_vars[1]+r'$ %s $'%time_vars[1],fontsize=tw)
-ax.text(target_x_traj[0]+15,target_y_traj[0],r'$ %s $'%math_vars[1]+r'$ %s $'%time_vars[0],fontsize=tw)
 
+#ax.text(target_x_traj[-1],target_y_traj[-1]-23,r'$ %s $'%math_vars[1]+r'$ %s $'%time_vars[2],fontsize=(tw/3)*2)
+ax.text(target_x_traj[-1]-100,target_y_traj[-1],r'$ %s $'%math_vars[1]+r'$ %s $'%time_vars[1],fontsize=tw)
+ax.text(target_x_traj[0]-100,target_y_traj[0],r'$ %s $'%math_vars[1]+r'$ %s $'%time_vars[0],fontsize=tw)
+
+#ax.text(target_x_traj[-1]+5,target_y_traj[-1]+2,r'$ %s $'%math_vars[1]+r'$ %s $'%time_vars[2],fontsize=(tw/3)*2)
 
 cb = fig.colorbar(c_map, ax=ax)
 cb.set_label('t (s)',fontsize=fs)
@@ -207,21 +218,33 @@ for i in range(int(auvNum)):
         ax.plot([auv_x[-1,i],
             target_x_traj[-1]],[auv_y[-1,i],target_y_traj[-1]],'r--',linewidth=lw/3,label='LOS'+r'$ %s $'%time_vars[1])
     else:
-        ax.plot([auv_x[-1,i],
-            target_x_traj[-1]],[auv_y[-1,i],target_y_traj[-1]],'r--',linewidth=lw/3)
+        if i != 1:
+            ax.plot([auv_x[-1,i],
+                target_x_traj[-1]],[auv_y[-1,i],target_y_traj[-1]],'r--',linewidth=lw/3)
         
     if i == 0:
-        a,b,c,d = +5,+0,+10,0
+        a,b,c,d = -55,-55,-25,0
     elif i == 1:
-        a,b,c,d = -45,+13,-0,-35
+        a,b,c,d = -60,-45,-25,-35
     else:
-        a,b,c,d = +15,-8,-30,+30
+        a,b,c,d = -120,+30,-30,+30
+
+    '''if i == 0:
+        a,b,c,d = +5,+0,+2,0
+    elif i == 1:
+        a,b,c,d = +5,+0,-0,+5
+    else:
+        a,b,c,d = -15,-8,-3,+5'''
 
     ax.scatter(auv_x[:,i],auv_y[:,i],c=test,cmap='autumn_r',linewidths=sw)
     ax.text(auv_x[0,i]+a,auv_y[0,i]+b,r'$ %s $'%agents_vars[i]+r'$ %s $'%time_vars[0],fontsize=tw)
     ax.scatter(auv_x[0,i],auv_y[0,i],c='y',linewidths=sw*8)
     #ax.text(auv_x[-1,i]+c,auv_y[-1,i]+d,r'$ %s $'%agents_vars[i]+r'$ %s $'%time_vars[1],fontsize=tw)
-    ax.scatter(auv_x[-1,i],auv_y[-1,i],c='r',linewidths=sw*8)
+    if i == 1:  
+        ax.text(auv_x[-1,i]+15,auv_y[-1,i],'FAILURE',fontsize=2*tw/3)
+        ax.scatter(auv_x[-1,i],auv_y[-1,i],marker='X',c='r',linewidths=sw*15)
+    else:
+        ax.scatter(auv_x[-1,i],auv_y[-1,i],c='r',linewidths=sw*8)
 
 
 '''PROPOSAL
@@ -272,7 +295,7 @@ ax.set_ylabel('y (m)',fontsize=fs)
 ax.grid()
 ax.axis('equal')
 ax.legend(fontsize=(fs*2)/3,loc='lower right')
-#plt.show()
+plt.show()
 
 ##########################################################
 # Plot tracking error
@@ -400,19 +423,24 @@ fig5, ax = plt.subplots()
 sampling = 1
 math_vars = ['loss function 1','loss function 2','loss function 3']
 lthres = header.config.RANGE_TO_TARGET
+
 x = np.linspace(0,elapsed_t,int(samples/sampling)) #subsampled set
 for i in range(int(auvNum)):
     #plt.subplot(int(auvNum),1,i+1)
     reward_func = []
+    dist_reward = []
     tmp_x = auv_x[:,i]
     tmp_y = auv_y[:,i]
-
+    d0 = np.sqrt((target_x_traj[0]-tmp_x[0])**2+(target_y_traj[0]-tmp_y[0])**2)
+    cost_d = np.linspace(5,d0,samples)
+    cost_g = np.linspace(0.01,1,samples)
   
     for j in range(samples):
-        tmp_phi = list_phi[j]
+        tmp_phi = list_phi[j]+20
 
         dist = np.sqrt((target_x_traj[j]-tmp_x[j])**2+(target_y_traj[j]-tmp_y[j])**2)
         reward_func.append(dist+tmp_phi)
+        dist_reward.append(dist)
         
         
     model = make_interp_spline(x, reward_func[::sampling])
@@ -430,15 +458,16 @@ plt.yticks(fontsize=(fs*2)/3, rotation = 0)#to set dimension and orientation of 
 plt.xticks(fontsize=(fs*2)/3, rotation=0)#to set dimension and orientation of tick labels
 
 fig5, ax = plt.subplots()
-ax.plot(list_phi,y,linewidth=lw/2)
-ax.scatter(list_phi[-1],y[-1],linewidths=lw/2)
+ax.plot(list_phi,dist_reward,linewidth=lw/2)
+ax.plot(1/cost_g,cost_d,linewidth=lw/2)
+ax.scatter(list_phi[-1],dist_reward[-1],linewidths=lw/2)
 ax.grid()
 ax.legend(fontsize=fs*2/3)
 ax.grid()
 plt.yticks(fontsize=(fs*2)/3, rotation = 0)#to set dimension and orientation of tick labels
 plt.xticks(fontsize=(fs*2)/3, rotation=0)#to set dimension and orientation of tick labels
 
-plt.show()
+#plt.show()
 
 
 '''Interpolation script

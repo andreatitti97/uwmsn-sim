@@ -32,24 +32,25 @@ def generate_random_points(area, min_distance, max_distance, center_x, center_y)
 
 ############################################################ SIMULATION SETUP ########################################################
 # Simulation parameters
-TIME_DURATION = 600 # (s)
+TIME_DURATION = 500 # (s)
 TIME_STEP = 0.01
 TIME_SCALER = 1# in [1 - 10] values near 10 may be source of errors (to fast for ROS stack)
 c = 1500 #sound wave speed
-OPTIMIZATION_ON = False
+
+AUV_failure = False
 
 # Estimation Parameters
 TP = 30 # regressor MAX length 40
 buffLen = 10 #buffer length for storing received pkts
-SIGMA_MEAS = 0.1#0.2 # (rad^2) --> 4.5° (as assumed in DAMPS and by cassino)
+SIGMA_MEAS = 0.08#0.1#0.2 # (rad^2) --> 4.5° (as assumed in DAMPS and by cassino)
 
 # AUVs Team Settings
 AUV_MAX_VEL = 1.5 #(m/s) -
 RANGE_TO_TARGET = 50 
 
 # Optimization Parameters --- alpha = 0.15, gamma = 1.0 (almost fixed formation)
-alpha_w = 0.34#0.15
-gamma_w = 1.0#0.25#1.0
+alpha_w = 0.50#fixed form 0.45#0.15
+gamma_w = 0.3#fixed form 0.85#0.25#1.0
 u_max = 35*math.pi/180
 delta_u = 0#10*math.pi/180
 MAX = 60*math.pi/180
@@ -82,12 +83,12 @@ TARGET_INIT = [+2000,-2500, math.pi, 2.5, 0.0, 0.0, 0.0] #[x(m),y(m),theta(rad),
 #TARGET_INIT = [-100,-30, math.pi/2, 0.0, 0.0, 0.0, 0.0] #static
 #TARGET_INIT = [-70,+15, math.pi-math.pi/8, 0.8, 0.0, 0.0, 0.0] #ideal moving
 
-TARGET_INIT = [-150,0, math.pi+math.pi/2-math.pi/6, 0.5, 0.0, 0.0, 0.0] #realistic moving 1
+TARGET_INIT = [-300,-50, math.pi+math.pi/2-math.pi/6, 0.5, 0.0, 0.0, 0.0] #realistic moving 1
 #TARGET_INIT = [-150,+300, math.pi, 0.4, 0.0, 0.0, 0.0] #realistic moving 2
 #TARGET_INIT = [-200,+10, math.pi, 0.4, 0.0, 0.0, 0.0] #ideal moving 2
 # PAPER JOURNAL
 #TARGET_INIT = [-150,0, math.pi+math.pi/2-math.pi/6, 0.5, 0.0, 0.0, 0.0] # validation 1
-#TARGET_INIT = [-450,105, np.pi/2+np.pi/8, 0.45, 0.0, 0.0, 0.0] # validation 2
+TARGET_INIT = [-450,105, np.pi/2+np.pi/8, 0.45, 0.0, 0.0, 0.0] # validation 2
 
 
 alpha_0, omega_0,alpha_dot_0,omega_dot_0 = TARGET_INIT[3],TARGET_INIT[4],TARGET_INIT[5],TARGET_INIT[6]
@@ -116,15 +117,7 @@ if random_init == True:
 
 else:
 
-    # VALIDATION 2
-    AUV_XY[0,0] = -38
-    AUV_XY[0,1] = 200
-
-    AUV_XY[1,0] = +10
-    AUV_XY[1,1] = 10
-
-    AUV_XY[2,0] = 5
-    AUV_XY[2,1] = -200
+    
     # VALIDATION 1
     AUV_XY[0,0] = -20
     AUV_XY[0,1] = 10
@@ -136,12 +129,23 @@ else:
     AUV_XY[2,1] = 10
 
     AUV_XY[0,0] = -17
-    AUV_XY[0,1] = 20
-    AUV_XY[2,0] = -8
-
     AUV_XY[0,1] = -23
+
+    AUV_XY[0,1] = 20
     AUV_XY[1,1] = -2.5
+
+    AUV_XY[2,0] = -8
     AUV_XY[2,1] = 3
+
+    # VALIDATION 2
+    AUV_XY[0,0] = -38
+    AUV_XY[0,1] = 200
+
+    AUV_XY[1,0] = +10
+    AUV_XY[1,1] = 10
+
+    AUV_XY[2,0] = -150
+    AUV_XY[2,1] = -100
 
 dist = []
 
