@@ -30,41 +30,106 @@ def generate_random_points(area, min_distance, max_distance, center_x, center_y)
     
     return points
 
+def alpha_f(f):
+    ''' Compute the term alpha(f) according to Stojanovic'09'''
+    return 0.11*(f**2/(1+f**2))+44*(f**2/(4100+f**2))+(2.75*(1e-4)*(f**2))+0.003
+
 ############################################################ SIMULATION SETUP ########################################################
 # Simulation parameters
 TIME_DURATION = 500 # (s)
 TIME_STEP = 0.01
 TIME_SCALER = 1# in [1 - 10] values near 10 may be source of errors (to fast for ROS stack)
-c = 1500 #sound wave speed
-
-AUV_failure = False
 
 # Estimation Parameters
 TP = 30 # regressor MAX length 40
 buffLen = 10 #buffer length for storing received pkts
 SIGMA_MEAS = 0.08#0.1#0.2 # (rad^2) --> 4.5° (as assumed in DAMPS and by cassino)
+k_phi_thresh = 1 #Thresh sul condizionamento del regressore per aggiornare la stima
 
 # AUVs Team Settings
 AUV_MAX_VEL = 1.5 #(m/s) -
 RANGE_TO_TARGET = 50 
+AUV_failure = False
+AUV2_bridge = True
 
 # Optimization Parameters --- alpha = 0.15, gamma = 1.0 (almost fixed formation)
-alpha_w = 0.50#fixed form 0.45#0.15
-gamma_w = 0.3#fixed form 0.85#0.25#1.0
-u_max = 35*math.pi/180
-delta_u = 0#10*math.pi/180
+alpha_w = 0.50 #fixed form 0.45#0.15
+gamma_w = 0.8#0.3 #fixed form 0.85#0.25#1.0
+u_max = 25*math.pi/180
+delta_u = 5*math.pi/180
 MAX = 60*math.pi/180
 MIN = 10*math.pi/180
-U = 7 #number of control choices
+U = 7 # number of control choices (should be an ODD number)
 H = 3 # planning horizon
 
-if U == 7:
-    ctrl_cmd = [-u_max,-u_max*2/((U-1)/2),-u_max/((U-1)/2),0,
-                u_max/((U-1)/2), u_max*2/((U-1)/2), u_max] #set of control actions
-elif U == 5:
-    ctrl_cmd = [-u_max,-u_max/2,0,u_max/2,u_max] #set of control actions
+ctrl_cmd = []
+u_i = u_max/((U-1)/2)
+for i in range(U):
+    if i < np.floor(U/2):
+        ctrl_cmd.append(-(u_max-i*u_i))
+    elif i == np.ceil(U/2):
+        ctrl_cmd.append(0.0)
+    if i > U/2:
+        ctrl_cmd.append((i-((U-1)/2))*u_i)
+
+# Randomize initial agents position or chose initial positions
+AUV_XY = np.zeros((4,3))
+area = (200, 200) # Area dimensions (width, height)
+center = (0,0)
+
+random_init = False
+min_distance = 35 #Minimum distance between AUVs
+max_distance = 500 #Maximum distance between AUVs
+
+if random_init == True:
+    random_points = generate_random_points(area, min_distance, max_distance, center[0],center[1])
+    
+    for i, point in enumerate(random_points):
+
+        AUV_XY[i,0] = point[0]#TODO: SOLVE THE BUG OF HAVING AUV1 IN POS [0,0,0]
+        AUV_XY[i,1] = point[1]
+
 else:
-    ctrl_cmd = [-u_max,0,u_max]
+    AUV_XY[0,0] = -38
+    AUV_XY[0,1] = 200
+
+    AUV_XY[1,0] = +10
+    AUV_XY[1,1] = 10
+
+    AUV_XY[2,0] = -150
+    AUV_XY[2,1] = -100
+
+# Communication Policy Paramaters
+Ts = 4 #TDMA: slot time # time sampling always equal to Ts/2
+n = 3 #auv num
+DT = Ts*n*2
+alpha = -0.1 #0.01 #Sigmoid parameters for packet loss, if alpha << gamma --> more packet loss
+dist = []
+for i in range(len(AUV_XY)-1):
+    tmp1 = (AUV_XY[i,0],AUV_XY[i,1])
+    tmp2 = (AUV_XY[i+1,0],AUV_XY[i+1,1])
+    dist.append(distance_between_points(tmp1,tmp2))
+    
+
+avg_d = sum(dist)/(len(dist))
+d = avg_d
+gamma = avg_d*3 #Sigmoid parameter for packet loss --> depends on the distance (tune only alpha)
+
+# Acoustic Parameters
+SL = 200 #db
+NL = 20 #db
+DI = 0 #directivity index a-dimensional
+DThresh = 0 #dB (minimum connectivity requirement)
+c = 1500 #sound wave speed
+f = 10 #kHx ( frequency of the modem)
+
+for i in range(len(dist)):
+    acoustic_loss = alpha_f(f) #f is in kHz
+    TL = 20*np.log(dist[i]) + (dist[i]*acoustic_loss*1e-3)
+    
+TL_ideal = 20*np.log(min_distance) + (min_distance*acoustic_loss*1e-3)#dB (transmission loss that if happens is "ideal")
+TL_worse = 20*np.log(max_distance) + (max_distance*acoustic_loss*1e-3)
+
 
 ######## CHOOSE TARGET DYNAMIC ###################################################################################################
 # CHOOSE Target parameter: start, goal, min max vels
@@ -94,99 +159,9 @@ TARGET_INIT = [-450,105, np.pi/2+np.pi/8, 0.45, 0.0, 0.0, 0.0] # validation 2
 alpha_0, omega_0,alpha_dot_0,omega_dot_0 = TARGET_INIT[3],TARGET_INIT[4],TARGET_INIT[5],TARGET_INIT[6]
 MAX_TARGET_VEL = 3 #(m/s) (only if target no costant vels)
 MIN_TARGET_VEL = 3 #(m/s)
-###################################################################################################################################
+sin_pattern = False
 
-
-AUV_XY = np.zeros((4,3))
-
-# Example usage
-area = (200, 200) #(500,500) # Area dimensions (width, height)
-center = (0,0)
-
-random_init = False
-min_distance = 35# Minimum distance between AUVs
-max_distance = 500# Maximum distance between AUVs
-
-if random_init == True:
-    random_points = generate_random_points(area, min_distance, max_distance, center[0],center[1])
-    
-    for i, point in enumerate(random_points):
-
-        AUV_XY[i,0] = point[0]#TODO: SOLVE THE BUG OF HAVING AUV1 IN POS [0,0,0]
-        AUV_XY[i,1] = point[1]
-
-else:
-
-    
-    # VALIDATION 1
-    AUV_XY[0,0] = -20
-    AUV_XY[0,1] = 10
-
-    AUV_XY[1,0] = 100
-    AUV_XY[1,1] = 10
-
-    AUV_XY[2,0] = 200
-    AUV_XY[2,1] = 10
-
-    AUV_XY[0,0] = -17
-    AUV_XY[0,1] = -23
-
-    AUV_XY[0,1] = 20
-    AUV_XY[1,1] = -2.5
-
-    AUV_XY[2,0] = -8
-    AUV_XY[2,1] = 3
-
-    # VALIDATION 2
-    AUV_XY[0,0] = -38
-    AUV_XY[0,1] = 200
-
-    AUV_XY[1,0] = +10
-    AUV_XY[1,1] = 10
-
-    AUV_XY[2,0] = -150
-    AUV_XY[2,1] = -100
-
-dist = []
-
-for i in range(3):
+for i in range(len(AUV_XY)):
     AUV_XY[i,2] = math.atan2(TARGET_INIT[1]-AUV_XY[i,1],TARGET_INIT[0]-AUV_XY[i,0])
-    tmp1 = (AUV_XY[i,0],AUV_XY[i,1])
-    tmp2 = (TARGET_INIT[0],TARGET_INIT[1])
-    dist.append(distance_between_points(tmp1,tmp2))
 
-avg_d = sum(dist)/len(dist)-10
-d = avg_d
-
-# Communication Paramaters
-Ts = 4 #TDMA: slot time # time sampling always equal to Ts/2
-n = 3 #auv num
-DT = Ts*n*2
-
-alpha = -0.1 #0.01 #Sigmoid parameters for packet loss, if alpha << gamma --> more packet loss
-gamma = avg_d*3 #Sigmoid parameter for packet loss --> depends on the distance (tune only alpha)
-
-# Acoustic Parameters
-SL = 200 #db
-NL = 20 #db
-DI = 0 #directivity index a-dimensional
-DThresh = 20 #dB (minimum connectivity requirement)
-
-f = 10 #kHx ( frequency of the modem)
-
-def alpha_f(f):
-    
-    return 0.11*(f**2/(1+f**2))+44*(f**2/(4100+f**2))+(2.75*(1e-4)*(f**2))+0.003
-
-#print('INITIAL EXPECTED TRANSIMISSION LOSS BETWEEN NODES')
-for i in range(len(dist)):
-    acoustic_loss = alpha_f(f) #f is in kHz
-    TL = 20*np.log(dist[i]) + (dist[i]*acoustic_loss*1e-3)
-    
-
-TL_ideal = 20*np.log(min_distance) + (min_distance*acoustic_loss*1e-3)#dB (transmission loss that if happens is "ideal")
-TL_worse = 20*np.log(max_distance) + (max_distance*acoustic_loss*1e-3)
-#print('TL ideal', TL_ideal) #c.a. 80 dB
-#print('TL worse', TL_worse) #c.a. 130 dB
-# IN REALTÀ PERME CONVIENE METTERE IL CONDIZIONAMENTO INIZIALE COME THRESH
-k_phi_thresh = 1 #Thresh sul condizionamento del regressore per aggiornare la stima
+###################################################################################################################################

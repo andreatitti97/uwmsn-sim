@@ -29,15 +29,18 @@ spec.loader.exec_module(header)
 target_x_traj, target_y_traj, platform_x, platform_y = [], [], [], []
 auv1_x, auv1_y, auv2_x, auv2_y,auv3_x,auv3_y,auv4_x,auv4_y  = [], [], [], [], [], [], [], []
 # Init global variables for callbacks
-path1 = [None,None,None]
-path2 = [None,None,None]
-path3 = [None,None,None]
-path4 = [None,None,None] 
+H = header.config.H
+path1, path2, path3, path4, paths = [], [], [], [], []
 paths = [None,None,None,None]
+for i in range(H):
+    path1.append(None)
+    path2.append(None)
+    path3.append(None)
+    path4.append(None)
 
 def run_simulation(target, auvNum, pub_s_state, pub_t_state, pub_init_opt):
 
-    """Simulate the sensor platform and the moving header.target
+    """Simulate the sensor platform and the moving target
     Input:  
             target : target initial state
             auvNum : list containing sensors state and methods for measurements
@@ -49,8 +52,7 @@ def run_simulation(target, auvNum, pub_s_state, pub_t_state, pub_init_opt):
 
     # ROS simulation parameters
     t_scaler = header.config.TIME_SCALER
-
-    Hz = 1/(header.config.TIME_STEP) #NB: different from sampling rate for move things, this is ros rate   
+    Hz = 1/(header.config.TIME_STEP) 
     rate = rospy.Rate(Hz)
 
     # Init time variables and counters and lists
@@ -76,14 +78,15 @@ def run_simulation(target, auvNum, pub_s_state, pub_t_state, pub_init_opt):
         arr = [measure_,meas_pos[0],meas_pos[1]]
         meas_table.append(arr)
 
-    
     estimator = header.estimator_module.Estimation()
     estimator.computeState(meas_table)
     rospy.loginfo('|---- OPTIMIZATION TIME WINDOW (s) --> %s',header.config.DT)
     rospy.loginfo('|---- KINEMATIC SIMULATION: Initial AUVs positions (m) --> %s',auvs_xy)
-    rospy.loginfo('|---- KINEMATIC SIMULATION: Initial Target position (m) --> %s',[target.pose.x,target.pose.y,target.pose.theta])
+    rospy.loginfo('|---- KINEMATIC SIMULATION: Initial Target position (m) --> %s',
+                    [target.pose.x,target.pose.y,target.pose.theta])
     rospy.loginfo('|---- INITIAL OBJECTIVE(CONDITION) --> %s',header.utils.compute_cost(estimator.phi))
     rospy.sleep(1)
+
     ## SIMULATION LOOP ############################################################################################################
     while not rospy.is_shutdown():
         if count1 < Hz: #to be sure that the initalization setup is shared among nodes
@@ -92,13 +95,15 @@ def run_simulation(target, auvNum, pub_s_state, pub_t_state, pub_init_opt):
             for i in range(auvNum):
                 tmp.append(np.sqrt((target.pose.y-auvs_xy[i,1])**2+(target.pose.x-auvs_xy[i,0])**2))
             pub_init_opt[1].publish(np.array(tmp,dtype=np.float32))
+            
         for i in range(auvNum):
             # Publish agents info
             a = np.array([auvs_xy[i,0],auvs_xy[i,1],auvs_xy[i,2]], dtype=np.float32)
             pub_s_state[i].publish(a)
             # Publish header.target info
             tmp = []
-            pub_t_state[i].publish(np.array([target.pose.x,target.pose.y,target.pose.theta], dtype=np.float32))
+            pub_t_state[i].publish(np.array([target.pose.x,target.pose.y,target.pose.theta],
+                                            dtype=np.float32))
 
         # Move Agents
         for i in range(auvNum):
@@ -139,7 +144,8 @@ def run_simulation(target, auvNum, pub_s_state, pub_t_state, pub_init_opt):
         if count1 % Hz == 0:
             '''ADD DEBUG PRINTS HERE'''
             rospy.loginfo('|---- KINEMATIC SIMULATION: Elapsed time (s) --> %s',t)
-            rospy.loginfo('|---- KINEMATIC SIMULATION: Target groud truth (m) --> %s',[target.pose.x,target.pose.y])
+            rospy.loginfo('|---- KINEMATIC SIMULATION: Target groud truth (m) --> %s',
+                            [target.pose.x,target.pose.y])
 
         t += dt
         count1 += 1  

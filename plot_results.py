@@ -23,7 +23,6 @@ sim_info = np.loadtxt(log_directory+'/sim_info.txt')
 ctrl_set = np.loadtxt(log_directory+'/ctrl_set.txt')
 auvNum = sim_info[0] 
 elapsed_t = sim_info[1]
-elapsed_t = 600
 Ts = sim_info[2]
 
 # Load target data - TO DOWNSAMPLE
@@ -133,16 +132,20 @@ for j in range(int(auvNum)):
             phi4.append([np.sin(b), -np.cos(b)])
 
 for i in range(len(phi1)):
-    if i < samples/2:
+    if header.config.AUV_failure == True:
+        if i < samples/2:
+            phi[0] = phi1[i]
+            phi[1] = phi2[i]
+            phi[2] = phi3[i]
+            #phi[3] = phi4[i]
+        else:
+
+            phi[0] = phi1[i]
+            phi[1] = phi2[i]
+    else:
         phi[0] = phi1[i]
         phi[1] = phi2[i]
         phi[2] = phi3[i]
-        #phi[3] = phi4[i]
-    else:
-        print('prova')
-        print(i)
-        phi[0] = phi1[i]
-        phi[1] = phi2[i]
 
     cost = computeCost(phi)
     list_phi.append(cost)

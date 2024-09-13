@@ -40,8 +40,6 @@ def computePursuitVel(curr_est,s_pose,d_max):
 
     if v_n > config.AUV_MAX_VEL:
         v_n = config.AUV_MAX_VEL
-    '''if 0 < eucl_dist <= config.RANGE_TO_TARGET:
-        v_n = np.sqrt((curr_est[2,0])**2+(curr_est[3,0])**2)'''
 
     return v_n
 
@@ -77,3 +75,4 @@ def computeCov(y,phi):
     cov = np.linalg.inv(np.dot(np.dot(np.transpose(phi),np.linalg.inv(a*np.identity(len(y)))),phi))
         
     return cov
+

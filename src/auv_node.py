@@ -33,25 +33,9 @@ ctrl_policy = []
 for i in range(((len(s_state)+(header.config.H+1)*2))):
     ctrl_policy.append(0)
 
-def updatePathRoutine(ax,ay,waypoints,s_pose,v_n,dt,DT,auvID):
+def updatePathRoutine(ax,ay,waypoints,s_pose,v_n,dt,DT):
 
     n_samples = 4
-    max_wp_queue = 10
-
-    '''if len(ax) >= n_samples:
-        tmp = []
-
-        for i in range(len(ax)):
-            
-            tmp.append(np.sqrt((s_pose[0]-ax[i])**2+(s_pose[1]-ay[i])**2))
-            
-        idx = tmp.index(min(tmp))
-        
-        for i in range(len(ax[idx:len(ax)])):
-            
-            ax.pop(-1)
-            ay.pop(-1)'''
-
     # Initialized starting position
     a_i = [s_pose[0],s_pose[1]]
     t_i = s_pose[2]
@@ -137,10 +121,12 @@ def run_auv_node(pub,auv,obs,Ts,Tf, auvNum):
 
             if auvID*Ts == t_tdma:
                 rospy.loginfo('AUV ID: %s current state %s',auvID,s_state)
-                rospy.loginfo('%s|---- AUV '+str(auvID)+': Transmitting measurements at time %s --> Channel Busy%s',cyan,t,none)
+                rospy.loginfo('%s|---- AUV '+str(auvID)+': Transmitting measurements at time %s --> Channel Busy%s',
+                                cyan,t,none)
                 
                 # Perform measurement 
-                [measure_, rel_bearing_, meas_pos] = auv.measureBearing(t_pose[0],t_pose[1],[s_state[0],s_state[1]],s_state[2])
+                [measure_, rel_bearing_, meas_pos] = auv.measureBearing(t_pose[0],t_pose[1],
+                                                                        [s_state[0],s_state[1]],s_state[2])
                 local_measures.append([t,measure_,meas_pos[0],meas_pos[1]])
                 for i in range(len(local_measures)):
                     pub[0].publish(np.array(local_measures[i],dtype=np.float32))
@@ -151,7 +137,8 @@ def run_auv_node(pub,auv,obs,Ts,Tf, auvNum):
                     t_tdma = 0
 
             else:#for making measurements also outside the given timeslot 
-                [measure_, rel_bearing_, meas_pos] = auv.measureBearing(t_pose[0],t_pose[1],[s_state[0],s_state[1]],s_state[2])
+                [measure_, rel_bearing_, meas_pos] = auv.measureBearing(t_pose[0],t_pose[1],
+                                                                        [s_state[0],s_state[1]],s_state[2])
                 local_measures.append([t,measure_,meas_pos[0],meas_pos[1]])
 
         if m_rx[0] - old_m[0] > 1:#check if the measurement is new
@@ -173,15 +160,11 @@ def run_auv_node(pub,auv,obs,Ts,Tf, auvNum):
                 v_n = header.utils.computePursuitVel(curr_est,s_state,d_max)
                 
                 rospy.loginfo('OPTIMIZATION ID %s PURSUIT VEL: %s',auvID,v_n)
-                cov = header.utils.computeCov(y,phi)# TODO change ak tu curr est
-                #pub[1].publish(np.array([t_pose[0],t_pose[1],np.cos(t_pose[2]),np.sin(t_pose[2])],dtype=np.float32)) #pub estimate of target state
+                cov = header.utils.computeCov(y,phi)
                 tmp = []
                 for i in range(len(curr_est)):
                     tmp.append(curr_est[i,0])
-
                 tmp.append(v_n)
-                
-                
                 pub[1].publish(np.array(tmp,dtype=np.float32))
                 rospy.logout('%s|---- AUV '+str(auvID)+': Target state Estimation [m,m/s] --> %s%s',blue,curr_est,none)
                 
@@ -211,7 +194,8 @@ def run_auv_node(pub,auv,obs,Ts,Tf, auvNum):
             ax = [s_state[0]] #the "first waypoint is the initial vehicle state"
             ay = [s_state[1]]
 
-            path, idx_motion, idx, rx, ry, ryaw, surge = updatePathRoutine(ax,ay,waypoints,s_state,v_n,dt,DT,auvID)
+            path, idx_motion, idx, rx, ry, ryaw, surge = updatePathRoutine(ax,ay,
+                                                            waypoints,s_state,v_n,dt,DT)
             
 
         if path != None: 
@@ -219,22 +203,21 @@ def run_auv_node(pub,auv,obs,Ts,Tf, auvNum):
             surge_vel.append(v_n)
             #if auvID != 2:#for fized node scenario
 
-            pub[2].publish(np.array([int(auvID),rx[idx_motion+idx],ry[idx_motion+idx],ryaw[idx_motion+idx]], dtype=np.float32))
+            pub[2].publish(np.array([int(auvID),rx[idx_motion+idx],
+                                        ry[idx_motion+idx],ryaw[idx_motion+idx]], dtype=np.float32))
             # PUBLISH THE CTRL_CMD
-            
             if len(rx)-1 <= idx_motion+idx:
                 idx_motion += 0
             else:
-                #SIMULATE AUVA_failure
                 if auvID != 2:
                     idx_motion += 1  
                 else:
+                    #SIMULATE AUV2_failure
                     if t > header.config.TIME_DURATION/2 and AUV_failure == True:
                         idx_motion += 0
                     else:
                         idx_motion += 1  
         
-
         if int(t) == (header.config.TIME_DURATION-1):
             rospy.on_shutdown(shutdown_cllbk)
             rospy.signal_shutdown('Simulation time limit reached')
@@ -267,7 +250,8 @@ def shutdown_cllbk():
     np.savetxt(log_path+'/'+str(auvID)+'heading',heading)
     magenta = "\033[0;35m"
     none = "\033[0m"
-    rospy.loginfo('%s|---- AUV '+str(auvID)+': Simulation data saved --> Shutting down ...%s',magenta,none)
+    rospy.loginfo('%s|---- AUV '+str(auvID)+': Simulation data saved --> Shutting down ...%s',
+                    magenta,none)
 
 def callback(data):
     
@@ -311,12 +295,10 @@ def main():
     auvNum = rospy.get_param(params_path+'/auvNum')
 
     # Init Global Variables for ROS callbacks
-    
     s_state = [AUV_XY[auvID-1,0],[auvID-1,1],[auvID-1,2]] # --> Agent Pose
     t_pose = [0,0,0] # --> Target ground truth
     m_rx = [0,0,0,0] # --> received measurament
     
-
     # Node Init
     rospy.init_node('auv'+str(auvID)) #TO ADD debug prints --> log_level=rospy.DEBUG
 

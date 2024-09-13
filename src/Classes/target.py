@@ -7,6 +7,7 @@ class_path = pkg_directory+'/Classes'
 spec = importlib.util.spec_from_file_location("module.config", class_path+"/config.py")
 config = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(config)
+sin_pattern = config.sin_pattern
 
 class Pose:
     """2D pose"""
@@ -39,6 +40,7 @@ class Target:
         self.ang_vel = config.omega_0 #(rad/sec)
         self.lin_acc = config.alpha_dot_0 #(m/sec^2)
         self.ang_acc = config.omega_dot_0 #(rad/sec^2)
+        self
         self.t = 0
 
     def set_start_target_poses(self, pose):
@@ -66,8 +68,12 @@ class Target:
         """
         self.t += dt
         self.pose.theta = self.pose.theta + (self.ang_vel+self.ang_acc * dt)*dt 
-        self.pose.x = self.pose.x + 0.001*np.sin(0.01*self.t+np.pi)# (self.lin_vel+self.lin_acc*dt) * \
-            #np.cos(self.pose.theta) * dt 
+        if sin_pattern == True:
+            self.pose.x = self.pose.x + 0.001*np.sin(0.01*self.t+np.pi)
+        else:
+            self.pose.x = self.pose.x + (self.lin_vel+self.lin_acc*dt) * \
+                np.cos(self.pose.theta) * dt 
+        
         self.pose.y = self.pose.y + (self.lin_vel+self.lin_acc*dt) * \
             np.sin(self.pose.theta) * dt 
         
