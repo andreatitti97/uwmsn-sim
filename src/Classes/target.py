@@ -33,14 +33,20 @@ class Target:
         linear and angular velocities. 
     """
 
-    def __init__(self): #path_finder_controller_target
+    def __init__(self, label): #path_finder_controller_target
 
-        self.pose = Pose(config.TARGET_INIT[0], config.TARGET_INIT[1],  config.TARGET_INIT[2])
+        if label == 1:
+            self.pose = Pose(config.TARGET_INIT[0], config.TARGET_INIT[1],  config.TARGET_INIT[2])
+        elif label == 2:
+            self.pose = Pose(10, 10,  0)
+        elif label == 3:
+            self.pose = Pose(-50, -50,  0)
         self.lin_vel = config.alpha_0 #(m/s)
         self.ang_vel = config.omega_0 #(rad/sec)
         self.lin_acc = config.alpha_dot_0 #(m/sec^2)
         self.ang_acc = config.omega_dot_0 #(rad/sec^2)
-        self
+        self.exist = False
+        self.label = label
         self.t = 0
 
     def set_start_target_poses(self, pose):

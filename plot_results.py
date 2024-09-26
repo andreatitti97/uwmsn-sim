@@ -22,25 +22,30 @@ spec.loader.exec_module(header)
 sim_info = np.loadtxt(log_directory+'/sim_info.txt')
 ctrl_set = np.loadtxt(log_directory+'/ctrl_set.txt')
 auvNum = sim_info[0] 
-elapsed_t = sim_info[1]
-Ts = sim_info[2]
-
-# Load target data - TO DOWNSAMPLE
-target_x_traj = np.loadtxt(log_directory+'/target_x_traj.txt')
-target_y_traj = np.loadtxt(log_directory+'/target_y_traj.txt')
+targetNum = sim_info[1]
+samples = sim_info[2]
+elapsed_t = sim_info[3]
+Ts = sim_info[4]
 
 # Initialize data structures for AUVs data
-auv_x_traj = np.zeros((len(target_x_traj),int(auvNum)))
-auv_y_traj = np.zeros((len(target_y_traj),int(auvNum)))
+auv_x_traj = np.zeros((samples,int(auvNum)))
+auv_y_traj = np.zeros((samples,int(auvNum)))
+target_x_traj = np.zeros((samples,int(auvNum)))
+target_y_traj = np.zeros((samples,int(auvNum)))
 surge_vel = [[],[],[],[]]
 heading = [[],[],[],[]]
 x_hat, tracking_errors, P, avgNodes, avgTime = [], [], [], [], []
 PDR = np.zeros((int(auvNum),1))
 
+# Load target data
+for i in range(targetNum):
+    target_x_traj[:,i] = np.loadtxt(log_directory+'/target_x_traj'+str(i+1)+'..txt')
+    target_y_traj[:,i] = np.loadtxt(log_directory+'/target_y_traj'+str(i+1)+'..txt')
+
 for i in range(int(auvNum)):
     # AUVs Simulation Data - TO DOWNSAMPLE
-    auv_x_traj[:,i] = np.loadtxt(log_directory+'/auv'+str(i+1)+'_x_traj.txt')
-    auv_y_traj[:,i] = np.loadtxt(log_directory+'/auv'+str(i+1)+'_y_traj.txt')
+    auv_x_traj[:,i] = np.loadtxt(log_directory+'/auv_x_traj'+str(i+1)+'.txt')
+    auv_y_traj[:,i] = np.loadtxt(log_directory+'/auv_y_traj'+str(i+1)+'.txt')
 
     surge_vel[i] = np.loadtxt(log_directory+'/'+str(i+1)+'surge_vel')
     heading[i] = np.loadtxt(log_directory+'/'+str(i+1)+'heading')*180/np.pi

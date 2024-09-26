@@ -41,20 +41,23 @@ TIME_STEP = 0.01
 TIME_SCALER = 1# in [1 - 10] values near 10 may be source of errors (to fast for ROS stack)
 
 # Estimation Parameters
+TM = 2 #sampling period (s)
 TP = 30 # regressor MAX length 40
 buffLen = 10 #buffer length for storing received pkts
 SIGMA_MEAS = 0.08#0.1#0.2 # (rad^2) --> 4.5° (as assumed in DAMPS and by cassino)
 k_phi_thresh = 1 #Thresh sul condizionamento del regressore per aggiornare la stima
+targetNum = 3
+auvNum = 6 #this is the maximum number of auvs considered in the simulator
 
 # AUVs Team Settings
 AUV_MAX_VEL = 1.5 #(m/s) -
 RANGE_TO_TARGET = 50 
-AUV_failure = False
+AUV_failure = False #auv2 will fail after t = TIME_DURATION/2
 AUV2_bridge = True
 
 # Optimization Parameters --- alpha = 0.15, gamma = 1.0 (almost fixed formation)
-alpha_w = 0.50 #fixed form 0.45#0.15
-gamma_w = 0.8#0.3 #fixed form 0.85#0.25#1.0
+alpha_w = 0.75 #fixed form 0.45#0.15
+gamma_w = 0.1#0.3 #fixed form 0.85#0.25#1.0
 u_max = 25*math.pi/180
 delta_u = 5*math.pi/180
 MAX = 60*math.pi/180
@@ -109,7 +112,6 @@ for i in range(len(AUV_XY)-1):
     tmp1 = (AUV_XY[i,0],AUV_XY[i,1])
     tmp2 = (AUV_XY[i+1,0],AUV_XY[i+1,1])
     dist.append(distance_between_points(tmp1,tmp2))
-    
 
 avg_d = sum(dist)/(len(dist))
 d = avg_d
@@ -127,7 +129,7 @@ for i in range(len(dist)):
     acoustic_loss = alpha_f(f) #f is in kHz
     TL = 20*np.log(dist[i]) + (dist[i]*acoustic_loss*1e-3)
     
-TL_ideal = 20*np.log(min_distance) + (min_distance*acoustic_loss*1e-3)#dB (transmission loss that if happens is "ideal")
+DThresh = 20*np.log(min_distance) + (min_distance*acoustic_loss*1e-3)#dB (transmission loss that if happens is "ideal")
 TL_worse = 20*np.log(max_distance) + (max_distance*acoustic_loss*1e-3)
 
 
@@ -157,6 +159,7 @@ TARGET_INIT = [-450,105, np.pi/2+np.pi/8, 0.45, 0.0, 0.0, 0.0] # validation 2
 
 
 alpha_0, omega_0,alpha_dot_0,omega_dot_0 = TARGET_INIT[3],TARGET_INIT[4],TARGET_INIT[5],TARGET_INIT[6]
+alpha_0, omega_0,alpha_dot_0,omega_dot_0 = 0,0,0,0
 MAX_TARGET_VEL = 3 #(m/s) (only if target no costant vels)
 MIN_TARGET_VEL = 3 #(m/s)
 sin_pattern = False
