@@ -132,11 +132,6 @@ def run_simulation(target_list, auvNum, pub_s_state, pub_t_state, pub_init_opt):
             consMat = np.array(consMat,dtype=np.float32)
             
             rows, cols = consMat.shape
-            '''matrixMsg = Matrix()
-            matrixMsg.rows = rows
-            matrixMsg.cols = cols
-            matrixMsg.data = consMat.flatten().tolist()
-'''
             pub_t_state[i].publish(Matrix(data=consMat.flatten().tolist(), rows=rows, cols=cols))
 
             #pub_t_state[i].publish(matrixMsg)
@@ -178,8 +173,10 @@ def run_simulation(target_list, auvNum, pub_s_state, pub_t_state, pub_init_opt):
         if count1 % Hz == 0:
             '''ADD DEBUG PRINTS HERE'''
             rospy.loginfo('|---- KINEMATIC SIMULATION: Elapsed time (s) --> %s',t)
-            rospy.loginfo('|---- KINEMATIC SIMULATION: Target groud truth (m) --> %s',
-                            [target.pose.x,target.pose.y])
+            for i in range(targetNum):
+                target =target_list[i]
+                rospy.loginfo('|---- KINEMATIC SIMULATION: Target '+str(i+1)+' groud truth (m) --> %s',
+                                [target.pose.x,target.pose.y])
 
         t += dt
         count1 += 1  

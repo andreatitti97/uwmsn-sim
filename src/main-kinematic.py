@@ -100,7 +100,7 @@ def run_simulation(target, auvNum, pub_s_state, pub_t_state, pub_init_opt):
             # Publish agents info
             a = np.array([auvs_xy[i,0],auvs_xy[i,1],auvs_xy[i,2]], dtype=np.float32)
             pub_s_state[i].publish(a)
-            # Publish header.target info
+            # Publish target info
             tmp = []
             pub_t_state[i].publish(np.array([target.pose.x,target.pose.y,target.pose.theta],
                                             dtype=np.float32))

@@ -12,11 +12,12 @@ class Tracker:
     The Tracker class is created everytime we detect a target.
     It contains the entire state of the tracked object.
     '''
-    def __init__(self):
+    def __init__(self,label):
 
         self.__estimator = est.Estimator()
         self.__curr_time = 0
         self.__prev_time = 0
+        self.__label = label
 
     @property
     def state(self):
