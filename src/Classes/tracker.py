@@ -26,7 +26,7 @@ class Tracker:
     def regressor(self):
         return self.__estimator.current_regressor
 
-    def processMeasurement(self, table): #table = [tempo, misura, auv pos x, auv pos y]
+    def processMeasurement(self, table): #table = [[tempo, misura, auv pos x, auv pos y]xTP]
         for i in range(len(table)):
             input_data = table[i]
             self.__estimator.iteration(input_data[0], input_data[1], input_data[2], input_data[3], self.__prev_time)

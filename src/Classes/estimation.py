@@ -28,6 +28,7 @@ class Estimator:
         self.__C = np.zeros((1,4))
         self.__t = []
         self.t_prev = 0
+        self.P_max = config.P_max
 
     @property
     def current_estimate(self):
@@ -56,7 +57,7 @@ class Estimator:
         self.__C = [np.sin(y_i), -np.cos(y_i), (t_meas - self.__t[0])*np.sin(y_i), -(t_meas - self.__t[0])*np.cos(y_i)]
         self.__phi.append(self.__C)
 
-        if len(self.__y) == config.TP:
+        if len(self.__y) == self.P_max:
             self.__y.pop(0) #SHIFT
             self.__t.pop(0)
             self.__phi.pop(0)          

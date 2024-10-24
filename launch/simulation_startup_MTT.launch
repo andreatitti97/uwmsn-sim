@@ -19,7 +19,7 @@
             <arg name="auvID" value="1" />
             <arg name="auvNum" value="$(eval arg('auvNum'))" />
         </include>
-        <include file="$(find uwmsn-motion_opt)/launch/distr_opt.launch" >
+        <include file="$(find uwmsn-motion_opt)/launch/distr_opt_MTT.launch" >
             <arg name="auvID" value="1" />
             <arg name="auvNum" value="$(eval arg('auvNum'))" />
         </include>
@@ -35,7 +35,7 @@
             <arg name="auvID" value="2" />
             <arg name="auvNum" value="$(eval arg('auvNum'))" />
         </include>
-        <include file="$(find uwmsn-motion_opt)/launch/distr_opt.launch" >
+        <include file="$(find uwmsn-motion_opt)/launch/distr_opt_MTT.launch" >
             <arg name="auvID" value="2" />
             <arg name="auvNum" value="$(eval arg('auvNum'))" />
         </include>
@@ -50,7 +50,7 @@
             <arg name="auvID" value="3" />
             <arg name="auvNum" value="$(eval arg('auvNum'))" />
         </include>
-        <include file="$(find uwmsn-motion_opt)/launch/distr_opt.launch" >
+        <include file="$(find uwmsn-motion_opt)/launch/distr_opt_MTT.launch" >
             <arg name="auvID" value="3" />
             <arg name="auvNum" value="$(eval arg('auvNum'))" />
         </include>
@@ -65,7 +65,7 @@
             <arg name="auvID" value="4" />
             <arg name="auvNum" value="$(eval arg('auvNum'))" />
         </include>
-        <include file="$(find uwmsn-motion_opt)/launch/distr_opt.launch" >
+        <include file="$(find uwmsn-motion_opt)/launch/distr_opt_MTT.launch" >
             <arg name="auvID" value="4" />
             <arg name="auvNum" value="$(eval arg('auvNum'))" />
         </include>
@@ -81,7 +81,7 @@
             <arg name="auvID" value="5" />
             <arg name="auvNum" value="$(eval arg('auvNum'))" />
         </include>
-        <include file="$(find uwmsn-motion_opt)/launch/distr_opt.launch" >
+        <include file="$(find uwmsn-motion_opt)/launch/distr_opt_MTT.launch" >
             <arg name="auvID" value="5" />
             <arg name="auvNum" value="$(eval arg('auvNum'))" />
         </include>
@@ -96,7 +96,7 @@
             <arg name="auvID" value="6" />
             <arg name="auvNum" value="$(eval arg('auvNum'))" />
         </include>
-        <include file="$(find uwmsn-motion_opt)/launch/distr_opt.launch" >
+        <include file="$(find uwmsn-motion_opt)/launch/distr_opt_MTT.launch" >
             <arg name="auvID" value="6" />
             <arg name="auvNum" value="$(eval arg('auvNum'))" />
         </include>

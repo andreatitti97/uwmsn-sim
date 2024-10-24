@@ -37,15 +37,16 @@ def alpha_f(f):
 ############################################################ SIMULATION SETUP ########################################################
 # Simulation parameters
 TIME_DURATION = 500 # (s)
-TIME_STEP = 0.01
 TIME_SCALER = 1# in [1 - 10] values near 10 may be source of errors (to fast for ROS stack)
+TIME_STEP = 0.01*TIME_SCALER
 
 # Estimation Parameters
-TM = 2 #sampling period (s)
-TP = 30 # regressor MAX length 40
+TM = 2 #measurements sampling period (s)
+P_max = 30 # regressor MAX length 40
+P_min = 4 #regressor min length
 buffLen = 10 #buffer length for storing received pkts
 SIGMA_MEAS = 0.08#0.1#0.2 # (rad^2) --> 4.5° (as assumed in DAMPS and by cassino)
-k_phi_thresh = 1 #Thresh sul condizionamento del regressore per aggiornare la stima
+k_phi_thresh = 0.0 #Thresh sul condizionamento del regressore per aggiornare la stima
 targetNum = 3
 auvNum = 6 #this is the maximum number of auvs considered in the simulator
 

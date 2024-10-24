@@ -5,11 +5,10 @@ import numpy as np
 from math import atan2
 import os, pathlib
 from scipy.interpolate import make_interp_spline
-from matplotlib.patches import Ellipse
 
 # Environment initialization
 pkg_directory = os.path.dirname(pathlib.Path(__file__).parent.resolve())+'/uwmsn-sim'
-log_directory = os.path.dirname(pathlib.Path(__file__).parent.resolve())+'/logs/logs_proposal'#'/DEMO_alternativ_t_motion/logs'
+log_directory = os.path.dirname(pathlib.Path(__file__).parent.resolve())+'/logs'
 class_directory = pkg_directory+'/src'+'/Classes'
 
 # Import config file 
@@ -85,15 +84,6 @@ for i in range(int(auvNum)):
 
     #Optimization Data
     #PDR[i] = np.loadtxt(log_directory+'/'+str(i+1)+'-PDR')
-
-# LOAD FILES FOR PLOT ESTIMATION (temporary)
-cov_x = np.loadtxt(log_directory+'/'+str(1)+'-cov'+str(1)+'.txt')
-cov_y = np.loadtxt(log_directory+'/'+str(1)+'-cov'+str(2)+'.txt')   
-cov_vx = np.loadtxt(log_directory+'/'+str(1)+'-cov'+str(3)+'.txt') 
-cov_vy = np.loadtxt(log_directory+'/'+str(1)+'-cov'+str(4)+'.txt') 
-x_hat_x = np.loadtxt(log_directory+'/'+str(1)+'-x_hat_'+str(1)+'.txt')
-x_hat_y = np.loadtxt(log_directory+'/'+str(1)+'-x_hat_'+str(2)+'.txt')
-
 
 # Downsampling script
 original_samples = len(target_x_traj)
@@ -231,14 +221,11 @@ for i in range(samples):
     a = 0 + i#samples - i
     test.append(a*10)
 
-c_map = ax.scatter(target_x_traj,target_y_traj,c=test,cmap='autumn_r',vmin=0, vmax=500,linewidths=sw)
+c_map = ax.scatter(target_x_traj,target_y_traj,c=test,cmap='autumn_r',vmin=0, vmax=elapsed_t,linewidths=sw)
 ax.scatter(target_x_traj[0],target_y_traj[0],c='y',marker='o',linewidths=sw*8)
 ax.scatter(target_x_traj[-1],target_y_traj[-1],c='k',linewidths=sw*12)
 ax.scatter(target_x_traj[-1],target_y_traj[-1],c='r',linewidths=sw*8)
 
-
-cov = Ellipse(xy=(x_hat_x[0],x_hat_y[0]), width=cov_x[0]*2, height=cov_y[0]*2, 
-                        edgecolor='r', fc='None', lw=lw)
 
 #ax.text(target_x_traj[-1],target_y_traj[-1]-23,r'$ %s $'%math_vars[1]+r'$ %s $'%time_vars[2],fontsize=(tw/3)*2)
 ax.text(target_x_traj[-1]-100,target_y_traj[-1],r'$ %s $'%math_vars[1]+r'$ %s $'%time_vars[1],fontsize=tw)
@@ -256,8 +243,7 @@ for i in range(int(auvNum)):
         ax.plot([auv_x[-1,i],
             target_x_traj[-1]],[auv_y[-1,i],target_y_traj[-1]],'r--',linewidth=lw/3,label='LOS'+r'$ %s $'%time_vars[1])
     else:
-        #if i != 1:
-        if 1==1:
+        if i != 1:
             ax.plot([auv_x[-1,i],
                 target_x_traj[-1]],[auv_y[-1,i],target_y_traj[-1]],'r--',linewidth=lw/3)
         
@@ -279,12 +265,11 @@ for i in range(int(auvNum)):
     ax.text(auv_x[0,i]+a,auv_y[0,i]+b,r'$ %s $'%agents_vars[i]+r'$ %s $'%time_vars[0],fontsize=tw)
     ax.scatter(auv_x[0,i],auv_y[0,i],c='y',linewidths=sw*8)
     #ax.text(auv_x[-1,i]+c,auv_y[-1,i]+d,r'$ %s $'%agents_vars[i]+r'$ %s $'%time_vars[1],fontsize=tw)
-    '''if i == 1:  
+    if i == 1:  
         ax.text(auv_x[-1,i]+15,auv_y[-1,i],'FAILURE',fontsize=2*tw/3)
         ax.scatter(auv_x[-1,i],auv_y[-1,i],marker='X',c='r',linewidths=sw*15)
-    else:'''
-        
-    ax.scatter(auv_x[-1,i],auv_y[-1,i],c='r',linewidths=sw*8)
+    else:
+        ax.scatter(auv_x[-1,i],auv_y[-1,i],c='r',linewidths=sw*8)
 
 
 '''PROPOSAL
@@ -335,7 +320,7 @@ ax.set_ylabel('y (m)',fontsize=fs)
 ax.grid()
 ax.axis('equal')
 ax.legend(fontsize=(fs*2)/3,loc='lower right')
-#plt.show()
+plt.show()
 
 ##########################################################
 # Plot tracking error
@@ -358,7 +343,7 @@ ax.legend(fontsize=fs*2/3)
 ax.grid()
 plt.yticks(fontsize=(fs*2)/3, rotation = 0)#to set dimension and orientation of tick labels
 plt.xticks(fontsize=(fs*2)/3, rotation=0)#to set dimension and orientation of tick labels
-plt.show()
+
 ##########################################################
 #plot distance to target
 fig5, ax = plt.subplots()

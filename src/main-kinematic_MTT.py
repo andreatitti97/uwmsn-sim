@@ -74,8 +74,7 @@ def run_simulation(target_list, auvNum, pub_s_state, pub_t_state, pub_init_opt):
     t, count1 = 0,0
     dt = header.config.TIME_STEP*t_scaler
     targetNum = len(target_list)
-    print('................................target num',targetNum)
- 
+     
     # Init AUVs position and orientation
     auvs_xy = header.config.AUV_XY
     msg, sensors, meas_table = [], [], []
@@ -89,6 +88,7 @@ def run_simulation(target_list, auvNum, pub_s_state, pub_t_state, pub_init_opt):
     
     for i in range(int(auvNum)):
         target = target_list[0]#first target as reference.
+        target.exist = True # Spawn the first target at the beginning of the simulation
         [measure_, rel_bearing_, meas_pos] = sensors[i].measureBearing(target.pose.x,target.pose.y,
                                                                        [auvs_xy[i,0],auvs_xy[i,1]],
                                                                        auvs_xy[i,2])
@@ -98,14 +98,14 @@ def run_simulation(target_list, auvNum, pub_s_state, pub_t_state, pub_init_opt):
     estimator = header.estimator_module.Estimation()
     estimator.computeState(meas_table)
     
-    rospy.loginfo('|---- OPTIMIZATION TIME WINDOW (s) --> %s',header.config.DT)
+    rospy.loginfo('|---- KINEMATIC SIMULATION: Optimization time window (s) --> %s',header.config.DT)
     rospy.loginfo('|---- KINEMATIC SIMULATION: Initial AUVs positions (m) --> %s',auvs_xy)
     for i in range(targetNum):
         target = target_list[i]
-        rospy.loginfo('|---- KINEMATIC SIMULATION: Initial Targets position (m) --> %s',
+        rospy.loginfo('|---- KINEMATIC SIMULATION: Initial Target(s) position (m) --> %s',
                         [target.pose.x,target.pose.y,target.pose.theta])
-        target.exist = True
-    rospy.loginfo('|---- INITIAL OBJECTIVE FUNCTION VALUE --> %s',header.utils.compute_cost(estimator.phi))
+        
+    rospy.loginfo('|---- KINEAMTIC SIMULATION: Initial value objective function --> %s',header.utils.compute_cost(estimator.phi))
     rospy.sleep(1)
 
     ## SIMULATION LOOP ############################################################################################################
@@ -134,8 +134,6 @@ def run_simulation(target_list, auvNum, pub_s_state, pub_t_state, pub_init_opt):
             rows, cols = consMat.shape
             pub_t_state[i].publish(Matrix(data=consMat.flatten().tolist(), rows=rows, cols=cols))
 
-            #pub_t_state[i].publish(matrixMsg)
-
         # Move Agents
         for i in range(auvNum):
             paths = [path1,path2,path3,path4,path5,path6]
@@ -150,7 +148,8 @@ def run_simulation(target_list, auvNum, pub_s_state, pub_t_state, pub_init_opt):
         # Move Targets
         for i in range(targetNum):
             target = target_list[i]
-            target.move_target(dt)
+            if target.exist == True:
+                target.move_target(dt)
                     
         #################################################################################################################
         ##################### SAVE THE POSITIONS OF TEAM REFERENCE/AGENTS/TARGET/ STATE FOR PLOT ########################
@@ -161,8 +160,9 @@ def run_simulation(target_list, auvNum, pub_s_state, pub_t_state, pub_init_opt):
 
         for i in range(targetNum):
             target = target_list[i]
-            t_traj_x[i].append(target.pose.x)
-            t_traj_y[i].append(target.pose.y)         
+            if target.exist == True:
+                t_traj_x[i].append(target.pose.x)
+                t_traj_y[i].append(target.pose.y)         
         
         ##################################################################################################################
         #  Stop simulation and save data to .txt files ###################################################################
@@ -174,9 +174,17 @@ def run_simulation(target_list, auvNum, pub_s_state, pub_t_state, pub_init_opt):
             '''ADD DEBUG PRINTS HERE'''
             rospy.loginfo('|---- KINEMATIC SIMULATION: Elapsed time (s) --> %s',t)
             for i in range(targetNum):
-                target =target_list[i]
-                rospy.loginfo('|---- KINEMATIC SIMULATION: Target '+str(i+1)+' groud truth (m) --> %s',
+                target = target_list[i]
+                print('EXIST',target.exist)
+                if target.exist == True:
+                    rospy.loginfo('|---- KINEMATIC SIMULATION: Target '+str(i+1)+' groud truth (m) --> %s',
                                 [target.pose.x,target.pose.y])
+                
+        ''' ADD SPAWNING TARGETS HERE'''
+        if t > 10:
+           target_list[1].exist = True
+        if t > 200:
+            target_list[2].exist = True
 
         t += dt
         count1 += 1  
@@ -275,7 +283,8 @@ def main():
     # Initialization object header.target
     target_list = []
     for i in range(targetNum):
-        target_list.append(header.target.Target(i+1))
+        target_list.append(header.target.Target(i+1,False))
+
 
     # Start listeners and run simulation
     listener(auvNum)
