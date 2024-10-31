@@ -17,26 +17,20 @@ pkg_directory = os.path.dirname(pathlib.Path(__file__).parent.resolve())
 log_path = os.path.dirname(pkg_directory)+'/logs'
 class_path = pkg_directory+'/src/Classes'
 
-# Load the header file as a Python module 
+# Load the h file as a Python module 
 header_file = pathlib.Path(__file__).parent.resolve()
 header_file = os.path.dirname(header_file)
 header_file = header_file+'/include'+'/uwmsn-sim'
 spec = importlib.util.spec_from_file_location("module.header", header_file+'/main-kinematic_h.py')
-header = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(header)
+h = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(h)
 
 # Init lists for plot
 target_x_traj, target_y_traj, platform_x, platform_y = [], [], [], []
 auv1_x, auv1_y, auv2_x, auv2_y,auv3_x,auv3_y,auv4_x,auv4_y  = [], [], [], [], [], [], [], []
 # Init global variables for callbacks
-H = header.config.H
-path1, path2, path3, path4, paths = [], [], [], [], []
-paths = [None,None,None,None]
-for i in range(H):
-    path1.append(None)
-    path2.append(None)
-    path3.append(None)
-    path4.append(None)
+H = h.config.H
+paths = [None for _ in range(len(h.config.AUV_XY))]
 
 def run_simulation(target, auvNum, pub_s_state, pub_t_state, pub_init_opt):
 
@@ -51,16 +45,16 @@ def run_simulation(target, auvNum, pub_s_state, pub_t_state, pub_init_opt):
     global count1, paths
 
     # ROS simulation parameters
-    t_scaler = header.config.TIME_SCALER
-    Hz = 1/(header.config.TIME_STEP) 
+    t_scaler = h.config.TIME_SCALER
+    Hz = 1/(h.config.TIME_STEP) 
     rate = rospy.Rate(Hz)
 
     # Init time variables and counters and lists
     t, count1 = 0,0
-    dt = header.config.TIME_STEP*t_scaler
+    dt = h.config.TIME_STEP*t_scaler
  
     # Init AUVs position and orientation
-    auvs_xy = header.config.AUV_XY
+    auvs_xy = h.config.AUV_XY
     msg, sensors, meas_table = [], [], []
 
     for i in range(len(auvs_xy)):
@@ -68,7 +62,7 @@ def run_simulation(target, auvNum, pub_s_state, pub_t_state, pub_init_opt):
         msg.append(auvs_xy[i,0])
         msg.append(auvs_xy[i,1])
         msg.append(auvs_xy[i,2])
-        sensors.append(header.sensor.Sensor(str(i),1,0,0.000))
+        sensors.append(h.sensor.Sensor(str(i),1,0,0.000))
     
     for i in range(int(auvNum)):
         
@@ -78,13 +72,13 @@ def run_simulation(target, auvNum, pub_s_state, pub_t_state, pub_init_opt):
         arr = [measure_,meas_pos[0],meas_pos[1]]
         meas_table.append(arr)
 
-    estimator = header.estimator_module.Estimation()
+    estimator = h.estimator_module.Estimation()
     estimator.computeState(meas_table)
-    rospy.loginfo('|---- OPTIMIZATION TIME WINDOW (s) --> %s',header.config.DT)
+    rospy.loginfo('|---- OPTIMIZATION TIME WINDOW (s) --> %s',h.config.DT)
     rospy.loginfo('|---- KINEMATIC SIMULATION: Initial AUVs positions (m) --> %s',auvs_xy)
     rospy.loginfo('|---- KINEMATIC SIMULATION: Initial Target position (m) --> %s',
                     [target.pose.x,target.pose.y,target.pose.theta])
-    rospy.loginfo('|---- INITIAL OBJECTIVE(CONDITION) --> %s',header.utils.compute_cost(estimator.phi))
+    rospy.loginfo('|---- INITIAL OBJECTIVE(CONDITION) --> %s',h.utils.compute_cost(estimator.phi))
     rospy.sleep(1)
 
     ## SIMULATION LOOP ############################################################################################################
@@ -97,9 +91,8 @@ def run_simulation(target, auvNum, pub_s_state, pub_t_state, pub_init_opt):
             pub_init_opt[1].publish(np.array(tmp,dtype=np.float32))
             
         for i in range(auvNum):
-            # Publish agents info
-            a = np.array([auvs_xy[i,0],auvs_xy[i,1],auvs_xy[i,2]], dtype=np.float32)
-            pub_s_state[i].publish(a)
+            pub_s_state[i].publish(np.array([auvs_xy[i,0],auvs_xy[i,1],auvs_xy[i,2]],
+                                            dtype=np.float32))
             # Publish target info
             tmp = []
             pub_t_state[i].publish(np.array([target.pose.x,target.pose.y,target.pose.theta],
@@ -107,11 +100,8 @@ def run_simulation(target, auvNum, pub_s_state, pub_t_state, pub_init_opt):
 
         # Move Agents
         for i in range(auvNum):
-            paths = [path1,path2,path3,path4]
             tmp = paths[i]
-
             if tmp[0] != None:
-
                 auvs_xy[i,0] = tmp[0]
                 auvs_xy[i,1] = tmp[1]
                 auvs_xy[i,2] = tmp[2]
@@ -137,7 +127,7 @@ def run_simulation(target, auvNum, pub_s_state, pub_t_state, pub_init_opt):
         
         ##################################################################################################################
         #  Stop simulation and save data to .txt files ###################################################################
-        if int(t) == (header.config.TIME_DURATION-1):
+        if int(t) == (h.config.TIME_DURATION-1):
             rospy.on_shutdown(shutdown_cllbk)
             rospy.signal_shutdown('Simulation time limit reached')
       
@@ -169,37 +159,21 @@ def shutdown_cllbk():
     none = "\033[0m"
     rospy.loginfo('|---- %sKINEMATIC SIMULATION: Simulation data saved --> Shutting down ...%s',magenta,none)
     rospy.loginfo('|---- Simulation Info: alhpa %s gama %s NL %s DThresh %s desired range %s',
-                  header.config.alpha_w,header.config.gamma_w, header.config.NL,
-                  header.config.DThresh, header.config.RANGE_TO_TARGET)
-def callback1(data):
-    global paths,path1
-    
-    tmp = data.data   
-    path1 = [tmp[1],tmp[2],tmp[3]]
+                  h.config.alpha_w,h.config.gamma_w, h.config.NL,
+                  h.config.DThresh, h.config.RANGE_TO_TARGET)
 
-def callback2(data):
-    global paths, path2    
-
+# Generic callback for updating the path of a specific AUV
+def callback(data, auvIndex):
+    global paths
     tmp = data.data
-    path2 = [tmp[1],tmp[2],tmp[3]]
+    paths[auvIndex] = [tmp[1], tmp[2], tmp[3]]
 
-def callback3(data):
-    global paths, path3
+def listener(auvNum):
+    for i in range(auvNum):
+        # Create a unique callback function for each subscriber
+        rospy.Subscriber('/'+str(i+1)+'/ctrl_cmd_'+str(i+1),
+                        numpy_msg(Floats), lambda data, i=i: callback(data, i))
 
-    tmp = data.data
-    path3 = [tmp[1],tmp[2],tmp[3]]
-
-def callback4(data):
-    global paths, path4    
-
-    tmp = data.data
-    path4 = [tmp[1],tmp[2],tmp[3]]
-
-def listener(n_auv):
-    callback_list = [callback1,callback2,callback3,callback4]
-    for i in range(n_auv):
-        rospy.Subscriber('/'+str(i+1)+'/ctrl_cmd_'+str(i+1), numpy_msg(Floats), callback_list[i])
-    
 def main():
 
     # ROS INIT   
@@ -217,16 +191,15 @@ def main():
     for i in range(auvNum):
         tmp1 = rospy.Publisher('/'+str(i+1)+'/vehicle_state_'+str(i+1), numpy_msg(Floats), queue_size=100)
         tmp2 = rospy.Publisher('/'+str(i+1)+'/target_state', numpy_msg(Floats), queue_size=100)
-
         pub_s_state.append(tmp1)
         pub_t_state.append(tmp2)
 
-    # Initialization object header.target
-    target_obj = header.target.Target(1)
+    # Initialization object h.target
+    target_obj = h.target.Target(1)
 
     # Save a logfile with simulation settings
-    sim_info = [auvNum, header.config.TIME_DURATION, header.config.Ts]
-    ctrl_set = header.config.ctrl_cmd
+    sim_info = [auvNum, h.config.TIME_DURATION, h.config.Ts]
+    ctrl_set = h.config.ctrl_cmd
     np.savetxt(log_path+'/sim_info.txt',sim_info)
     np.savetxt(log_path+'/ctrl_set.txt',ctrl_set)
 

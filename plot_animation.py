@@ -9,7 +9,7 @@ from matplotlib.gridspec import GridSpec
 
 # Environment initialization
 pkg_directory = os.path.dirname(pathlib.Path(__file__).parent.resolve())+'/uwmsn-sim'
-log_directory = os.path.dirname(pathlib.Path(__file__).parent.resolve())+'/logs_I-RIM_poster'#/logs_FIXED_FORM'
+log_directory = os.path.dirname(pathlib.Path(__file__).parent.resolve())+'/logs'
 class_directory = pkg_directory+'/src'+'/Classes'
 
 # Load simulation info
@@ -118,7 +118,7 @@ lw = 8
 fs = 50
 tw = 40
 tw = 20
-AUV_failure = False
+AUV_failure = True
 # Initialize data structures
 a1_x, a2_x, a3_x, a4_x = [], [], [], []
 a1_y, a2_y, a3_y, a4_y = [], [], [], []
@@ -197,12 +197,14 @@ ax4 = fig.add_subplot(gs[2, 0])  # This takes the bottom right
 ########################### PLOT SIM INFO ##############################
 ax4.set_ylim([0,100])
 ax4.set_xlim([0,100])
+ax4.set_ylabel('Simulation Info')
 math_vars2 = ['\\sigma_m']
-ax4.text(10,78,'Simulation Time: 500 (s) \n Accelerated view x100',fontsize=2*tw/3)
-ax4.text(10,60,'Packet Delivery Ratio: 90 %',fontsize=2*tw/3)
-ax4.text(10,40,'Measurament noise '+r'$ %s $'%math_vars2[0]+' = 5 (deg)',fontsize=2*tw/3)
+interval = 80
+ax4.text(10,78,'Simulation Time: 500 (s) \n Accelerated view',fontsize=2*tw/3)
+ax4.text(10,60,'Packet Delivery Ratio: 75 %',fontsize=2*tw/3)
+ax4.text(10,30,'Measurament noise '+r'$ %s $'%math_vars2[0]+' = 5 (deg)\n+Outliers 20%',fontsize=2*tw/3)
 ax4.text(10,20,'TDMA slot time: 4 (sec)',fontsize=2*tw/3)
-ax4.text(10,2,'Average optimization time = '+str(np.round(avgTimeOpt,3))+' (sec)',fontsize=2*tw/3)
+ax4.text(10,2,'Average optimization time = '+str(np.round(avgTimeOpt*5,3))+' (sec)',fontsize=2*tw/3)
 #ax4.set_title('Simulation Parameters',y=-0.01)
 plt.tick_params(left = False, right = False , labelleft = False , 
                 labelbottom = False, bottom = False) 
@@ -229,10 +231,10 @@ for i in range(len(t_prova)):
     epsi.append(0.0)
 err = ax3.plot(t_prova,epsi,'r--',linewidth=lw,label=r'$ %s $'%sensors_vars[-1])   
 
-ax3.set_ylim([0,max_value])
+ax3.set_ylim([0,4])
 ax3.set_xlabel('t (s)', labelpad=0.01)
 ax3.set_ylabel('RMSE (m)')
-ax3.legend(fontsize=fs/3, loc='upper right')
+ax3.legend(fontsize=fs/5, loc='upper right')
 ax3.grid()
 
 #################### PLOT LOSS FUNCTION #######################
@@ -241,28 +243,35 @@ t = []
 for i in range(samples):
     t.append(tmp[i])
 
-y = ax2.plot(t[0],list_phi[0],linewidth=lw,label=r'$ %s $'%math_vars[3])[0]
+y = ax2.plot(t[0],list_phi[0],linewidth=lw,label='LOSS FUNCTION')[0]#label=r'$ %s $'%math_vars[3])[0]
 
 opt_value = []
 for i in range(samples):
     opt_value.append(1)
 ax2.plot(t,opt_value,'r--',linewidth=lw,label='Optimal Value')
 ax2.set_xlabel('t (s)',labelpad=0.01)
+ax2.set_ylabel('Cumulative Loss Function')
 #ax2.set_ylabel(r'$ %s $'%math_vars[3], fontsize=fs)
 ax2.legend(fontsize=fs/5,loc='upper right')
 ax2.grid()
 
 ################## PLOT SIMULATION SCENARIO ###################################
-#ax1.set_facecolor('azure')
-target = ax1.plot(target_x_traj[0],target_y_traj[0],'r',linewidth=lw,label=r'$ %s $'%math_vars[0]+'(t)')[0]
 
-a1 = ax1.plot(a1_x[0],a1_y[0],'b',label=r'$ %s $'%math_vars[2]+'(t)',linewidth=lw/2)[0]
-a2 = ax1.plot(a2_x[0],a2_y[0],'b',linewidth=lw/2)[0]
-a3 = ax1.plot(a3_x[0],a3_y[0],'b',linewidth=lw/2)[0]
+target = ax1.plot(target_x_traj[0],target_y_traj[0],'r',linewidth=lw/2,label=r'$ %s $'%math_vars[0]+'(t)')[0]
+#target = ax1.scatter(target_x_traj[0],target_y_traj[0],c='r',linewidths=lw/2,label=r'$ %s $'%math_vars[0]+'(t)')
 
-s1 = ax1.scatter(a3_x[0],a3_y[0],c='b',linewidths=lw)
-s2 = ax1.scatter(a3_x[0],a3_y[0],c='b',linewidths=lw)
-s3 = ax1.scatter(a3_x[0],a3_y[0],c='b',linewidths=lw)
+l1 = ax1.plot(l1_x[0],l1_y[0],'g--',linewidth=lw/4,label='LOS')[0]
+l2 = ax1.plot(l2_x[0],l2_y[0],'g--',linewidth=lw/4)[0]
+l3 = ax1.plot(l3_x[0],l3_y[0],'g--',linewidth=lw/4)[0]
+#l4 = ax1.plot(l4_x[0],l4_y[0],'g--',linewidth=lw/4)[0]
+
+a1 = ax1.plot(a1_x[0],a1_y[0],'darkslategrey',label=r'$ %s $'%math_vars[2]+'(t)',linewidth=lw/2)[0]
+a2 = ax1.plot(a2_x[0],a2_y[0],'darkslategrey',linewidth=lw/2)[0]
+a3 = ax1.plot(a3_x[0],a3_y[0],'darkslategrey',linewidth=lw/2)[0]
+
+s1 = ax1.scatter(a3_x[0],a3_y[0],c='darkslategrey',linewidths=lw)
+s2 = ax1.scatter(a3_x[0],a3_y[0],c='darkslategrey',linewidths=lw)
+s3 = ax1.scatter(a3_x[0],a3_y[0],c='darkslategrey',linewidths=lw)
 
 '''ax1.text(a1_x[0]+20,a1_y[0],r'$ %s $'%sensors_vars[0]+r'$ %s $'%time_vars[0],fontsize=tw)
 ax1.text(a2_x[0]+20,a2_y[0],r'$ %s $'%sensors_vars[1]+r'$ %s $'%time_vars[0],fontsize=tw)
@@ -271,19 +280,14 @@ ax1.text(a1_x[0]+20,a1_y[0],r'$ %s $'%sensors_vars[0],fontsize=tw)
 ax1.text(a2_x[0]+20,a2_y[0],r'$ %s $'%sensors_vars[1],fontsize=tw)
 ax1.text(a3_x[0]+20,a3_y[0],r'$ %s $'%sensors_vars[2],fontsize=tw)
 
-l1 = ax1.plot(l1_x[0],l1_y[0],'g--',linewidth=lw/4,label='LOS')[0]
-l2 = ax1.plot(l2_x[0],l2_y[0],'g--',linewidth=lw/4)[0]
-l3 = ax1.plot(l3_x[0],l3_y[0],'g--',linewidth=lw/4)[0]
-#l4 = ax1.plot(l4_x[0],l4_y[0],'g--',linewidth=lw/4)[0]
-
 # Static plots - subplot1
 ax1.scatter(target_x_traj[0],target_y_traj[0],c='r',label=r'$ %s $'%math_vars[0]+r'$ %s $'%time_vars[0],linewidths=lw)
 
 for i in range(int(auvNum)):
-    ax1.scatter(auv_x_traj[0,i],auv_y_traj[0,i],c='b',linewidths=lw)
+    ax1.scatter(auv_x_traj[0,i],auv_y_traj[0,i],c='darkslategrey',linewidths=lw)
 
-ax1.scatter(auv_x_traj[0,-1],auv_y_traj[0,-1],c='b',linewidths=lw,label=r'$ %s $'%math_vars[2]+r'$ %s $'%time_vars[0])
-estimation = ax1.scatter(x_hat_x[0],x_hat_y[0],c='azure',edgecolors='y',label=r'$ %s $'%math_vars[1]+'(t)',linewidths=lw)
+ax1.scatter(auv_x_traj[0,-1],auv_y_traj[0,-1],c='darkslategrey',linewidths=lw,label=r'$ %s $'%math_vars[2]+r'$ %s $'%time_vars[0])
+estimation = ax1.scatter(x_hat_x[0],x_hat_y[0],c='w',edgecolors='k',s=200, alpha=0.2,linewidths=3,label='Target State Estimation-AUV1')#label=r'$ %s $'%math_vars[1]+'(t)')
 
 '''cov = Ellipse(xy=(x_hat_x[0],x_hat_y[0]), width=cov_x[0]*2, height=cov_y[0]*2, 
                         edgecolor='r', fc='None', lw=lw)'''
@@ -291,29 +295,37 @@ ax1.set_xlabel('x (m)',fontsize=fs/3)
 ax1.set_ylabel('y (m)',fontsize=fs/3)
 ax1.grid()
 ax1.axis('equal')
-ax1.legend(fontsize=fs/2)
-ax1.set_xlim([-800,+800])
-ax1.set_ylim([-800,+800])
+ax1.legend(fontsize=fs/3)
+ax1.set_xlim([-550,+480])
+ax1.set_ylim([-480,+480])
 '''ax1.set_xlim([-200,+200])
 ax1.set_ylim([-200,+200])'''
 
 def update(frame):
     
-
     # Normalize frame to total samples (for synchronous evolution)
     norm_frame_1 = int(frame / samples * len(tracking_errors[0]))
     norm_frame_2 = int(frame / samples * len(tracking_errors[1]))
     norm_frame_3 = int(frame / samples * len(tracking_errors[2]))
-    norm_frame_est = int(frame / 100 * len(x_hat_x))
+    norm_frame_est = int(frame / samples * len(x_hat_x))
 
     y.set_data(t[:frame],list_phi[:frame])
     
     err1.set_data(t_prova[:norm_frame_1],tmp_err1[:norm_frame_1])
-    err2.set_data(t_prova[:norm_frame_2],tmp_err2[:norm_frame_2])
+    if frame >= elapsed_t/2 and AUV_failure == True:
+        err2.set_data(0,0)
+    else:
+        
+        err2.set_data(t_prova[:norm_frame_2],tmp_err2[:norm_frame_2])
+
     err3.set_data(t_prova[:norm_frame_3],tmp_err3[:norm_frame_3])
     
     # update the line plot:
-    target.set_data(target_x_traj[:frame],target_y_traj[:frame])
+    #data = np.stack([target_x_traj[frame], target_y_traj[frame]]).T
+    #target.set_offsets(data)
+    target.set_data(target_x_traj[:frame], target_y_traj[:frame])
+    
+    
     a1.set_data(a1_x[:frame],a1_y[:frame])
     a2.set_data(a2_x[:frame],a2_y[:frame]) #if you use : the plot remain
     a3.set_data(a3_x[:frame],a3_y[:frame])
@@ -322,6 +334,10 @@ def update(frame):
     s1.set_offsets(data)
     data = np.stack([a2_x[frame], a2_y[frame]]).T
     s2.set_offsets(data)
+    if frame >= elapsed_t/2 and AUV_failure == True:
+        s2.set_color('orange')
+    else:
+        s2.set_color('darkslategrey')
     data = np.stack([a3_x[frame], a3_y[frame]]).T
     s3.set_offsets(data)
 
@@ -333,21 +349,22 @@ def update(frame):
         l2.set_data(l2_x[frame],l2_y[frame])
         
       
-    data = np.stack([x_hat_x[:norm_frame_est], x_hat_y[:norm_frame_est]]).T
+    data = np.stack([x_hat_x[norm_frame_est], x_hat_y[norm_frame_est]]).T
     estimation.set_offsets(data)
+    
     #plt.gca().relim()
     #plt.gca().autoscale_view()
 
-    return (y, target, a1,a2,a3,s1,s2,s3,l1,l2,l3, err1,err2,err3)#a4
+    return (l1,l2,l3,y, target, a1,a2,a3,s1,s2,s3, err1,err2,err3, estimation)#a4
 
 
 plt.yticks(fontsize=fs/3, rotation=0)#to set dimension and orientation of tick labels
 plt.xticks(fontsize=fs/3, rotation=0)#to set dimension and orientation of tick labels
 ax1.yaxis.set_label_position("right")
 ani = animation.FuncAnimation(fig=fig, func=update,
-                               frames=samples, interval=50, blit=True)
+                               frames=samples, interval=80, blit=True)
 
-#ani.save(filename="/home/andrea/animations/fixed_target.mp4", writer='ffmpeg', fps=30,dpi=200)  # Increase DPI for better quality)
+ani.save(filename="/home/andrea/animations/realistic.mp4", writer='ffmpeg', fps=30,dpi=200)  # Increase DPI for better quality)
             
 #ani2.save(filename="/home/andrea/animations/fixed_target_cost.gif", writer="pillow")
 

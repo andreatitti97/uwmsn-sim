@@ -38,7 +38,7 @@ class Target:
         if label == 1:
             self.pose = Pose(config.TARGET_INIT[0], config.TARGET_INIT[1],  config.TARGET_INIT[2])
         elif label == 2:
-            self.pose = Pose(10, 10,  0)
+            self.pose = Pose(-70, +70,  0)
         elif label == 3:
             self.pose = Pose(-50, -50,  0)
         self.lin_vel = config.alpha_0 #(m/s)

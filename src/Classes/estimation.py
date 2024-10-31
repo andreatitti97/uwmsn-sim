@@ -41,6 +41,12 @@ class Estimator:
         return True
 
     def propagation(self, curr_time, prev_time):#compute old state in the regressor and propagation to the actual state
+        # Invert the equations for computing the state at the oldest time in the regressor
+        tmp_y = np.zeros((len(self.__y),1))
+        for i in range(len(self.__y)):
+            tmp_y[i] = self.__y[i]
+        self.__x = np.dot(np.linalg.pinv(self.__phi),tmp_y)
+        
         # Propagate the estimation
         dt = curr_time - self.__t[0] #tempo attuale - tempo ultimo stato noto.
         self.__F = np.matrix([[1,0,dt,0],
@@ -67,11 +73,8 @@ class Estimator:
                 tmp[2] = ((self.__t[i]-self.__t[0])/(self.__t[i]-prev_t))*tmp[2]
                 tmp[3] = ((self.__t[i]-self.__t[0])/(self.__t[i]-prev_t))*tmp[3]
                 self.__phi[i] = [tmp[0],tmp[1],tmp[2],tmp[3]]
-        # Invert the equations for computing the state at the oldest time in the regressor
-        tmp_y = np.zeros((len(self.__y),1))
-        for i in range(len(self.__y)):
-            tmp_y[i] = self.__y[i]
-        self.__x = np.dot(np.linalg.pinv(self.__phi),tmp_y)
+        
+        
 
 
         

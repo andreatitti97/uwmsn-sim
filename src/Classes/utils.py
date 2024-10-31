@@ -45,7 +45,7 @@ def computePursuitVel(curr_est,s_pose,d_max):
 
 
 def compute_cost(phi):
-
+    #compute the conditioning
     length_y = len(phi)
     tmp_phi = np.zeros((length_y,2))
     for i in range(length_y):

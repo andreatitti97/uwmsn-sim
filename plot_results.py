@@ -9,7 +9,7 @@ from matplotlib.patches import Ellipse
 
 # Environment initialization
 pkg_directory = os.path.dirname(pathlib.Path(__file__).parent.resolve())+'/uwmsn-sim'
-log_directory = os.path.dirname(pathlib.Path(__file__).parent.resolve())+'/logs/logs_proposal'#'/DEMO_alternativ_t_motion/logs'
+log_directory = os.path.dirname(pathlib.Path(__file__).parent.resolve())+'/logs'
 class_directory = pkg_directory+'/src'+'/Classes'
 
 # Import config file 

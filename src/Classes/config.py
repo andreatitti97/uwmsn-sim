@@ -42,12 +42,12 @@ TIME_STEP = 0.01*TIME_SCALER
 
 # Estimation Parameters
 TM = 2 #measurements sampling period (s)
-P_max = 30 # regressor MAX length 40
-P_min = 4 #regressor min length
-buffLen = 10 #buffer length for storing received pkts
-SIGMA_MEAS = 0.08#0.1#0.2 # (rad^2) --> 4.5° (as assumed in DAMPS and by cassino)
-k_phi_thresh = 0.0 #Thresh sul condizionamento del regressore per aggiornare la stima
-targetNum = 3
+P_max = 100 # regressor MAX length 40
+P_min = 10 #regressor min length
+buffLen = 3 #buffer length for storing received pkts
+SIGMA_MEAS = 0.01#0.08#0.1#0.2 # (rad^2) --> 4.5° (as assumed in DAMPS and by cassino)
+k_phi_thresh = 10.0 #Thresh sul condizionamento del regressore per aggiornare la stima
+targetNum = 3 #this is the maximum number of target considered in the simulator
 auvNum = 6 #this is the maximum number of auvs considered in the simulator
 
 # AUVs Team Settings
@@ -55,6 +55,10 @@ AUV_MAX_VEL = 1.5 #(m/s) -
 RANGE_TO_TARGET = 50 
 AUV_failure = False #auv2 will fail after t = TIME_DURATION/2
 AUV2_bridge = True
+netTopology = [[] for _ in range(auvNum)]
+netTopology[0] = [2] #put the ID of the neigbours of agent 1
+netTopology[1] = [1,3] #put the ID of the neigbours of agent 2
+netTopology[2] = [2] #put the ID of the neigbours of agent 3
 
 # Optimization Parameters --- alpha = 0.15, gamma = 1.0 (almost fixed formation)
 alpha_w = 0.75 #fixed form 0.45#0.15
@@ -104,9 +108,9 @@ else:
     AUV_XY[2,1] = -100
 
 # Communication Policy Paramaters
-Ts = 4 #TDMA: slot time # time sampling always equal to Ts/2
+Ts = 4 #TDMA: slot time # time sampling always equal to Ts/2 -- considering pkt=64B and v=480bps
 n = 3 #auv num
-DT = Ts*n*2
+DT = Ts*n*2 #optimization time window
 alpha = -0.1 #0.01 #Sigmoid parameters for packet loss, if alpha << gamma --> more packet loss
 dist = []
 for i in range(len(AUV_XY)-1):
@@ -125,6 +129,8 @@ DI = 0 #directivity index a-dimensional
 DThresh = 0 #dB (minimum connectivity requirement)
 c = 1500 #sound wave speed
 f = 10 #kHx ( frequency of the modem)
+PDR = 100
+
 
 for i in range(len(dist)):
     acoustic_loss = alpha_f(f) #f is in kHz
@@ -156,11 +162,10 @@ TARGET_INIT = [-300,-50, math.pi+math.pi/2-math.pi/6, 0.5, 0.0, 0.0, 0.0] #reali
 #TARGET_INIT = [-200,+10, math.pi, 0.4, 0.0, 0.0, 0.0] #ideal moving 2
 # PAPER JOURNAL
 #TARGET_INIT = [-150,0, math.pi+math.pi/2-math.pi/6, 0.5, 0.0, 0.0, 0.0] # validation 1
-TARGET_INIT = [-450,105, np.pi/2+np.pi/8, 0.45, 0.0, 0.0, 0.0] # validation 2
-
+TARGET_INIT = [-450,105, np.pi/2+np.pi/8, 0.0, 0.0, 0.0, 0.0] # validation 2
 
 alpha_0, omega_0,alpha_dot_0,omega_dot_0 = TARGET_INIT[3],TARGET_INIT[4],TARGET_INIT[5],TARGET_INIT[6]
-alpha_0, omega_0,alpha_dot_0,omega_dot_0 = 0,0,0,0
+
 MAX_TARGET_VEL = 3 #(m/s) (only if target no costant vels)
 MIN_TARGET_VEL = 3 #(m/s)
 sin_pattern = False
