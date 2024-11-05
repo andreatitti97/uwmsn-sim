@@ -27,13 +27,13 @@ h = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(h)
 
 #Load global variables for callback
-targetNum, auvNum, simTime = h.config.targetNum, h.config.auvNum, h.config.TIME_DURATION
+targetNumSim, auvNumSim, simTime = h.config.targetNum, h.config.auvNum, h.config.TIME_DURATION
 Ts, alpha_w, gamma_w, NL = h.config.Ts, h.config.alpha_w, h.config.gamma_w, h.config.NL
 H, Dthresh, desRange, ctrl_set = h.config.H, h.config.DThresh, h.config.RANGE_TO_TARGET, h.config.ctrl_cmd
 # Init data structures for callback
 paths = [[None, None, None] for _ in range(len(h.config.AUV_XY))]
-s_traj_x, s_traj_y = [[] for _ in range(auvNum)], [[] for _ in range(auvNum)]
-t_traj_x, t_traj_y = [[] for _ in range(auvNum)], [[] for _ in range(auvNum)]
+s_traj_x, s_traj_y = [[] for _ in range(auvNumSim)], [[] for _ in range(auvNumSim)]
+t_traj_x, t_traj_y = [[] for _ in range(auvNumSim)], [[] for _ in range(auvNumSim)]
 
 def run_simulation(target_list, auvNum, pub_s_state, pub_t_state, pub_init_opt):
 
@@ -61,14 +61,14 @@ def run_simulation(target_list, auvNum, pub_s_state, pub_t_state, pub_init_opt):
     auvs_xy = h.config.AUV_XY
     initMsg, sensors, measTable = [], [], []
 
-    for i in range(len(auvs_xy)):
+    for i in range(auvNum):
 
         initMsg.append(auvs_xy[i,0])
         initMsg.append(auvs_xy[i,1])
         initMsg.append(auvs_xy[i,2])
         sensors.append(h.sensor.Sensor(str(i),1,0,0.000))
     
-    for i in range(int(auvNum)):
+    for i in range(auvNum):
         target = target_list[0]#first target as reference.
         target.exist = True # Spawn the first target at the beginning of the simulation
         [measure_, rel_bearing_, meas_pos] = sensors[i].measureBearing(target.pose.x,target.pose.y,
@@ -80,14 +80,13 @@ def run_simulation(target_list, auvNum, pub_s_state, pub_t_state, pub_init_opt):
     estimator = h.estimator_module.Estimation()
     estimator.computeState(measTable)
 
-    rospy.loginfo('|---- KINEMATIC SIMULATION: Initial AUVs positions (m) --> %s',auvs_xy)
+    for i in range(auvNum):
+        rospy.loginfo('|---- KINEMATIC SIMULATION: Initial AUV'+str(i+1)+' pose (m) --> %s',auvs_xy[i,:])
     for i in range(targetNum):
         target = target_list[i]
-        rospy.loginfo('|---- KINEMATIC SIMULATION: Initial Target(s) position (m) --> %s',
+        rospy.loginfo('|---- KINEMATIC SIMULATION: Initial Target(s) pose (m) --> %s',
                         [target.pose.x,target.pose.y,target.pose.theta])
         
-    rospy.loginfo('|---- KINEAMTIC SIMULATION: Initial value objective function --> %s',
-                h.utils.compute_cost(estimator.phi))
     rospy.sleep(1)
 
     ## SIMULATION LOOP ############################################################################################################
@@ -132,14 +131,13 @@ def run_simulation(target_list, auvNum, pub_s_state, pub_t_state, pub_init_opt):
 
         for i in range(targetNum):
             target = target_list[i]
-            if target.exist == True:
-                t_traj_x[i].append(target.pose.x)
-                t_traj_y[i].append(target.pose.y)         
+            t_traj_x[i].append(target.pose.x)
+            t_traj_y[i].append(target.pose.y)         
         
         ##################################################################################################################
         #  Stop simulation and save data to .txt files ###################################################################
         if int(t) == (h.config.TIME_DURATION-1):
-            rospy.on_shutdown(shutdown_cllbk)
+            rospy.on_shutdown(shutdown_cllbk(auvNum,targetNum))
             rospy.signal_shutdown('Simulation time limit reached')
       
         if count1 % Hz == 0:
@@ -154,31 +152,33 @@ def run_simulation(target_list, auvNum, pub_s_state, pub_t_state, pub_init_opt):
                 
         ''' ADD SPAWNING TARGETS HERE'''
         if t > 0:
-           target_list[1].exist = True
+            if targetNum > 1:
+               target_list[1].exist = True
         if t > 0:
-            target_list[2].exist = True
+            if targetNum > 2:
+                target_list[2].exist = True
 
         t += dt
         count1 += 1  
         rate.sleep()
 
-def shutdown_cllbk():
-    
+def shutdown_cllbk(auvNum,targetNum):
+
+    '''PUT DATA SAVING HERE'''
     for i in range(targetNum):  
         np.savetxt(log_path+'/target_x_traj'+str(i+1)+'.txt',t_traj_x[i])
         np.savetxt(log_path+'/target_y_traj'+str(i+1)+'.txt',t_traj_y[i])
-        samples = len(t_traj_x[i])
-
+        
     for i in range(auvNum):
 
         np.savetxt(log_path+'/auv_x_traj'+str(i+1)+'.txt',s_traj_x[i])
         np.savetxt(log_path+'/auv_y_traj'+str(i+1)+'.txt',s_traj_y[i])
 
     # Save a logfile with simulation settings
-    sim_info = [auvNum, targetNum, samples, simTime, Ts, 
-                alpha_w, gamma_w, NL, Dthresh, desRange]
-    
+    sim_info = [Ts, NL, desRange, alpha_w, gamma_w, Dthresh]
+    sim_data = [auvNum, targetNum, simTime, len(t_traj_x[0])]
     np.savetxt(log_path+'/sim_info.txt',sim_info)
+    np.savetxt(log_path+'/sim_data.txt',sim_data)
     np.savetxt(log_path+'/ctrl_set.txt',ctrl_set)
 
     magenta = "\033[0;35m"
@@ -203,6 +203,7 @@ def main():
     # ROS INIT   
     # Get AUV ID and number of vehicles.
     auvNum = rospy.get_param('/kinematic_sim/auvNum')
+    targetNum = rospy.get_param('/kinematic_sim/targetNum')
     # Node Init
     rospy.init_node('kinematic_sim') #log_level=rospy.DEBUG
     
@@ -227,7 +228,7 @@ def main():
     # Start listeners and run simulation
     listener(auvNum)
     run_simulation(target_list, auvNum, pub_s_state, pub_t_state, pub_init_opt)  
-    rospy.on_shutdown(shutdown_cllbk)
+    rospy.on_shutdown(lambda: shutdown_cllbk(auvNum,targetNum))
     rospy.spin()
 
 if __name__ == '__main__':

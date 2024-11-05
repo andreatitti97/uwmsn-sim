@@ -3,11 +3,13 @@
 
 <arg name="auvID"/>
 <arg name="auvNum"/>
+<arg name="targetNum"/>
     
   <node pkg="uwmsn-sim" type="auv_node.py" name="auv" output="screen" args="$(arg auvID)">
     <!-- <rosparam command="load" file="$(find mission_manager)/config/conf_auv_$(arg auvID).yaml" />-->
     <param name="auvID" type="int" value="$(eval arg('auvID'))" />
     <param name="auvNum" type="int" value="$(eval arg('auvNum'))" />
+    <param name="targetNum" type="int" value="$(eval arg('targetNum'))" />
   </node>
     
     

@@ -24,11 +24,11 @@ def calc_spline_course(sp,ds):
 
     return rx, ry, ryaw, rk, s, surge
 
-def computePursuitVel(curr_est,s_pose,d_max):
+def computePursuitVel(curr_est,s_pose,d_max, DT):
 
     predicted_pose = np.array(np.zeros(2))
-    predicted_pose[0] = curr_est[0,0] + config.DT*curr_est[2,0]#TODO: check how much time propagate
-    predicted_pose[1] = curr_est[1,0] + config.DT*curr_est[3,0]
+    predicted_pose[0] = curr_est[0,0] + DT*curr_est[2,0]#TODO: check how much time propagate
+    predicted_pose[1] = curr_est[1,0] + DT*curr_est[3,0]
 
     eucl_dist = np.sqrt((curr_est[0,0]-s_pose[0])**2+(curr_est[1,0]-s_pose[1])**2)
     epsi = 0#config.RANGE_TO_TARGET #DISTANZA VOLUTA DAL TARGET

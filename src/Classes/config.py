@@ -39,46 +39,25 @@ def alpha_f(f):
 TIME_DURATION = 500 # (s)
 TIME_SCALER = 1# in [1 - 10] values near 10 may be source of errors (to fast for ROS stack)
 TIME_STEP = 0.01*TIME_SCALER
-
-# Estimation Parameters
-TM = 2 #measurements sampling period (s)
-P_max = 100 # regressor MAX length 40
-P_min = 10 #regressor min length
-buffLen = 3 #buffer length for storing received pkts
-SIGMA_MEAS = 0.01#0.08#0.1#0.2 # (rad^2) --> 4.5° (as assumed in DAMPS and by cassino)
-k_phi_thresh = 10.0 #Thresh sul condizionamento del regressore per aggiornare la stima
 targetNum = 3 #this is the maximum number of target considered in the simulator
 auvNum = 6 #this is the maximum number of auvs considered in the simulator
 
+# Distributed Estimation Algorithm Parameters
+TM = 2 #measurements sampling period (s)
+P_max = 100 # regressor MAX length 40
+P_min = 5 #regressor min length
+buffLen = 3 #buffer length for storing received pkts
+SIGMA_MEAS = 0.01#0.08#0.1#0.2 # (rad^2) --> 4.5° (as assumed in DAMPS and by cassino)
+k_phi_thresh = 30.0 #Thresh sul condizionamento del regressore per aggiornare la stima
+
 # AUVs Team Settings
 AUV_MAX_VEL = 1.5 #(m/s) -
-RANGE_TO_TARGET = 50 
 AUV_failure = False #auv2 will fail after t = TIME_DURATION/2
 AUV2_bridge = True
 netTopology = [[] for _ in range(auvNum)]
 netTopology[0] = [2] #put the ID of the neigbours of agent 1
 netTopology[1] = [1,3] #put the ID of the neigbours of agent 2
 netTopology[2] = [2] #put the ID of the neigbours of agent 3
-
-# Optimization Parameters --- alpha = 0.15, gamma = 1.0 (almost fixed formation)
-alpha_w = 0.75 #fixed form 0.45#0.15
-gamma_w = 0.1#0.3 #fixed form 0.85#0.25#1.0
-u_max = 25*math.pi/180
-delta_u = 5*math.pi/180
-MAX = 60*math.pi/180
-MIN = 10*math.pi/180
-U = 7 # number of control choices (should be an ODD number)
-H = 3 # planning horizon
-
-ctrl_cmd = []
-u_i = u_max/((U-1)/2)
-for i in range(U):
-    if i < np.floor(U/2):
-        ctrl_cmd.append(-(u_max-i*u_i))
-    elif i == np.ceil(U/2):
-        ctrl_cmd.append(0.0)
-    if i > U/2:
-        ctrl_cmd.append((i-((U-1)/2))*u_i)
 
 # Randomize initial agents position or chose initial positions
 AUV_XY = np.zeros((4,3))
@@ -109,9 +88,6 @@ else:
 
 # Communication Policy Paramaters
 Ts = 4 #TDMA: slot time # time sampling always equal to Ts/2 -- considering pkt=64B and v=480bps
-n = 3 #auv num
-DT = Ts*n*2 #optimization time window
-alpha = -0.1 #0.01 #Sigmoid parameters for packet loss, if alpha << gamma --> more packet loss
 dist = []
 for i in range(len(AUV_XY)-1):
     tmp1 = (AUV_XY[i,0],AUV_XY[i,1])
@@ -121,24 +97,43 @@ for i in range(len(AUV_XY)-1):
 avg_d = sum(dist)/(len(dist))
 d = avg_d
 gamma = avg_d*3 #Sigmoid parameter for packet loss --> depends on the distance (tune only alpha)
+PDR = 90
 
-# Acoustic Parameters
+# Acoustic Model Parameters
 SL = 200 #db
 NL = 20 #db
 DI = 0 #directivity index a-dimensional
-DThresh = 0 #dB (minimum connectivity requirement)
 c = 1500 #sound wave speed
 f = 10 #kHx ( frequency of the modem)
-PDR = 100
-
 
 for i in range(len(dist)):
     acoustic_loss = alpha_f(f) #f is in kHz
     TL = 20*np.log(dist[i]) + (dist[i]*acoustic_loss*1e-3)
-    
 DThresh = 20*np.log(min_distance) + (min_distance*acoustic_loss*1e-3)#dB (transmission loss that if happens is "ideal")
 TL_worse = 20*np.log(max_distance) + (max_distance*acoustic_loss*1e-3)
 
+# Optimization Parameters --- alpha = 0.15, gamma = 1.0 (almost fixed formation)
+alpha_w = 0.75 #fixed form 0.45#0.15
+gamma_w = 0.1#0.3 #fixed form 0.85#0.25#1.0
+DThresh = 0 #dB (minimum connectivity requirement)
+RANGE_TO_TARGET = 50 
+
+u_max = 25*math.pi/180
+delta_u = 5*math.pi/180
+MAX = 60*math.pi/180
+MIN = 10*math.pi/180
+U = 7 # number of control choices (should be an ODD number)
+H = 3 # planning horizon
+
+ctrl_cmd = []
+u_i = u_max/((U-1)/2)
+for i in range(U):
+    if i < np.floor(U/2):
+        ctrl_cmd.append(-(u_max-i*u_i))
+    elif i == np.ceil(U/2):
+        ctrl_cmd.append(0.0)
+    if i > U/2:
+        ctrl_cmd.append((i-((U-1)/2))*u_i)
 
 ######## CHOOSE TARGET DYNAMIC ###################################################################################################
 # CHOOSE Target parameter: start, goal, min max vels

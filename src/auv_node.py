@@ -104,7 +104,8 @@ def run_auv_node(pub,auv,obs,Ts,Tf, auvNum):
 
     # Load simulation params from config file
     dt = header.config.TIME_STEP*t_scaler
-    DT = header.config.DT #Optimization Time Window
+    Ts = header.config.Ts #Optimization Time Window
+    DT = Ts*auvNum*2 #optimization time window
     thresh = header.config.k_phi_thresh
     
     rospy.sleep(1)

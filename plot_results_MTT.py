@@ -20,48 +20,34 @@ spec.loader.exec_module(header)
 
 # Load simulation info
 sim_info = np.loadtxt(log_directory+'/sim_info.txt')
+sim_data = np.loadtxt(log_directory+'/sim_data.txt')
 ctrl_set = np.loadtxt(log_directory+'/ctrl_set.txt')
-'''auvNum = sim_info[0] 
-targetNum = sim_info[1]
-samples = sim_info[2]
-elapsed_t = sim_info[3]
-Ts = sim_info[4]
-'''
-auvNum = sim_info[0] 
-samples = sim_info[1]
-elapsed_t = sim_info[2]
+samples = np.loadtxt(log_directory+'/samples.txt')
+print('Simulation info: [Slot Time (TDMA), Minimum Distance to the target (m), alpha_w, gamma_w, Dthresh]', sim_info)
+auvNum = int(sim_data[0])
+targetNum = int(sim_data[1])
+simTime = int(sim_data[2])
+samples = int(sim_data[3])
+# Initialize data structures for AUVs data
+auv_x_traj = np.zeros(((samples),(auvNum)))
+auv_y_traj = np.zeros(((samples),(auvNum)))
+target_x_traj = np.zeros(((samples),(auvNum)))
+target_y_traj = np.zeros(((samples),(auvNum)))
+
+surge_vel = [[] for _ in range((auvNum))]
+heading = [[] for _ in range(auvNum)]
+x_hat, tracking_errors, P, avgNodes, avgTime = [], [], [], [], []
+PDR = np.zeros(((auvNum),1))
 
 # Load target data - TO DOWNSAMPLE
-target_x_traj = np.loadtxt(log_directory+'/target_x_traj.txt')
-target_y_traj = np.loadtxt(log_directory+'/target_y_traj.txt')
-
-# Initialize data structures for AUVs data
-auv_x_traj = np.zeros((len(target_x_traj),int(auvNum)))
-auv_y_traj = np.zeros((len(target_y_traj),int(auvNum)))
-surge_vel = [[],[],[],[]]
-heading = [[],[],[],[]]
-x_hat, tracking_errors, P, avgNodes, avgTime = [], [], [], [], []
-PDR = np.zeros((int(auvNum),1))
-
-'''# Initialize data structures for AUVs data
-auv_x_traj = np.zeros((samples,int(auvNum)))
-auv_y_traj = np.zeros((samples,int(auvNum)))
-target_x_traj = np.zeros((samples,int(auvNum)))
-target_y_traj = np.zeros((samples,int(auvNum)))
-surge_vel = [[],[],[],[]]
-heading = [[],[],[],[]]
-x_hat, tracking_errors, P, avgNodes, avgTime = [], [], [], [], []
-PDR = np.zeros((int(auvNum),1))'''
-
-'''# Load target data
-for i in range(targetNum):
-    target_x_traj[:,i] = np.loadtxt(log_directory+'/target_x_traj'+str(i+1)+'..txt')
-    target_y_traj[:,i] = np.loadtxt(log_directory+'/target_y_traj'+str(i+1)+'..txt')'''
+for i in range(1):
+    target_x_traj[:,i] = np.loadtxt(log_directory+'/target_x_traj'+str(i+1)+'.txt')
+    target_y_traj[:,i] = np.loadtxt(log_directory+'/target_y_traj'+str(i+1)+'.txt')
 
 for i in range(int(auvNum)):
     # AUVs Simulation Data - TO DOWNSAMPLE
-    auv_x_traj[:,i] = np.loadtxt(log_directory+'/auv'+str(i+1)+'_x_traj.txt')
-    auv_y_traj[:,i] = np.loadtxt(log_directory+'/auv'+str(i+1)+'_y_traj.txt')
+    auv_x_traj[:,i] = np.loadtxt(log_directory+'/auv_x_traj'+str(i+1)+'.txt')
+    auv_y_traj[:,i] = np.loadtxt(log_directory+'/auv_y_traj'+str(i+1)+'.txt')
 
     surge_vel[i] = np.loadtxt(log_directory+'/'+str(i+1)+'surge_vel')
     heading[i] = np.loadtxt(log_directory+'/'+str(i+1)+'heading')*180/np.pi
@@ -71,34 +57,37 @@ for i in range(int(auvNum)):
     avgNodes.append(np.loadtxt(log_directory+'/nodes'+str(i+1)+'.txt'))    
 
     # Estimation Data
-    tmp = np.loadtxt(log_directory+'/'+str(i+1)+'-x_hat_2.txt')
+    err = np.loadtxt(log_directory+'/'+str(i+1)+'-trackErr')
+    tracking_errors.append(err)
+    '''tmp = np.loadtxt(log_directory+'/'+str(i+1)+'-x_hat_2.txt')
     x_hat_ = np.zeros((len(tmp),4))
-    err = np.loadtxt(log_directory+'/'+str(i+1)+'-err.txt')
+    
     cov = np.zeros((len(tmp),4))
     for j in range(4):
         x_hat_[:,j] = np.loadtxt(log_directory+'/'+str(i+1)+'-x_hat_'+str(j+1)+'.txt')
         cov[:,j] = np.loadtxt(log_directory+'/'+str(i+1)+'-cov'+str(j+1)+'.txt')
     x_hat.append(x_hat_)
-    P.append(cov)
-    tracking_errors.append(err)
-
-    #Optimization Data
-    #PDR[i] = np.loadtxt(log_directory+'/'+str(i+1)+'-PDR')
+    P.append(cov)'''
 
 # Downsampling script
-original_samples = len(target_x_traj)
-sampling = 50#100 ideal #200 realistic scneario
-tmp_x = target_x_traj
-target_x_traj = tmp_x[::sampling]
+original_samples = samples
+sampling = 2
+samples = int(original_samples/sampling)
+target_x = np.zeros((samples,int(targetNum)))
+target_y = np.zeros((samples,int(targetNum)))
+for i in range(targetNum):
+    tmp_x = target_x_traj[:,i]
+    tmp_y = target_x_traj[:,i]
 
-tmp_y = target_y_traj
-target_y_traj = tmp_y[::sampling]
-samples = len(target_x_traj)
+    target_x[:,i] = tmp_x[::sampling]
+    target_y[:,i] = tmp_y[::sampling]
+
 
 auv_x = np.zeros((samples,int(auvNum)))
 auv_y = np.zeros((samples,int(auvNum)))
-x = np.linspace(0,elapsed_t,original_samples) 
-t = np.linspace(0,elapsed_t,samples)#subsampled set
+x = np.linspace(0,simTime,original_samples) 
+t = np.linspace(0,simTime,samples)#subsampled set
+
 for i in range(int(auvNum)):
     tmp_x = auv_x_traj[:,i]
     model = make_interp_spline(x, auv_x_traj[:,i],k=9) #TODO CHECK ROUNDING UP PROBLEM FOR INTERP
@@ -138,19 +127,23 @@ for i in range(int(auvNum)):
 phi = np.zeros((4,2))
 list_phi, phi1, phi2, phi3, phi4 = [], [], [], [], []
 
-for j in range(int(auvNum)):
-    tmp_x = auv_x[:,j]
-    tmp_y = auv_y[:,j]
-    for i in range(samples):
-        b = atan2(tmp_y[i]-target_y_traj[i],tmp_x[i]-target_x_traj[i])
-        if j == 0:
-            phi1.append([np.sin(b), -np.cos(b)])
-        if j == 1:
-            phi2.append([np.sin(b), -np.cos(b)])
-        if j == 2:
-            phi3.append([np.sin(b), -np.cos(b)])
-        if j == 3:
-            phi4.append([np.sin(b), -np.cos(b)])
+for k in range(targetNum):
+    tmp_t_x = target_x[:,k]
+    tmp_t_y = target_y[:,k]
+    
+    for j in range(int(auvNum)):
+        tmp_x = auv_x[:,j]
+        tmp_y = auv_y[:,j]
+        for i in range(samples):
+            b = atan2(tmp_y[i]-tmp_t_y[i],tmp_x[i]-tmp_t_x[i])
+            if j == 0:
+                phi1.append([np.sin(b), -np.cos(b)])
+            if j == 1:
+                phi2.append([np.sin(b), -np.cos(b)])
+            if j == 2:
+                phi3.append([np.sin(b), -np.cos(b)])
+            if j == 3:
+                phi4.append([np.sin(b), -np.cos(b)])
 
 for i in range(len(phi1)):
     if header.config.AUV_failure == True:
@@ -221,17 +214,17 @@ for i in range(samples):
     a = 0 + i#samples - i
     test.append(a*10)
 
-c_map = ax.scatter(target_x_traj,target_y_traj,c=test,cmap='autumn_r',vmin=0, vmax=elapsed_t,linewidths=sw)
-ax.scatter(target_x_traj[0],target_y_traj[0],c='y',marker='o',linewidths=sw*8)
-ax.scatter(target_x_traj[-1],target_y_traj[-1],c='k',linewidths=sw*12)
-ax.scatter(target_x_traj[-1],target_y_traj[-1],c='r',linewidths=sw*8)
+c_map = ax.scatter(target_x[:,0],target_y[:,0],c=test,cmap='autumn_r',vmin=0, vmax=simTime,linewidths=sw)
+ax.scatter(target_x[0],target_y[0],c='y',marker='o',linewidths=sw*8)
+ax.scatter(target_x[-1],target_y[-1],c='k',linewidths=sw*12)
+ax.scatter(target_x[-1],target_y[-1],c='r',linewidths=sw*8)
 
 
-#ax.text(target_x_traj[-1],target_y_traj[-1]-23,r'$ %s $'%math_vars[1]+r'$ %s $'%time_vars[2],fontsize=(tw/3)*2)
-ax.text(target_x_traj[-1]-100,target_y_traj[-1],r'$ %s $'%math_vars[1]+r'$ %s $'%time_vars[1],fontsize=tw)
-ax.text(target_x_traj[0]-100,target_y_traj[0],r'$ %s $'%math_vars[1]+r'$ %s $'%time_vars[0],fontsize=tw)
+#ax.text(target_x[-1],target_y[-1]-23,r'$ %s $'%math_vars[1]+r'$ %s $'%time_vars[2],fontsize=(tw/3)*2)
+ax.text(target_x[-1]-100,target_y[-1],r'$ %s $'%math_vars[1]+r'$ %s $'%time_vars[1],fontsize=tw)
+ax.text(target_x[0]-100,target_y[0],r'$ %s $'%math_vars[1]+r'$ %s $'%time_vars[0],fontsize=tw)
 
-#ax.text(target_x_traj[-1]+5,target_y_traj[-1]+2,r'$ %s $'%math_vars[1]+r'$ %s $'%time_vars[2],fontsize=(tw/3)*2)
+#ax.text(target_x[-1]+5,target_y[-1]+2,r'$ %s $'%math_vars[1]+r'$ %s $'%time_vars[2],fontsize=(tw/3)*2)
 
 cb = fig.colorbar(c_map, ax=ax)
 cb.set_label('t (s)',fontsize=fs)
@@ -241,11 +234,11 @@ for i in range(int(auvNum)):
     
     if i == 0:
         ax.plot([auv_x[-1,i],
-            target_x_traj[-1]],[auv_y[-1,i],target_y_traj[-1]],'r--',linewidth=lw/3,label='LOS'+r'$ %s $'%time_vars[1])
+            target_x[-1,0]],[auv_y[-1,i],target_y[-1,0]],'r--',linewidth=lw/3,label='LOS'+r'$ %s $'%time_vars[1])
     else:
         if i != 1:
             ax.plot([auv_x[-1,i],
-                target_x_traj[-1]],[auv_y[-1,i],target_y_traj[-1]],'r--',linewidth=lw/3)
+                target_x[-1,0]],[auv_y[-1,i],target_y[-1,0]],'r--',linewidth=lw/3)
         
     if i == 0:
         a,b,c,d = -55,-55,-25,0
@@ -273,7 +266,7 @@ for i in range(int(auvNum)):
 
 
 '''PROPOSAL
-ax.text(target_x_traj[-1],target_y_traj[-1]+5,r'$ %s $'%math_vars[1]+r'$ %s $'%time_vars[2],fontsize=(tw/3)*2)
+ax.text(target_x[-1],target_y[-1]+5,r'$ %s $'%math_vars[1]+r'$ %s $'%time_vars[2],fontsize=(tw/3)*2)
 if i == 0:
         a,b,c,d = +5,+0,+2,0
     elif i == 1:
@@ -283,7 +276,7 @@ if i == 0:
 
 '''RANGE
 
-ax.text(target_x_traj[-1]-5,target_y_traj[-1]+4,r'$ %s $'%math_vars[1]+r'$ %s $'%time_vars[2],fontsize=(tw/3)*2)
+ax.text(target_x[-1]-5,target_y[-1]+4,r'$ %s $'%math_vars[1]+r'$ %s $'%time_vars[2],fontsize=(tw/3)*2)
 if i == 0:
         a,b,c,d = +5,-10,-10,-10
     elif i == 1:
@@ -292,8 +285,8 @@ if i == 0:
         a,b,c,d = -10,-8,0,-7'''
 
 '''GEOM
-ax.text(target_x_traj[-1]+6,target_y_traj[-1]-18,r'$ %s $'%math_vars[1]+r'$ %s $'%time_vars[1],fontsize=tw)
-ax.text(target_x_traj[0]+15,target_y_traj[0],r'$ %s $'%math_vars[1]+r'$ %s $'%time_vars[0],fontsize=tw)
+ax.text(target_x[-1]+6,target_y[-1]-18,r'$ %s $'%math_vars[1]+r'$ %s $'%time_vars[1],fontsize=tw)
+ax.text(target_x[0]+15,target_y[0],r'$ %s $'%math_vars[1]+r'$ %s $'%time_vars[0],fontsize=tw)
 if i == 0:
         a,b,c,d = +5,0,0,+12
     elif i == 1:
@@ -303,8 +296,8 @@ if i == 0:
 
 
 '''REALISTIC
-ax.text(target_x_traj[-1]+6,target_y_traj[-1]-18,r'$ %s $'%math_vars[1]+r'$ %s $'%time_vars[1],fontsize=tw)
-ax.text(target_x_traj[0]+15,target_y_traj[0],r'$ %s $'%math_vars[1]+r'$ %s $'%time_vars[0],fontsize=tw)
+ax.text(target_x[-1]+6,target_y[-1]-18,r'$ %s $'%math_vars[1]+r'$ %s $'%time_vars[1],fontsize=tw)
+ax.text(target_x[0]+15,target_y[0],r'$ %s $'%math_vars[1]+r'$ %s $'%time_vars[0],fontsize=tw)
 
 
 if i == 0:
@@ -350,7 +343,7 @@ fig5, ax = plt.subplots()
 sampling = 1
 math_vars = ['d_1','d_2','d_3','d_4','d_{-}^{r}','d_{+}^{r}']
 lthres = header.config.RANGE_TO_TARGET
-x = np.linspace(0,elapsed_t,int(samples/sampling)) #subsampled set
+x = np.linspace(0,simTime,int(samples/sampling)) #subsampled set
 for i in range(int(auvNum)):
     #plt.subplot(int(auvNum),1,i+1)
     dist = []
@@ -361,11 +354,11 @@ for i in range(int(auvNum)):
     for j in range(samples):
 
         low_thresh.append(lthres)
-        dist.append(np.sqrt((target_x_traj[j]-tmp_x[j])**2+(target_y_traj[j]-tmp_y[j])**2)-a)
+        dist.append(np.sqrt((target_x[j]-tmp_x[j])**2+(target_y[j]-tmp_y[j])**2)-a)
         
         
     model = make_interp_spline(x, dist[::sampling])
-    t = np.linspace(0,elapsed_t,samples)#original samples length but interpolated
+    t = np.linspace(0,simTime,samples)#original samples length but interpolated
     y = model(t)
     
     ax.plot(t,y,linewidth=lw,label=r'$ %s $'%math_vars[i])
@@ -449,27 +442,27 @@ sampling = 1
 math_vars = ['loss function 1','loss function 2','loss function 3']
 lthres = header.config.RANGE_TO_TARGET
 
-x = np.linspace(0,elapsed_t,int(samples/sampling)) #subsampled set
+x = np.linspace(0,simTime,int(samples/sampling)) #subsampled set
 for i in range(int(auvNum)):
     #plt.subplot(int(auvNum),1,i+1)
     reward_func = []
     dist_reward = []
     tmp_x = auv_x[:,i]
     tmp_y = auv_y[:,i]
-    d0 = np.sqrt((target_x_traj[0]-tmp_x[0])**2+(target_y_traj[0]-tmp_y[0])**2)
+    d0 = np.sqrt((target_x[0]-tmp_x[0])**2+(target_y[0]-tmp_y[0])**2)
     cost_d = np.linspace(5,d0,samples)
     cost_g = np.linspace(0.01,1,samples)
   
     for j in range(samples):
         tmp_phi = list_phi[j]+20
 
-        dist = np.sqrt((target_x_traj[j]-tmp_x[j])**2+(target_y_traj[j]-tmp_y[j])**2)
+        dist = np.sqrt((target_x[j]-tmp_x[j])**2+(target_y[j]-tmp_y[j])**2)
         reward_func.append(dist+tmp_phi)
         dist_reward.append(dist)
         
         
     model = make_interp_spline(x, reward_func[::sampling])
-    t = np.linspace(0,elapsed_t,samples)#original samples length but interpolated
+    t = np.linspace(0,simTime,samples)#original samples length but interpolated
     y = model(t)
     
     ax.plot(t,y,linewidth=lw,label=r'$ %s $'%math_vars[i])
@@ -496,11 +489,11 @@ plt.xticks(fontsize=(fs*2)/3, rotation=0)#to set dimension and orientation of ti
 
 
 '''Interpolation script
-x = np.linspace(0,elapsed_t,int(len(target_x_traj)/500)+1) #subsampled set
+x = np.linspace(0,simTime,int(len(target_x)/500)+1) #subsampled set
     
     model = make_interp_spline(x, dist[::500])
 
-    t = np.linspace(0,elapsed_t,len(target_x_traj))#original samples length but interpolated
+    t = np.linspace(0,simTime,len(target_x))#original samples length but interpolated
     y = model(t)
     '''
 
@@ -578,9 +571,9 @@ for i in range(int(auvNum)):
 
     tmp = surge_vel[i]
 
-    x = np.linspace(0,elapsed_t,int(len(tmp)/sampling)) #subsampled set
+    x = np.linspace(0,simTime,int(len(tmp)/sampling)) #subsampled set
     model = make_interp_spline(x, tmp[::sampling])
-    t = np.linspace(0,elapsed_t,samples)#original samples length but interpolated
+    t = np.linspace(0,simTime,samples)#original samples length but interpolated
     y = model(t)
 
     ax.plot(t,y,label='AUV'+str(i+1),linewidth=lw)
@@ -605,10 +598,10 @@ for i in range(int(auvNum)):
         if tmp[j] < 0:
             tmp[j] = 360 + tmp[j]      
 
-    x = np.linspace(0,elapsed_t,int(len(tmp)/sampling)) #subsampled set
+    x = np.linspace(0,simTime,int(len(tmp)/sampling)) #subsampled set
 
     model = make_interp_spline(x, tmp[::sampling]) #TODO CHECK ROUNDING UP PROBLEM FOR INTERP
-    t = np.linspace(0,elapsed_t,samples)#original samples length but interpolated
+    t = np.linspace(0,simTime,samples)#original samples length but interpolated
     y = model(t)
 
     ax.plot(t,y,label='AUV'+str(i+1),linewidth=lw)
