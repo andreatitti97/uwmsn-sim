@@ -67,8 +67,8 @@ def run_auv_node(pub,auv,obs,Ts,Tf,auvNum):
 
     # Load simulation params from config file
     dt, thresh = h.config.TIME_STEP*t_scaler, h.config.k_phi_thresh
-    AUV_failure, P_min = h.config.AUV_failure, h.config.P_min
-    DT = h.config.Ts*auvNum*2
+    AUV_failure, P_min, H = h.config.AUV_failure, h.config.P_min, h.config.H
+    DT = h.config.Ts*auvNum
     targetNum = len(obs)
 
     # Init time variables and counters and lists
@@ -145,10 +145,9 @@ def run_auv_node(pub,auv,obs,Ts,Tf,auvNum):
                             phi,y = obs[i].regressor #update the regressor
                             measTable[i] = []#empty the measurements table
                             
-                            # if good conditioning do estimation
-                            if h.utils.compute_cost(phi) < thresh:
+                            if (h.utils.computeCost(phi)) < thresh:
                                 
-                                obs[i].propagate_estimation(t) #you can now propagate     
+                                obs[i].propagation(t) #you can now propagate     
                                 cov = h.utils.computeCov(y,phi)#compute a-posteriori cov (vedi paper)
                                 confirmedEst = [np.floor(t), targetInfo[4]]#timestamp, label
                                 for j in range(4): 
@@ -168,8 +167,10 @@ def run_auv_node(pub,auv,obs,Ts,Tf,auvNum):
 
                         xi_hat_i = msgTx[i]
                         targetPose = targetsData[i]
-                        trackErr[i].append(np.sqrt((targetPose[0] - xi_hat_i[0])**2
-                                                    +(targetPose[1] - xi_hat_i[1])**2))
+
+                        trackErr[i].append(np.sqrt((targetPose[0] - xi_hat_i[2])**2
+                                                    +(targetPose[1] - xi_hat_i[3])**2))
+
                         f_xi_hat_i = [f"{val:.2f}" for val in xi_hat_i[2:6]]
                         rospy.logout('%s|---- AUV '+str(auvID)+': Target '+str(int(xi_hat_i[1]))
                                     +' state Estimation [m,m/s] --> %s%s',
@@ -180,28 +181,27 @@ def run_auv_node(pub,auv,obs,Ts,Tf,auvNum):
     
         #if the optimization has produced somthing update path, do this control always to avoid unnecessary waitings.
         if sum(ctrlPolicy) != sum(old_pi_bar):
-            
-            waypoints = ctrlPolicy[7:(len(ctrlPolicy)-1)]
+
             ax, ay = [senPose[0]], [senPose[1]]#the "first waypoint is the initial vehicle state"
-            path, idx_motion, idx, rx, ry, ryaw, surge = h.updatePathRoutine(ax,ay,
-                                                            waypoints,senPose,v_n,dt,DT)
-            print(path)#TODO, check path routine!!!!!!!!!!! adjust v_n for work with policy
+            path, idxMotion, idx, rx, ry, ryaw, surge = h.updatePathRoutine(ax,ay,senPose,
+                                                            ctrlPolicy[3+H:-1],ctrlPolicy[3:3+H],dt,DT)
+            
         if path != None: 
-            heading.append(ryaw[idx_motion+idx])
-            pub[2].publish(np.array([int(auvID),rx[idx_motion+idx],
-                                        ry[idx_motion+idx],ryaw[idx_motion+idx]], dtype=np.float32))
+            heading.append(ryaw[idxMotion+idx])
+            pub[2].publish(np.array([int(auvID),rx[idxMotion+idx],
+                                        ry[idxMotion+idx],ryaw[idxMotion+idx]], dtype=np.float32))
             # PUBLISH THE CTRL_CMD
-            if len(rx)-1 <= idx_motion+idx:
-                idx_motion += 0
+            if len(rx)-1 <= idxMotion+idx:
+                idxMotion += 0
             else:
                 if auvID != 2:
-                    idx_motion += 1  
+                    idxMotion += 1  
                 else:
                     #SIMULATE AUV2_failure
                     if t > h.config.TIME_DURATION/2 and AUV_failure == True:
-                        idx_motion += 0
+                        idxMotion += 0
                     else:
-                        idx_motion += 1  
+                        idxMotion += 1  
         
         if int(t) == (h.config.TIME_DURATION-1):
             rospy.on_shutdown(lambda: shutdownCllbk(targetNum))

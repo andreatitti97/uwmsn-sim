@@ -70,7 +70,6 @@ for i in range(auvNum):
     x_hat.append(x_hat_)
     P.append(cov)'''
     
-
 # LOAD FILES FOR PLOT ESTIMATION (temporary)
 '''cov_x = np.loadtxt(log_directory+'/'+str(1)+'-cov'+str(1)+'.txt')
 cov_y = np.loadtxt(log_directory+'/'+str(1)+'-cov'+str(2)+'.txt')   
@@ -80,18 +79,11 @@ x_hat_x = np.loadtxt(log_directory+'/'+str(1)+'-x_hat_'+str(1)+'.txt')
 x_hat_y = np.loadtxt(log_directory+'/'+str(1)+'-x_hat_'+str(2)+'.txt')'''
 
 ###############################################
-# Animated plot
-
-# Parameters
-lw = 8
-fs = 50
-tw = 40
-tw = 20
-AUV_failure = False
+# Static plot
 
 # Downsampling script
 original_samples = samples
-sampling = 100
+sampling = 10
 samples = int(np.ceil(original_samples / sampling))
 
 # Downsample target positions
@@ -147,9 +139,16 @@ for k in range(targetNum):
         cost = header.utils.computeCost(phi)
         list_phi[i] += cost
 
-# Initialize strings fo legends
+# PLOT SETUP
+# Parameters
+fs = 40
+lw = 5
+sw = 5
+tw = 30
+AUV_failure = False
+
 vars = ['Target','\\hat{\\xi}','AUVs','LOSS FUNCTION']
-vars_math = ['\\kappa(\\Phi)','\\xi','C^{(d)}+C^{(g)}','\\sigma_m','\\epsilon']
+vars_math = ['\\kappa(\\Phi)','\\xi','C^{(d)}+C^{(g)}']
 
 time_vars = ['(t_{0})','(t_{f})','(t_{0}=t_{f})']
 
@@ -160,57 +159,53 @@ agents_vars = ['AUV'+str(i+1) for i in range(auvNum)]
 agents_vars_math = ['s_'+str(i+1) for i in range(auvNum)]
 colors = ['darkslategrey', 'orange', 'purple', 'blue']
 
-
 # Initialize the figure
 fig = plt.figure()
 fig.patch.set_facecolor('lightgray')  # Background color for the figure
 # Adjust the figure size (for full screen) and define grid spec
 fig.set_size_inches(16, 9)
 # Set subplots spacing
-#fig.tight_layout(pad=10.0)
-gs = GridSpec(3, 3, figure=fig)
-ax1 = fig.add_subplot(gs[:, 1:3])  # This takes the entire first row
-ax2 = fig.add_subplot(gs[0, 0])  # This takes the bottom left
-ax3 = fig.add_subplot(gs[1, 0])  # This takes the bottom right
-ax4 = fig.add_subplot(gs[2, 0])  # This takes the bottom right
+gs = GridSpec(2, 2, figure=fig)
+ax1 = fig.add_subplot(gs[0, 0])  # This takes the bottom left
+ax2 = fig.add_subplot(gs[1, 0])  # This takes the bottom right
+ax3 = fig.add_subplot(gs[0, 1])  # This takes the bottom right
+ax4 = fig.add_subplot(gs[1, 1])  # This takes the bottom right
 
 ########################### PLOT SIM INFO ##############################
-ax4.set_ylim([0,100])
-ax4.set_xlim([0,100])
-ax4.set_ylabel('Simulation Info')
-
-ax4.text(10,78,'Simulation Time: '+str(simTime)+' (s) \n Accelerated view',fontsize=2*tw/3)
-ax4.text(10,60,'Packet Delivery Ratio: 75 %',fontsize=2*tw/3)
-ax4.text(10,30,'Measurament noise '+r'$ %s $'%vars_math[3]+' = 5 (deg)\n+Outliers 20%',fontsize=2*tw/3)
-ax4.text(10,20,'TDMA slot time: 4 (sec)',fontsize=2*tw/3)
-#ax4.text(10,2,'Average optimization time = '+str(np.round(avgTimeOpt*5,3))+' (sec)',fontsize=2*tw/3)
-#ax4.set_title('Simulation Parameters',y=-0.01)
+ax3.set_ylim([0,100])
+ax3.set_xlim([0,100])
+ax3.set_ylabel('Simulation Info')
+math_vars2 = ['\\sigma_m']
+ax3.text(10,78,'Simulation Time: '+str(simTime)+' (s) \n Accelerated view',fontsize=2*tw/3)
+ax3.text(10,60,'Packet Delivery Ratio: 75 %',fontsize=2*tw/3)
+ax3.text(10,30,'Measurament noise '+r'$ %s $'%math_vars2[0]+' = 5 (deg)\n+Outliers 20%',fontsize=2*tw/3)
+ax3.text(10,20,'TDMA slot time: 4 (sec)',fontsize=2*tw/3)
+#ax3.text(10,2,'Average optimization time = '+str(np.round(avgTimeOpt*5,3))+' (sec)',fontsize=2*tw/3)
+#ax3.set_title('Simulation Parameters',y=-0.01)
 plt.tick_params(left = False, right = False , labelleft = False , 
                 labelbottom = False, bottom = False) 
 
-
 ############################ PLOT TRACKING ERROR #############################
-# Initialize lists to hold plots
+# Initialize lists to hold errors and plots
+t_prova = [np.linspace(0, simTime, len(tracking_errors[i])) for i in range(int(auvNum))]
+errors = [tracking_errors[i] for i in range(int(auvNum))]
 error_plots = []
 
-t_prova = [np.linspace(0, simTime, len(tracking_errors[i])) for i in range(int(auvNum))]
-epsi = np.zeros(len(t_prova[0]))  # Single list of zeros for epsi across all AUVs
-error_plots = [ax3.plot([], [], linewidth=lw / 2, label=agents_vars[i])[0] for i in range(auvNum)]
+# Plot each AUV's tracking error
+for i, (t, err) in enumerate(zip(t_prova, errors)):
+    error_plot = ax2.plot(t, err, label=r'$ %s $' % agents_vars[i], linewidth=lw)
+    error_plots.append(error_plot)
+    max_value = max(max_value, err.max()) if i > 0 else err.max()  # Keep track of the max value across errors
 
-# Loop through each AUV to initialize error plots
-for i, (t_err, err) in enumerate(zip(t_prova, tracking_errors)):
+epsi = []    
+for i in range(len(t_prova[0])):
+    epsi.append(0.0)
+err = ax2.plot(t_prova[0],epsi,'r--',linewidth=lw,label=r'$ %s $'%agents_vars[-1])   
 
-    # Track max value across errors for any further processing
-    max_value = max(max_value, err.max()) if i > 0 else err.max()
-
-# Plot a static "epsi" reference line once, outside the loop
-epsi_line = ax3.plot(t_prova[0], epsi, 'r--', linewidth=lw, label=r'$ %s $' % vars_math[-1])   
-
-ax3.set_ylim([0,max_value+1])
-ax3.set_xlabel('t (s)', labelpad=0.01)
-ax3.set_ylabel('RMSE (m)')
-ax3.legend(fontsize=fs/5, loc='upper right')
-ax3.grid()
+ax2.set_xlabel('t (s)', labelpad=0.01)
+ax2.set_ylabel('RMSE (m)')
+ax2.legend(fontsize=fs/5, loc='upper right')
+ax2.grid()
 
 #################### PLOT LOSS FUNCTION #######################
 tmp = np.linspace(0,simTime,samples)
@@ -218,87 +213,67 @@ t = []
 for i in range(samples):
     t.append(tmp[i])
 
-#cost_lines = ax2.plot(t[0],list_phi[0],linewidth=lw,label='LOSS FUNCTION')[0]#label=r'$ %s $'%math_vars[3])[0]
-cost_lines = [ax2.plot([], [], linewidth=lw / 2,label='LOSS FUNCTION')[0]] 
+ax1.plot(t, list_phi, linewidth=lw / 2,label='LOSS FUNCTION')
 opt_value = []
 for i in range(samples):
     opt_value.append(1)
-ax2.plot(t,opt_value,'r--',linewidth=lw,label='Optimal Value')
-ax2.set_xlabel('t (s)',labelpad=0.01)
-ax2.set_ylabel('Cumulative Loss Function')
-ax2.set_ylim([0,list_phi.max()+1])
-#ax2.set_ylabel(r'$ %s $'%math_vars[3], fontsize=fs)
-ax2.legend(fontsize=fs/5,loc='upper right')
-ax2.grid()
+ax1.plot(t,opt_value,'r--',linewidth=lw,label='Optimal Value')
+ax1.set_xlabel('t (s)',labelpad=0.01)
+ax1.set_ylabel('Cumulative Loss Function')
+ax1.set_ylim([0,list_phi.max()+1])
+#ax1.set_ylabel(r'$ %s $'%vars[3], fontsize=fs)
+ax1.legend(fontsize=fs/5,loc='upper right')
+ax1.grid()
 
 ################## PLOT SIMULATION SCENARIO ###################################
-# Initialize lines and scatter points for targets
-target_lines = [ax1.plot([], [], 'r', linewidth=lw / 2)[0] for _ in range(targetNum)]
-target_scatters = [ax1.scatter([], [], c='r', linewidths=lw) for _ in range(targetNum)]
+fig = plt.figure()
+ax = fig.add_subplot()  # This takes the entire first row
+colors = []
 
-# Initialize lines and scatter points for AUVs
-auv_lines = [ax1.plot([], [], 'darkslategrey', linewidth=lw / 2)[0] for _ in range(auvNum)]
-auv_scatters = [ax1.scatter([], [], c='darkslategrey', linewidths=lw) for _ in range(auvNum)]
+# Plot the AUV trajectories (a_x and a_y) with labels and different colors
+a = 0
+test = []
+for i in range(samples):
+    a = 0 + i#samples - i
+    test.append(a*10)
 
-# Initialize LOS lines
-los_lines = [ax1.plot([], [], 'g--', linewidth=lw / 4)[0] for _ in range(auvNum)]
+c_map = ax.scatter(target_x[:,0],target_y[:,0],c=test,cmap='autumn_r',vmin=0, vmax=simTime,linewidths=sw)
+ax.scatter(target_x[0],target_y[0],c='y',marker='o',linewidths=sw)
+ax.scatter(target_x[-1],target_y[-1],c='k',linewidths=sw)
+ax.scatter(target_x[-1],target_y[-1],c='r',linewidths=sw)
 
-# Setting axis properties
-ax1.set_xlabel('x (m)')
-ax1.set_ylabel('y (m)')
-ax1.grid()
-ax1.axis('equal')
-ax1.set_xlim([-1000, +1000])
-ax1.set_ylim([-1000, +1000])
+ax.text(target_x[-1],target_y[-1],r'$ %s $'%vars[1]+r'$ %s $'%time_vars[1],fontsize=tw)
+ax.text(target_x[0],target_y[0],r'$ %s $'%vars[1]+r'$ %s $'%time_vars[0],fontsize=tw)
 
-# Initialization function
-def init():
-    for line in auv_lines + los_lines + target_lines + cost_lines + error_plots:
-        line.set_data([], [])
-    for scatter in auv_scatters + target_scatters:
-        scatter.set_offsets(np.empty((0, 2)))  # Ensure empty 2D array
-    return auv_lines + auv_scatters + los_lines + target_lines + cost_lines + error_plots
+cb = fig.colorbar(c_map, ax=ax)
+cb.set_label('t (s)',fontsize=fs)
+cb.ax.tick_params(labelsize=(fs/3)*2)
 
-# Update function for each frame
-normFrame = [[] for _ in range(auvNum)]
-
-def update(frame):
-    # Normalize frame to total samples (for synchronous evolution)
-    for i in range(auvNum):
-        normFrame[i] = (int(frame / samples * len(tracking_errors[i])))
-
-    #norm_frame_est = int(frame / samples * len(x_hat_x))#TODO
-
-    # Update the loss function line
-    cost_lines[0].set_data(t[:frame],list_phi[:frame])
-
-    # Update line paths for each AUV
-    for i in range(auvNum):
-        auv_lines[i].set_data(a_x[i][:frame], a_y[i][:frame])
-        auv_scatters[i].set_offsets(np.array([[a_x[i][frame], a_y[i][frame]]]))  # Correctly shape offsets
-
-        # Update LOS lines if available up to the current frame
-        los_lines[i].set_data(l_x[i][frame], l_y[i][frame])
-
-        # Update traking error
-        error_plots[i].set_data(t_prova[i][:normFrame[i]],tracking_errors[i][:normFrame[i]])
-
-    for i in range(targetNum):
-        target_lines[i].set_data(t_x[i][:frame], t_y[i][:frame])
-        target_scatters[i].set_offsets(np.array([[t_x[i][frame], t_y[i][frame]]]))
-
-    # Example condition to change colors or clear elements
-    if frame >= simTime / 2 and AUV_failure:
-        los_lines[1].set_data([], [])  # Clear LOS line for AUV 2 if AUV fails
-        auv_scatters[1].set_facecolor('orange')  # Change color for AUV 2
+for i in range(int(auvNum)):
+    
+    if AUV_failure == True:
+        if i != 1:
+            ax.plot([auv_x[-1,i],
+                target_x[-1,0]],[auv_y[-1,i],target_y[-1,0]],'r--',linewidth=lw/3)
     else:
-        auv_scatters[1].set_facecolor('darkslategrey')
+        ax.plot([auv_x[-1,i],
+            target_x[-1,0]],[auv_y[-1,i],target_y[-1,0]],'r--',linewidth=lw/3,label='LOS'+r'$ %s $'%time_vars[1])
 
-    return auv_lines + auv_scatters + los_lines + target_lines + cost_lines + error_plots
+    ax.scatter(auv_x[:,i],auv_y[:,i],c=test,cmap='autumn_r',linewidths=sw)
+    ax.text(auv_x[0,i],auv_y[0,i],r'$ %s $'%agents_vars[i]+r'$ %s $'%time_vars[0],fontsize=tw)
+    ax.scatter(auv_x[0,i],auv_y[0,i],c='y',linewidths=sw)
+    
+    if AUV_failure == True:
+        if i == 1:  
+            ax.text(auv_x[-1,i],auv_y[-1,i],'FAILURE',fontsize=tw)
+            ax.scatter(auv_x[-1,i],auv_y[-1,i],marker='X',c='r',linewidths=sw)
+    else:
+        ax.scatter(auv_x[-1,i],auv_y[-1,i],c='r',linewidths=sw)
 
-# Run the animation
-ani = animation.FuncAnimation(fig, update, frames=samples, init_func=init, blit=True, interval=10)
+ax.set_xlabel('x (m)',fontsize=fs)
+ax.set_ylabel('y (m)',fontsize=fs)
+ax.grid()
+ax.axis('equal')
+ax.legend(fontsize=(fs*2)/3,loc='lower right')
 plt.show()
-
-#ani.save(filename="/home/andrea/animations/realistic.mp4", writer='ffmpeg', fps=30,dpi=200)  # Increase DPI for better quality)
-#ani2.save(filename="/home/andrea/animations/fixed_target_cost.gif", writer="pillow")
+plt.show()  

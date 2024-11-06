@@ -137,7 +137,7 @@ def run_simulation(target_list, auvNum, pub_s_state, pub_t_state, pub_init_opt):
         ##################################################################################################################
         #  Stop simulation and save data to .txt files ###################################################################
         if int(t) == (h.config.TIME_DURATION-1):
-            rospy.on_shutdown(shutdown_cllbk(auvNum,targetNum))
+            rospy.on_shutdown(lambda: shutdown_cllbk(auvNum,targetNum))
             rospy.signal_shutdown('Simulation time limit reached')
       
         if count1 % Hz == 0:

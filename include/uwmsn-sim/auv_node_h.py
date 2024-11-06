@@ -26,19 +26,19 @@ utils = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(utils)
 
 
-def updatePathRoutine(ax,ay,waypoints,s,v_n,dt,DT):
+def updatePathRoutine(ax,ay,s,headingRef,surgeRef,dt,DT):
 
-    n_samples = 4
+    numSamples = 4
     # Initialized starting position
     a_i = [s[0],s[1]]
     t_i = s[2]
 
-    # Compute new waypoints according to the given heading change
-    for i in range(len(waypoints)):
-        for j in range(n_samples): #more samples for better curve fitting()
-            t_f = t_i+(waypoints[i]/int(DT/(DT/n_samples)))           
-            ax.append(np.cos(t_f)*v_n*(DT/n_samples)+a_i[0])
-            ay.append(np.sin(t_f)*v_n*(DT/n_samples)+a_i[1])
+    # Compute new headingRef according to the given heading change
+    for i in range(config.H):
+        for _ in range(numSamples): #more samples for better curve fitting()
+            t_f = t_i+(headingRef[i]/int(DT/(DT/numSamples)))           
+            ax.append(np.cos(t_f)*surgeRef[i]*(DT/numSamples)+a_i[0])
+            ay.append(np.sin(t_f)*surgeRef[i]*(DT/numSamples)+a_i[1])
             a_i = [ax[-1],ay[-1]]
             t_i = t_f
 

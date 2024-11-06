@@ -31,7 +31,7 @@ class Tracker:
             input_data = table[i]
             self.__estimator.iteration(input_data[0], input_data[1], input_data[2], input_data[3], self.__prev_time)
 
-    def propagate_estimation(self, curr_time):
+    def propagation(self, curr_time):
         self.__curr_time = curr_time
         self.__estimator.propagation(self.__curr_time, self.__prev_time)
         self.__prev_time = self.__curr_time

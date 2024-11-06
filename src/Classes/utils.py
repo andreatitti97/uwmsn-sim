@@ -43,11 +43,11 @@ def computePursuitVel(curr_est,s_pose,d_max, DT):
 
     return v_n
 
+def computeCost(phi):
 
-def compute_cost(phi):
-    #compute the conditioning
     length_y = len(phi)
     tmp_phi = np.zeros((length_y,2))
+
     for i in range(length_y):
         a = phi[i]
         tmp_phi[i,:] = [a[0],a[1]]
@@ -57,6 +57,17 @@ def compute_cost(phi):
         W[i,i] = 1.0
 
     PHI = np.dot(np.transpose(tmp_phi),np.dot(np.linalg.inv(W),tmp_phi))
+
+    return np.linalg.norm(np.linalg.inv(PHI),ord=2)*np.linalg.norm(PHI,ord=2)
+
+# Utils functions
+def computeCost_fi(phi):
+
+    length_y = len(phi)
+    W = np.zeros((length_y,length_y))
+    for i in range(length_y):
+        W[i,i] = 1.0
+    PHI = np.dot(np.transpose(phi),np.dot(np.linalg.inv(W),phi))
 
     return np.linalg.norm(np.linalg.inv(PHI),ord=2)*np.linalg.norm(PHI,ord=2)
 

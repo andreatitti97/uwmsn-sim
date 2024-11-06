@@ -36,7 +36,7 @@ def alpha_f(f):
 
 ############################################################ SIMULATION SETUP ########################################################
 # Simulation parameters
-TIME_DURATION = 500 # (s)
+TIME_DURATION = 350 # (s)
 TIME_SCALER = 1# in [1 - 10] values near 10 may be source of errors (to fast for ROS stack)
 TIME_STEP = 0.01*TIME_SCALER
 targetNum = 3 #this is the maximum number of target considered in the simulator
@@ -44,11 +44,11 @@ auvNum = 6 #this is the maximum number of auvs considered in the simulator
 
 # Distributed Estimation Algorithm Parameters
 TM = 2 #measurements sampling period (s)
-P_max = 100 # regressor MAX length 40
+P_max = 20 # regressor MAX length 40
 P_min = 5 #regressor min length
 buffLen = 3 #buffer length for storing received pkts
-SIGMA_MEAS = 0.01#0.08#0.1#0.2 # (rad^2) --> 4.5° (as assumed in DAMPS and by cassino)
-k_phi_thresh = 30.0 #Thresh sul condizionamento del regressore per aggiornare la stima
+SIGMA_MEAS = 0.1#0.08#0.1#0.2 # (rad^2) --> 4.5° (as assumed in DAMPS and by cassino)
+k_phi_thresh = 30 #Thresh sul condizionamento del regressore per aggiornare la stima
 
 # AUVs Team Settings
 AUV_MAX_VEL = 1.5 #(m/s) -
@@ -113,12 +113,12 @@ DThresh = 20*np.log(min_distance) + (min_distance*acoustic_loss*1e-3)#dB (transm
 TL_worse = 20*np.log(max_distance) + (max_distance*acoustic_loss*1e-3)
 
 # Optimization Parameters --- alpha = 0.15, gamma = 1.0 (almost fixed formation)
-alpha_w = 0.75 #fixed form 0.45#0.15
+alpha_w = 0.99 #fixed form 0.45#0.15
 gamma_w = 0.1#0.3 #fixed form 0.85#0.25#1.0
 DThresh = 0 #dB (minimum connectivity requirement)
 RANGE_TO_TARGET = 50 
 
-u_max = 25*math.pi/180
+u_max = 45*math.pi/180
 delta_u = 5*math.pi/180
 MAX = 60*math.pi/180
 MIN = 10*math.pi/180
@@ -157,7 +157,7 @@ TARGET_INIT = [-300,-50, math.pi+math.pi/2-math.pi/6, 0.5, 0.0, 0.0, 0.0] #reali
 #TARGET_INIT = [-200,+10, math.pi, 0.4, 0.0, 0.0, 0.0] #ideal moving 2
 # PAPER JOURNAL
 #TARGET_INIT = [-150,0, math.pi+math.pi/2-math.pi/6, 0.5, 0.0, 0.0, 0.0] # validation 1
-TARGET_INIT = [-450,105, np.pi/2+np.pi/8, 0.0, 0.0, 0.0, 0.0] # validation 2
+TARGET_INIT = [-450,105, np.pi/2+np.pi/8, 0.4, 0.0, 0.0, 0.0] # validation 2
 
 alpha_0, omega_0,alpha_dot_0,omega_dot_0 = TARGET_INIT[3],TARGET_INIT[4],TARGET_INIT[5],TARGET_INIT[6]
 
