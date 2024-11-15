@@ -275,5 +275,58 @@ ax.set_ylabel('y (m)',fontsize=fs)
 ax.grid()
 ax.axis('equal')
 ax.legend(fontsize=(fs*2)/3,loc='lower right')
+#plt.show()
+
+##########################################################
+# Plot SNR between the AUVs given the desired topology
+
+fig6, ax = plt.subplots()
+sampling = 1
+math_vars = ['SNR_{ij}(dB)','SNR_{12}','SNR_{23}','SNR_{lb}','SNR_{ub}']
+
+f = header.config.f
+acoustic_loss =  0.11*(f**2/(1+f**2))+44*(f**2/(4100+f**2))+(2.75*(1e-4)*(f**2))+0.003 #f is in kHz
+
+snr_12= []
+snr_23 = []
+
+tmp_x_1 = auv_x[:,0]
+tmp_y_1 = auv_y[:,0]
+tmp_x_2 = auv_x[:,1]
+tmp_y_2 = auv_y[:,1]
+tmp_x_3 = auv_x[:,2]
+tmp_y_3 = auv_y[:,2]
+NL = header.config.NL
+loops = len(tmp_x)
+for j in range(loops):
+    if j == loops/2:
+        NL = header.config.NL
+    dist_12 = np.sqrt((tmp_x_1[j]-tmp_x_2[j])**2+(tmp_y_1[j]-tmp_y_2[j])**2)
+    dist_23 = np.sqrt((tmp_x_2[j]-tmp_x_3[j])**2+(tmp_y_2[j]-tmp_y_3[j])**2)
+
+    TL_12 = 20*np.log10(dist_12) + (dist_12*acoustic_loss*1e-3)
+    TL_23 = 20*np.log10(dist_23) + (dist_23*acoustic_loss*1e-3)
+                    
+    snr_12.append(header.config.SL - NL - TL_12 + header.config.DI)
+    snr_23.append(header.config.SL - NL - TL_23 + header.config.DI)
+
+ax.plot(t,snr_12,label=r'$ %s $'%math_vars[1],linewidth=lw) 
+ax.plot(t,snr_23,label=r'$ %s $'%math_vars[2],linewidth=lw)
+SNR_lb, SNR_ub = [], []
+noise_change = []
+for i in range(loops):
+    SNR_lb.append(header.config.SNR_lb)
+    SNR_ub.append(header.config.SNR_ub)
+    noise_change.append(header.config.TIME_DURATION/2)
+ax.plot(t,SNR_lb,'r--',label=r'$ %s $'%math_vars[3],linewidth=lw)
+ax.plot(t,SNR_ub,'g--',label=r'$ %s $'%math_vars[4],linewidth=lw)
+#plt.axvline(x=header.config.TIME_DURATION/2,color='k',label='NOISE CHANGE',linewidth=lw)
+
+ax.set_ylabel(r'$ %s $'%math_vars[0], fontsize=fs)
+ax.set_xlabel('t (s)', fontsize =fs)
+ax.legend(fontsize=fs)
+ax.grid()
+plt.yticks(fontsize=(fs)/3, rotation = 0)#to set dimension and orientation of tick labels
+plt.xticks(fontsize=(fs)/3, rotation = 0)#to set dimension and orientation of tick labels
 plt.show()
-plt.show()  
+

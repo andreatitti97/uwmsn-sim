@@ -36,25 +36,34 @@ def updatePathRoutine(ax,ay,s,headingRef,surgeRef,dt,DT):
     # Compute new headingRef according to the given heading change
     for i in range(config.H):
         for _ in range(numSamples): #more samples for better curve fitting()
-            t_f = t_i+(headingRef[i]/int(DT/(DT/numSamples)))           
-            ax.append(np.cos(t_f)*surgeRef[i]*(DT/numSamples)+a_i[0])
-            ay.append(np.sin(t_f)*surgeRef[i]*(DT/numSamples)+a_i[1])
+            t_f = t_i+(headingRef[i]/int(DT/(DT/numSamples)))     
+            if surgeRef[i] > 10e-4:      
+               
+                ax.append(np.cos(t_f)*surgeRef[i]*(DT/numSamples)+a_i[0])
+                ay.append(np.sin(t_f)*surgeRef[i]*(DT/numSamples)+a_i[1])
+            
             a_i = [ax[-1],ay[-1]]
             t_i = t_f
 
     # Generate new path 
-    path = planner.CubicSpline2D(ax, ay)
-    [rx, ry, ryaw, rk, s, surge] = utils.calc_spline_course(path,dt)
-
-    tmp = []
-    for i in range(len(rx)):
+    if len(ax) > 1 and len(ay) > 1:
         
-        tmp.append(np.sqrt((s[0]-rx[i])**2+(s[1]-ry[i])**2))
-        
-    idx = tmp.index(min(tmp))
-    idx_motion = 0
+        path = planner.CubicSpline2D(ax, ay)
+        [rx, ry, ryaw, rk, s, surge] = utils.calc_spline_course(path,dt)
 
-    return path, idx_motion, idx, rx, ry, ryaw, surge
+        tmp = []
+        for i in range(len(rx)):
+            
+            tmp.append(np.sqrt((s[0]-rx[i])**2+(s[1]-ry[i])**2))
+            
+        idx = tmp.index(min(tmp))
+        idx_motion = 0
+    else:
+        idx_motion, idx = 0, 0
+        rx, ry, ryaw = [s[0]], [s[1]], [s[2]]
+        path = None
+
+    return path, idx_motion, idx, rx, ry, ryaw
 
 def orderByTimestamp(data_list):
     """

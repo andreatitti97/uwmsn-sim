@@ -33,25 +33,26 @@ def generate_random_points(area, min_distance, max_distance, center_x, center_y)
 def alpha_f(f):
     ''' Compute the term alpha(f) according to Stojanovic'09'''
     return 0.11*(f**2/(1+f**2))+44*(f**2/(4100+f**2))+(2.75*(1e-4)*(f**2))+0.003
-
+    
 ############################################################ SIMULATION SETUP ########################################################
 # Simulation parameters
-TIME_DURATION = 350 # (s)
+TIME_DURATION = 800 # (s)
 TIME_SCALER = 1# in [1 - 10] values near 10 may be source of errors (to fast for ROS stack)
 TIME_STEP = 0.01*TIME_SCALER
 targetNum = 3 #this is the maximum number of target considered in the simulator
 auvNum = 6 #this is the maximum number of auvs considered in the simulator
 
 # Distributed Estimation Algorithm Parameters
-TM = 2 #measurements sampling period (s)
-P_max = 20 # regressor MAX length 40
+TM = 2 #measurements sampling period (s), lower than this impossible due to AVS processing!
+P_max = 50 # regressor MAX length 40
 P_min = 5 #regressor min length
 buffLen = 3 #buffer length for storing received pkts
 SIGMA_MEAS = 0.1#0.08#0.1#0.2 # (rad^2) --> 4.5° (as assumed in DAMPS and by cassino)
-k_phi_thresh = 30 #Thresh sul condizionamento del regressore per aggiornare la stima
+k_phi_thresh = 100 #Thresh sul condizionamento del regressore per aggiornare la stima
+
 
 # AUVs Team Settings
-AUV_MAX_VEL = 1.5 #(m/s) -
+AUV_MAX_VEL = 1.0 #(m/s) -
 AUV_failure = False #auv2 will fail after t = TIME_DURATION/2
 AUV2_bridge = True
 netTopology = [[] for _ in range(auvNum)]
@@ -65,7 +66,7 @@ area = (200, 200) # Area dimensions (width, height)
 center = (0,0)
 
 random_init = False
-min_distance = 35 #Minimum distance between AUVs
+min_distance = 50 #Minimum distance between AUVs
 max_distance = 500 #Maximum distance between AUVs
 
 if random_init == True:
@@ -97,43 +98,51 @@ for i in range(len(AUV_XY)-1):
 avg_d = sum(dist)/(len(dist))
 d = avg_d
 gamma = avg_d*3 #Sigmoid parameter for packet loss --> depends on the distance (tune only alpha)
-PDR = 90
+PDR = 100
 
 # Acoustic Model Parameters
-SL = 200 #db
-NL = 20 #db
+SL = 186 #we worked with modem at 182 - 168 db
+NL = 30 #db
 DI = 0 #directivity index a-dimensional
 c = 1500 #sound wave speed
 f = 10 #kHx ( frequency of the modem)
 
-for i in range(len(dist)):
-    acoustic_loss = alpha_f(f) #f is in kHz
-    TL = 20*np.log(dist[i]) + (dist[i]*acoustic_loss*1e-3)
-DThresh = 20*np.log(min_distance) + (min_distance*acoustic_loss*1e-3)#dB (transmission loss that if happens is "ideal")
-TL_worse = 20*np.log(max_distance) + (max_distance*acoustic_loss*1e-3)
+acoustic_loss = alpha_f(f) #f is in kHz
+TL_min = 20*np.log10(min_distance) + (min_distance*acoustic_loss*1e-3)#dB (transmission loss that if happens is "ideal")
+TL_max = 20*np.log10(max_distance) + (max_distance*acoustic_loss*1e-3)
+SNR_lb = SL -TL_max - NL - DI
+SNR_ub = SL -TL_min - NL - DI
+SNR_minimal = 90 #dB TODO validate this value
 
+if SNR_ub < SNR_minimal: 
+    print('INCREASE SOURCE LEVEL or TOO MUCH NOISE')
+'''print('SNR expected initial', SNR_lb)
+print('(SNR lower bound):', SNR_lb)
+print('(SNR upper bound):', SNR_ub)'''
+for i in range(len(dist)):
+    TL = 20*np.log10(dist[i]) + (dist[i]*acoustic_loss*1e-3)
+    #print('INITIL DIStanceS',dist[i])
+    if TL > TL_max or TL < TL_min:
+        print('ACOUSTIC PARAMETERS NOT GOOD')
+    '''else:
+        print('SNR '+str(i)+'-'+str(i+1),SL -TL - NL - DI)
+'''
 # Optimization Parameters --- alpha = 0.15, gamma = 1.0 (almost fixed formation)
 alpha_w = 0.99 #fixed form 0.45#0.15
-gamma_w = 0.1#0.3 #fixed form 0.85#0.25#1.0
-DThresh = 0 #dB (minimum connectivity requirement)
-RANGE_TO_TARGET = 50 
+gamma_w = 0.1 #fixed form 0.85#0.25#1.0
+RANGE_TO_TARGET = 3*min_distance #
 
+U = 5  # number of control choices (should be an ODD number)
 u_max = 45*math.pi/180
-delta_u = 5*math.pi/180
+delta_u = 0*math.pi/180
 MAX = 60*math.pi/180
 MIN = 10*math.pi/180
-U = 7 # number of control choices (should be an ODD number)
 H = 3 # planning horizon
 
-ctrl_cmd = []
-u_i = u_max/((U-1)/2)
-for i in range(U):
-    if i < np.floor(U/2):
-        ctrl_cmd.append(-(u_max-i*u_i))
-    elif i == np.ceil(U/2):
-        ctrl_cmd.append(0.0)
-    if i > U/2:
-        ctrl_cmd.append((i-((U-1)/2))*u_i)
+# Generate control commands using list comprehension
+u_i = u_max / ((U - 1) / 2)
+ctrl_cmd = [-u_max + i * u_i for i in range(U)]
+
 
 ######## CHOOSE TARGET DYNAMIC ###################################################################################################
 # CHOOSE Target parameter: start, goal, min max vels
@@ -157,7 +166,7 @@ TARGET_INIT = [-300,-50, math.pi+math.pi/2-math.pi/6, 0.5, 0.0, 0.0, 0.0] #reali
 #TARGET_INIT = [-200,+10, math.pi, 0.4, 0.0, 0.0, 0.0] #ideal moving 2
 # PAPER JOURNAL
 #TARGET_INIT = [-150,0, math.pi+math.pi/2-math.pi/6, 0.5, 0.0, 0.0, 0.0] # validation 1
-TARGET_INIT = [-450,105, np.pi/2+np.pi/8, 0.4, 0.0, 0.0, 0.0] # validation 2
+TARGET_INIT = [-250,105, np.pi-np.pi/6, 0.2, 0.0, 0.0, 0.0] # validation 2
 
 alpha_0, omega_0,alpha_dot_0,omega_dot_0 = TARGET_INIT[3],TARGET_INIT[4],TARGET_INIT[5],TARGET_INIT[6]
 
@@ -169,3 +178,11 @@ for i in range(len(AUV_XY)):
     AUV_XY[i,2] = math.atan2(TARGET_INIT[1]-AUV_XY[i,1],TARGET_INIT[0]-AUV_XY[i,0])
 
 ###################################################################################################################################
+
+
+'''
+|---- KINEMATIC SIMULATION: Initial AUV1 pose (m) --> [-73.27314635  30.71628413   1.93896648]
+|---- KINEMATIC SIMULATION: Initial AUV2 pose (m) --> [ 0.82907326 47.07568912  2.65823081]
+|---- KINEMATIC SIMULATION: Initial AUV3 pose (m) --> [ 61.00768948 -44.96615869   2.40857432]
+|---- KINEMATIC SIMULATION: Initial Target(s) pose (m) --> [-100, 100, 2.6179938779914944]
+'''

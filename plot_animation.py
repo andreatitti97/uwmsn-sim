@@ -222,6 +222,7 @@ for i in range(samples):
 cost_lines = [ax2.plot([], [], linewidth=lw / 2,label='LOSS FUNCTION')[0]] 
 opt_value = []
 for i in range(samples):
+    
     opt_value.append(1)
 ax2.plot(t,opt_value,'r--',linewidth=lw,label='Optimal Value')
 ax2.set_xlabel('t (s)',labelpad=0.01)
@@ -232,6 +233,8 @@ ax2.legend(fontsize=fs/5,loc='upper right')
 ax2.grid()
 
 ################## PLOT SIMULATION SCENARIO ###################################
+from matplotlib.patches import Circle
+
 # Initialize lines and scatter points for targets
 target_lines = [ax1.plot([], [], 'r', linewidth=lw / 2)[0] for _ in range(targetNum)]
 target_scatters = [ax1.scatter([], [], c='r', linewidths=lw) for _ in range(targetNum)]
@@ -243,13 +246,19 @@ auv_scatters = [ax1.scatter([], [], c='darkslategrey', linewidths=lw) for _ in r
 # Initialize LOS lines
 los_lines = [ax1.plot([], [], 'g--', linewidth=lw / 4)[0] for _ in range(auvNum)]
 
+# Initialize AUV circles
+radius = header.config.min_distance
+auv_circles = [Circle((0, 0), radius, color='blue', alpha=0.3) for _ in range(auvNum)]
+for circle in auv_circles:
+    ax1.add_patch(circle)
+
 # Setting axis properties
 ax1.set_xlabel('x (m)')
 ax1.set_ylabel('y (m)')
 ax1.grid()
 ax1.axis('equal')
-ax1.set_xlim([-1000, +1000])
-ax1.set_ylim([-1000, +1000])
+ax1.set_xlim([-600, +600])
+ax1.set_ylim([-600, +600])
 
 # Initialization function
 def init():
@@ -257,7 +266,9 @@ def init():
         line.set_data([], [])
     for scatter in auv_scatters + target_scatters:
         scatter.set_offsets(np.empty((0, 2)))  # Ensure empty 2D array
-    return auv_lines + auv_scatters + los_lines + target_lines + cost_lines + error_plots
+    for circle in auv_circles:
+        circle.set_center((0, 0))  # Reset circle positions
+    return auv_lines + auv_scatters + los_lines + target_lines + cost_lines + error_plots + auv_circles
 
 # Update function for each frame
 normFrame = [[] for _ in range(auvNum)]
@@ -267,21 +278,22 @@ def update(frame):
     for i in range(auvNum):
         normFrame[i] = (int(frame / samples * len(tracking_errors[i])))
 
-    #norm_frame_est = int(frame / samples * len(x_hat_x))#TODO
-
     # Update the loss function line
-    cost_lines[0].set_data(t[:frame],list_phi[:frame])
+    cost_lines[0].set_data(t[:frame], list_phi[:frame])
 
     # Update line paths for each AUV
     for i in range(auvNum):
         auv_lines[i].set_data(a_x[i][:frame], a_y[i][:frame])
         auv_scatters[i].set_offsets(np.array([[a_x[i][frame], a_y[i][frame]]]))  # Correctly shape offsets
 
+        # Update the circle position
+        auv_circles[i].set_center((a_x[i][frame], a_y[i][frame]))
+
         # Update LOS lines if available up to the current frame
         los_lines[i].set_data(l_x[i][frame], l_y[i][frame])
 
-        # Update traking error
-        error_plots[i].set_data(t_prova[i][:normFrame[i]],tracking_errors[i][:normFrame[i]])
+        # Update tracking error
+        error_plots[i].set_data(t_prova[i][:normFrame[i]], tracking_errors[i][:normFrame[i]])
 
     for i in range(targetNum):
         target_lines[i].set_data(t_x[i][:frame], t_y[i][:frame])
@@ -294,11 +306,11 @@ def update(frame):
     else:
         auv_scatters[1].set_facecolor('darkslategrey')
 
-    return auv_lines + auv_scatters + los_lines + target_lines + cost_lines + error_plots
+    return auv_lines + auv_scatters + los_lines + target_lines + cost_lines + error_plots + auv_circles
 
 # Run the animation
-ani = animation.FuncAnimation(fig, update, frames=samples, init_func=init, blit=True, interval=10)
+ani = animation.FuncAnimation(fig, update, frames=samples, init_func=init, blit=True, interval=1)
 plt.show()
 
-#ani.save(filename="/home/andrea/animations/realistic.mp4", writer='ffmpeg', fps=30,dpi=200)  # Increase DPI for better quality)
-#ani2.save(filename="/home/andrea/animations/fixed_target_cost.gif", writer="pillow")
+# ani.save(filename="/home/andrea/animations/realistic.mp4", writer='ffmpeg', fps=30, dpi=200)  # Increase DPI for better quality
+# ani2.save(filename="/home/andrea/animations/fixed_target_cost.gif", writer="pillow")

@@ -8,6 +8,7 @@ import rospy
 from rospy_tutorials.msg import Floats
 from rospy.numpy_msg import numpy_msg
 from uwmsn_msgs.msg import Matrix
+from std_srvs.srv import Trigger
 
 # Environment: Define the relevant paths
 pkg_directory = os.path.dirname(pathlib.Path(__file__).parent.resolve())
@@ -63,10 +64,11 @@ def run_auv_node(pub,auv,obs,Ts,Tf,auvNum):
     # Colors for prints
     blue = "\033[1;34m"
     cyan = "\033[0;36m"
+    BGreen="\[\033[1;32m\]" 
     none = "\033[0m"
 
     # Load simulation params from config file
-    dt, thresh = h.config.TIME_STEP*t_scaler, h.config.k_phi_thresh
+    dt, k_thresh, desRange = h.config.TIME_STEP*t_scaler, h.config.k_phi_thresh, h.config.RANGE_TO_TARGET
     AUV_failure, P_min, H = h.config.AUV_failure, h.config.P_min, h.config.H
     DT = h.config.Ts*auvNum
     targetNum = len(obs)
@@ -77,143 +79,167 @@ def run_auv_node(pub,auv,obs,Ts,Tf,auvNum):
     measTable = [[] for _ in range(len(targetsData))]
     measRxOld = [[0,0,0,0,0] for _ in range(targetNum)]
     path = None
-
+    missionDone = False
     # Start listeners and init waypoints data structure
     ax, ay = [senPose[0]], [senPose[1]] #the "first waypoint is the initial vehicle pos"
-    waypoints = np.zeros(h.config.H) #init waypoints data structure
+    
     ctrlPolicy = [AUV_XY[auvID-1,i] for i in range(3)]+[0.0]*((h.config.H + 1) * 2)
     old_pi_bar = ctrlPolicy
     
-    rospy.sleep(1)
-    ## SIMULATION LOOP ############################################################################################################
-    while not rospy.is_shutdown():
-        
-        checkMeasNew = measRx[0]
-        checkMeasOld = measRxOld[0]
-        #check if the a new measurement is received
-        if checkMeasNew[0] - checkMeasOld[0] > tol or checkMeasNew[1] - checkMeasOld[1] > tol:
-            for i in range(len(measRx)):
-                tmp = measRx[i]
-                measTable[int(tmp[4])-1].append([tmp[0],tmp[1],tmp[2],tmp[3],tmp[4]])
+    # Wait for start signal from the simulation node
+    if wait_for_start_signal():
+        rospy.loginfo("Starting agent operations.")
 
-        if (count1 % (Hz/t_scaler)) == 0:#count seconds for TDMA and acoustic sampling
-            clkTdma += 1
-            clkSmpl += 1
 
-            if (clkSmpl % TM) == 0:#measure
-                for i in range(len(targetsData)): 
-                    targetInfo = targetsData[i]
-                    if targetInfo[3] != 0:#check if the target actually exist
-                        # Perform measurement 
-                        [measure, relBearing, measSenPos] = auv.measureBearing(targetInfo[0],
-                                                                                targetInfo[1],
-                                                                        [senPose[0],senPose[1]],
-                                                                        senPose[2])
-                        m = [t,measure,measSenPos[0],measSenPos[1],targetInfo[4]]
-                        measTx.append(m)
-                        measTable[int(targetInfo[4])-1].append(m)
-                
-            if auvID*Ts == clkTdma:#transmit informations
-                f_senPose = [f'{val:.2f}' for val in senPose]
-                rospy.loginfo('%s|---- AUV '+str(auvID)+': %s current state %s %s',
-                            cyan,auvID,f_senPose,none)
-                f_t = f'{t:.2f}'
-                rospy.loginfo('%s|---- AUV '+str(auvID)+
-                            ': Transmitting measurements at time %s --> Channel Busy%s',
-                            cyan,f_t,none)
-                
-                if len(measTx) > h.config.buffLen:
-                    #remove old measurements (max three meas at time otherwise too many bytes)
-                    measTx.pop(0)
-
-                measTx = np.array(measTx,dtype=np.float32)
-                rows, cols = measTx.shape
-                pub[0].publish(Matrix(data=measTx.flatten().tolist(), rows=rows, cols=cols))
-                pub[3].publish(np.array(ctrlPolicy,dtype=np.float32))
-                measTx = []#empty the buffer of local measures
-                if clkTdma == auvNum*Ts:
-                    clkTdma = 0
-
-                # Process the measurements and compute target state estimation if some conditions
-                for i in range(targetNum):
-                    
-                    targetInfo = targetsData[i]
-                    if targetInfo[3] != 0:#check if the target actually exist
-                        if len(measTable[i]) > P_min:  #to be sure there are enough measurements avoiding sing matrix
-
-                            obs[i].processMeasurement(h.orderByTimestamp(measTable[i]))
-                            phi,y = obs[i].regressor #update the regressor
-                            measTable[i] = []#empty the measurements table
-                            
-                            if (h.utils.computeCost(phi)) < thresh:
-                                
-                                obs[i].propagation(t) #you can now propagate     
-                                cov = h.utils.computeCov(y,phi)#compute a-posteriori cov (vedi paper)
-                                confirmedEst = [np.floor(t), targetInfo[4]]#timestamp, label
-                                for j in range(4): 
-                                    confirmedEst.append(obs[i].state[j,0])
-                                for j in range(4):
-                                    for k in range(4):
-                                        confirmedEst.append(cov[j,k])
-                                msgTx.append(confirmedEst)
-                    
-                # TRIGGER THE OPTIMIZATION IF NEW ESTIMATIONS DONE + SAVE TRACKING DATA ########################    
-                if msgTx != []:
-                    msgTx = np.array(msgTx,dtype=np.float32)
-                    rows, cols = msgTx.shape
-                    pub[1].publish(Matrix(data=msgTx.flatten().tolist(), rows=rows, cols=cols))
-
-                    for i in range(len(msgTx)):
-
-                        xi_hat_i = msgTx[i]
-                        targetPose = targetsData[i]
-
-                        trackErr[i].append(np.sqrt((targetPose[0] - xi_hat_i[2])**2
-                                                    +(targetPose[1] - xi_hat_i[3])**2))
-
-                        f_xi_hat_i = [f"{val:.2f}" for val in xi_hat_i[2:6]]
-                        rospy.logout('%s|---- AUV '+str(auvID)+': Target '+str(int(xi_hat_i[1]))
-                                    +' state Estimation [m,m/s] --> %s%s',
-                                blue,f_xi_hat_i,none)#TODO print the estimate not the msg
-                        
-                    msgTx = [] #empty the list after sending al the msgs
-                    ############################################################################################################
-    
-        #if the optimization has produced somthing update path, do this control always to avoid unnecessary waitings.
-        if sum(ctrlPolicy) != sum(old_pi_bar):
-
-            ax, ay = [senPose[0]], [senPose[1]]#the "first waypoint is the initial vehicle state"
-            path, idxMotion, idx, rx, ry, ryaw, surge = h.updatePathRoutine(ax,ay,senPose,
-                                                            ctrlPolicy[3+H:-1],ctrlPolicy[3:3+H],dt,DT)
+        ## SIMULATION LOOP ############################################################################################################
+        while not rospy.is_shutdown():
             
-        if path != None: 
-            heading.append(ryaw[idxMotion+idx])
-            pub[2].publish(np.array([int(auvID),rx[idxMotion+idx],
-                                        ry[idxMotion+idx],ryaw[idxMotion+idx]], dtype=np.float32))
-            # PUBLISH THE CTRL_CMD
-            if len(rx)-1 <= idxMotion+idx:
-                idxMotion += 0
-            else:
-                if auvID != 2:
-                    idxMotion += 1  
-                else:
-                    #SIMULATE AUV2_failure
-                    if t > h.config.TIME_DURATION/2 and AUV_failure == True:
-                        idxMotion += 0
-                    else:
-                        idxMotion += 1  
-        
-        if int(t) == (h.config.TIME_DURATION-1):
-            rospy.on_shutdown(lambda: shutdownCllbk(targetNum))
-            rospy.signal_shutdown('Simulation time limit reached')
+            checkMeasNew = measRx[0]
+            checkMeasOld = measRxOld[0]
+            #check if the a new measurement is received
+            if checkMeasNew[0] - checkMeasOld[0] > tol or checkMeasNew[1] - checkMeasOld[1] > tol:
+                for i in range(len(measRx)):
+                    tmp = measRx[i]
+                    measTable[int(tmp[4])-1].append([tmp[0],tmp[1],tmp[2],tmp[3],tmp[4]])
 
-        measRxOld, old_pi_bar = measRx, ctrlPolicy
-        t += dt
-        count1 += 1 
-        if clkTdma >= Tf:
-            clkTdma = 0
+            if (count1 % (Hz/t_scaler)) == 0:#count seconds for TDMA and acoustic sampling
+                clkTdma += 1
+                clkSmpl += 1
+
+                if (clkSmpl % TM) == 0:#measure
+                    for i in range(len(targetsData)): 
+                        targetInfo = targetsData[i]
+                        if targetInfo[3] != 0:#check if the target actually exist
+                            # Perform measurement 
+                            [measure, relBearing, measSenPos] = auv.measureBearing(targetInfo[0],
+                                                                                    targetInfo[1],
+                                                                            [senPose[0],senPose[1]],
+                                                                            senPose[2])
+                            m = [t,measure,measSenPos[0],measSenPos[1],targetInfo[4]]
+                            measTx.append(m)
+                            measTable[int(targetInfo[4])-1].append(m)
+                                    
+                if auvID*Ts == clkTdma:#transmit informations
+                    f_senPose = [f'{val:.2f}' for val in senPose]
+                    rospy.loginfo('%s|---- AUV '+str(auvID)+': %s current state %s %s',
+                                cyan,auvID,f_senPose,none)
+                    f_t = f'{t:.2f}'
+                    rospy.loginfo('%s|---- AUV '+str(auvID)+
+                                ': Transmitting measurements at time %s --> Channel Busy%s',
+                                cyan,f_t,none)
+                    
+                    if len(measTx) > h.config.buffLen:
+                        #remove old measurements (max three meas at time otherwise too many bytes)
+                        measTx.pop(0)
+
+                    measTx = np.array(measTx,dtype=np.float32)
+                    rows, cols = measTx.shape
+                    pub[0].publish(Matrix(data=measTx.flatten().tolist(), rows=rows, cols=cols))
+                    pub[3].publish(np.array(ctrlPolicy,dtype=np.float32))
+                    measTx = []#empty the buffer of local measures
+                    if clkTdma == auvNum*Ts:
+                        clkTdma = 0
+
+                    # Process the measurements and compute target state estimation if some conditions
+                    for i in range(targetNum):
+                        
+                        targetInfo = targetsData[i]
+                        if targetInfo[3] != 0:#check if the target actually exist
+                            if len(measTable[i]) > P_min:  #to be sure there are enough measurements avoiding sing matrix
+
+                                obs[i].processMeasurement(h.orderByTimestamp(measTable[i]))
+                                phi,y = obs[i].regressor #update the regressor
+                                measTable[i] = []#empty the measurements table
+                                k_phi = h.utils.computeCost(phi)
+                                rospy.loginfo('%s|---- AUV %s Conditioning Estimation %s %s',
+                                            blue, auvID, k_phi,none)
+                                if k_phi < k_thresh:
+                                
+                                    obs[i].propagation(t) #you can now propagate     
+                                    cov = h.utils.computeCov(y,phi)#compute a-posteriori cov (vedi paper)
+                                    confirmedEst = [np.floor(t), k_phi, targetInfo[4]]#timestamp, k_phi, label
+                                    for j in range(4): 
+                                        confirmedEst.append(obs[i].state[j,0])
+                                    for j in range(4):
+                                        for k in range(4):
+                                            confirmedEst.append(cov[j,k])
+                                    msgTx.append(confirmedEst)
+                                
+                        
+                    # TRIGGER THE OPTIMIZATION IF NEW ESTIMATIONS DONE + SAVE TRACKING DATA ########################    
+                    if msgTx != []:
+                        msgTx = np.array(msgTx,dtype=np.float32)
+                        rows, cols = msgTx.shape
+                        
+
+
+                        for i in range(len(msgTx)):
+                            
+                            xi_hat_i = msgTx[i]
+                            targetPose = targetsData[i]
+
+                            d_s_xi = np.sqrt((xi_hat_i[4]-senPose[1])**2+(xi_hat_i[3]-senPose[0])**2)
+                            
+
+                            trackErr[i].append(np.sqrt((targetPose[0] - xi_hat_i[3])**2
+                                                        +(targetPose[1] - xi_hat_i[4])**2))
+
+                            f_xi_hat_i = [f"{val:.2f}" for val in xi_hat_i[3:7]]
+                            rospy.logout('%s|---- AUV '+str(auvID)+': Target '+str(int(xi_hat_i[2]))
+                                        +' State Estimation [m,m/s] --> %s Range Target %s  %s',
+                                    blue,f_xi_hat_i,d_s_xi,none)#TODO print the estimate not the msg
+                            
+                        # TODO: Now the stop condition is not working for the MTT
+                        if d_s_xi <= desRange:
+                            rospy.loginfo('%s|---- AUV '+str(auvID)+' MISSION ACCOMPLISHED')
+                            missionDone= True
+                        else:
+                            pub[1].publish(Matrix(data=msgTx.flatten().tolist(), rows=rows, cols=cols))
+
+                            
+                        msgTx = [] #empty the list after sending al the msgs
+                        ############################################################################################################
         
-        rate.sleep()
+            #if the optimization has produced somthing update path, do this control always to avoid unnecessary waitings.
+            if sum(ctrlPolicy) != sum(old_pi_bar):
+                f_ctrlPolicy = [f"{val:.2f}" for val in ctrlPolicy]
+                rospy.logout('%s|---- AUV '+str(auvID)+': Optimization Done!, Output Policy [state (X,Y,Theta), headings (rad), surge (m/s)] --> %s%s',
+                BGreen, f_ctrlPolicy, none)
+
+                ax, ay = [senPose[0]], [senPose[1]]#the "first waypoint is the initial vehicle state"
+                path, idxMotion, idx, rx, ry, ryaw = h.updatePathRoutine(ax,ay,senPose,
+                                                                ctrlPolicy[3:3+H+1],ctrlPolicy[3+H+1:-1],dt,DT)
+                
+            if path != None and missionDone == False: 
+                
+                heading.append(ryaw[idxMotion+idx])
+                pub[2].publish(np.array([int(auvID),rx[idxMotion+idx],
+                                            ry[idxMotion+idx],ryaw[idxMotion+idx]], dtype=np.float32))
+                # PUBLISH THE CTRL_CMD
+                if len(rx)-1 <= idxMotion+idx:
+                    idxMotion += 0
+                else:
+                    if auvID != 2:
+                        idxMotion += 1  
+                    else:
+                        #SIMULATE AUV2_failure
+                        if t > h.config.TIME_DURATION/2 and AUV_failure == True:
+                            idxMotion += 0
+                        else:
+                            
+                            idxMotion += 1
+            
+            if int(t) == (h.config.TIME_DURATION-1):
+                rospy.on_shutdown(lambda: shutdownCllbk(targetNum))
+                rospy.signal_shutdown('Simulation time limit reached')
+
+            measRxOld, old_pi_bar = measRx, ctrlPolicy
+            t += dt
+            count1 += 1 
+            if clkTdma >= Tf:
+                clkTdma = 0
+            
+            rate.sleep()
 
 def shutdownCllbk(targetNum):
     global auvID
@@ -235,6 +261,7 @@ def callbackSenState(data):
     
     global senPose
     senPose = data.data
+
 
 def callbackTargetState(data):
     
@@ -259,6 +286,18 @@ def listener(auvID):
     rospy.Subscriber('/'+str(auvID)+'/ctrl_policy', numpy_msg(Floats), callbackCtrlPolicy)
     rospy.Subscriber('/'+str(auvID)+'/rx_meas', Matrix, callbackRxMeas)
     
+def wait_for_start_signal():
+    rospy.loginfo("Waiting for start signal from simulation...")
+    rospy.wait_for_service('/start_simulation_service')
+    try:
+        start_simulation = rospy.ServiceProxy('/start_simulation_service', Trigger)
+        response = start_simulation()
+        if response.success:
+            rospy.loginfo(response.message)
+            return True
+    except rospy.ServiceException as e:
+        rospy.logerr("Service call failed: %s" % e)
+    return False
     
 def main():
 
@@ -278,7 +317,7 @@ def main():
     pub = []
     pub_measurement = rospy.Publisher('/'+str(auvID)+'/tx_meas', Matrix, queue_size=100)
     pub_estimation = rospy.Publisher('estimation', Matrix, queue_size=100)
-    pub_ctrl_cmd = rospy.Publisher('ctrl_cmd_'+str(auvID), numpy_msg(Floats),queue_size=10)
+    pub_ctrl_cmd = rospy.Publisher('/'+str(auvID)+'/ctrl_cmd', numpy_msg(Floats),queue_size=10)
     pub_ctrl_policy = rospy.Publisher('/'+str(auvID)+'/tx_ctrl_policy',
                                     numpy_msg(Floats), queue_size=100)
     pub.append(pub_measurement)

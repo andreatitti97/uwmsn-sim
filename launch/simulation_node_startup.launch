@@ -1,0 +1,15 @@
+<?xml version="1.0"?>
+<launch>
+
+<!-- auvNum must be passed as arg from cmd line -->
+    <arg name="auvNum"/>
+    <arg name="targetNum"/>
+    <arg name="formationControl"/>
+	    
+	<node pkg="uwmsn-sim" type="main-kinematic_MTT.py" name="kinematic_sim" output="screen">
+	    <param name="auvNum" value="$(eval arg('auvNum'))" />
+	    <param name="targetNum" value="$(eval arg('targetNum'))" />
+	    <param name="formationControl" value="$(eval arg('formationControl'))" />
+	</node>
+
+</launch>

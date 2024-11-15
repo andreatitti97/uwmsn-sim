@@ -6,11 +6,6 @@
     <arg name="targetNum"/>
     <arg name="formationControl"/>
 
-<node pkg="uwmsn-sim" type="main-kinematic_MTT.py" name="kinematic_sim" output="screen">
-    <param name="auvNum" value="$(eval arg('auvNum'))" />
-    <param name="targetNum" value="$(eval arg('targetNum'))" />
-    <param name="formation_control" value="$(eval arg('formationControl'))" />
-</node>
 <!-- AUV 1 -->
     <group if="$(eval arg('auvNum') >= 1)" clear_params="false" ns="1">
         <include file="$(find uwmsn-sim)/launch/auvs_initialization_MTT.launch" >

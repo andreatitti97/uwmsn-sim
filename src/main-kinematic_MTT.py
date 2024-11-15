@@ -9,6 +9,7 @@ import rospy
 from rospy_tutorials.msg import Floats
 from rospy.numpy_msg import numpy_msg
 from uwmsn_msgs.msg import Matrix
+from std_srvs.srv import Trigger, TriggerResponse
 
 # Environment: Define the relevant paths
 '''pathlib: output is an object path (sum a string using '/')
@@ -29,11 +30,12 @@ spec.loader.exec_module(h)
 #Load global variables for callback
 targetNumSim, auvNumSim, simTime = h.config.targetNum, h.config.auvNum, h.config.TIME_DURATION
 Ts, alpha_w, gamma_w, NL = h.config.Ts, h.config.alpha_w, h.config.gamma_w, h.config.NL
-H, Dthresh, desRange, ctrl_set = h.config.H, h.config.DThresh, h.config.RANGE_TO_TARGET, h.config.ctrl_cmd
+H, desRange, ctrl_set = h.config.H, h.config.RANGE_TO_TARGET, h.config.ctrl_cmd
 # Init data structures for callback
 paths = [[None, None, None] for _ in range(len(h.config.AUV_XY))]
 s_traj_x, s_traj_y = [[] for _ in range(auvNumSim)], [[] for _ in range(auvNumSim)]
 t_traj_x, t_traj_y = [[] for _ in range(auvNumSim)], [[] for _ in range(auvNumSim)]
+global t
 
 def run_simulation(target_list, auvNum, pub_s_state, pub_t_state, pub_init_opt):
 
@@ -45,7 +47,7 @@ def run_simulation(target_list, auvNum, pub_s_state, pub_t_state, pub_init_opt):
             pub_t_state : list containing the publishers for the target state
 
     """
-    global count1, paths
+    global count1, paths, t
 
     # ROS simulation parameters
     t_scaler = h.config.TIME_SCALER
@@ -87,6 +89,8 @@ def run_simulation(target_list, auvNum, pub_s_state, pub_t_state, pub_init_opt):
         rospy.loginfo('|---- KINEMATIC SIMULATION: Initial Target(s) pose (m) --> %s',
                         [target.pose.x,target.pose.y,target.pose.theta])
         
+
+
     rospy.sleep(1)
 
     ## SIMULATION LOOP ############################################################################################################
@@ -114,6 +118,7 @@ def run_simulation(target_list, auvNum, pub_s_state, pub_t_state, pub_init_opt):
         for i in range(auvNum):
             tmp = paths[i]
             if tmp[0] != None:
+                
                 auvs_xy[i,0], auvs_xy[i,1], auvs_xy[i,2]  = tmp[0], tmp[1], tmp[2]
 
         # Move Targets
@@ -137,7 +142,7 @@ def run_simulation(target_list, auvNum, pub_s_state, pub_t_state, pub_init_opt):
         ##################################################################################################################
         #  Stop simulation and save data to .txt files ###################################################################
         if int(t) == (h.config.TIME_DURATION-1):
-            rospy.on_shutdown(lambda: shutdown_cllbk(auvNum,targetNum))
+            rospy.on_shutdown(lambda: shutdown_cllbk(auvNum,targetNum,t))
             rospy.signal_shutdown('Simulation time limit reached')
       
         if count1 % Hz == 0:
@@ -162,7 +167,7 @@ def run_simulation(target_list, auvNum, pub_s_state, pub_t_state, pub_init_opt):
         count1 += 1  
         rate.sleep()
 
-def shutdown_cllbk(auvNum,targetNum):
+def shutdown_cllbk(auvNum,targetNum,t):
 
     '''PUT DATA SAVING HERE'''
     for i in range(targetNum):  
@@ -175,8 +180,8 @@ def shutdown_cllbk(auvNum,targetNum):
         np.savetxt(log_path+'/auv_y_traj'+str(i+1)+'.txt',s_traj_y[i])
 
     # Save a logfile with simulation settings
-    sim_info = [Ts, NL, desRange, alpha_w, gamma_w, Dthresh]
-    sim_data = [auvNum, targetNum, simTime, len(t_traj_x[0])]
+    sim_info = [Ts, NL, desRange, alpha_w, gamma_w]
+    sim_data = [auvNum, targetNum, t, len(t_traj_x[0])]
     np.savetxt(log_path+'/sim_info.txt',sim_info)
     np.savetxt(log_path+'/sim_data.txt',sim_data)
     np.savetxt(log_path+'/ctrl_set.txt',ctrl_set)
@@ -195,11 +200,16 @@ def callback(data, auvIndex):
 def listener(auvNum):
     for i in range(auvNum):
         # Create a unique callback function for each subscriber
-        rospy.Subscriber('/'+str(i+1)+'/ctrl_cmd_'+str(i+1),
+        rospy.Subscriber('/'+str(i+1)+'/ctrl_cmd',
                         numpy_msg(Floats), lambda data, i=i: callback(data, i))
     
+def handle_start_request(req):
+    rospy.loginfo("Start signal sent to agent")
+    return TriggerResponse(success=True, message="Simulation started")
+
 def main():
 
+    global t
     # ROS INIT   
     # Get AUV ID and number of vehicles.
     auvNum = rospy.get_param('/kinematic_sim/auvNum')
@@ -216,6 +226,9 @@ def main():
                                         numpy_msg(Floats), queue_size=100))
         pub_t_state.append(rospy.Publisher('/'+str(i+1)+'/target_state', Matrix,
                                 queue_size=100))
+        
+    # Start service
+    start_service = rospy.Service('/start_simulation_service', Trigger, handle_start_request)
        
     # One time publisher or initialize the optmization node with all AUVs info
     
@@ -227,8 +240,11 @@ def main():
 
     # Start listeners and run simulation
     listener(auvNum)
+
+    
+
     run_simulation(target_list, auvNum, pub_s_state, pub_t_state, pub_init_opt)  
-    rospy.on_shutdown(lambda: shutdown_cllbk(auvNum,targetNum))
+    rospy.on_shutdown(lambda: shutdown_cllbk(auvNum,targetNum,t))
     rospy.spin()
 
 if __name__ == '__main__':
