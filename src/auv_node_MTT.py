@@ -40,6 +40,7 @@ ctrlPolicy = [0 for _ in range(len(senPose)+(h.config.H+1)*2)]
 # Empty list for plots
 heading, surge_vel = [], []
 trackErr = [[] for _ in range(targetNumSim)]
+xi_hat = [[] for _ in range(targetNumSim)]
 
 
 def run_auv_node(pub,auv,obs,Ts,Tf,auvNum):
@@ -171,8 +172,6 @@ def run_auv_node(pub,auv,obs,Ts,Tf,auvNum):
                         msgTx = np.array(msgTx,dtype=np.float32)
                         rows, cols = msgTx.shape
                         
-
-
                         for i in range(len(msgTx)):
                             
                             xi_hat_i = msgTx[i]
@@ -183,6 +182,7 @@ def run_auv_node(pub,auv,obs,Ts,Tf,auvNum):
 
                             trackErr[i].append(np.sqrt((targetPose[0] - xi_hat_i[3])**2
                                                         +(targetPose[1] - xi_hat_i[4])**2))
+                            xi_hat[i].append(xi_hat_i[3:7])
 
                             f_xi_hat_i = [f"{val:.2f}" for val in xi_hat_i[3:7]]
                             rospy.logout('%s|---- AUV '+str(auvID)+': Target '+str(int(xi_hat_i[2]))
@@ -207,16 +207,22 @@ def run_auv_node(pub,auv,obs,Ts,Tf,auvNum):
                 BGreen, f_ctrlPolicy, none)
 
                 ax, ay = [senPose[0]], [senPose[1]]#the "first waypoint is the initial vehicle state"
-                path, idxMotion, idx, rx, ry, ryaw = h.updatePathRoutine(ax,ay,senPose,
+                path, idxMotion, idx, rx, ry, ryaw = h.updatePathRoutine(auvID,ax,ay,senPose,
                                                                 ctrlPolicy[3:3+H+1],ctrlPolicy[3+H+1:-1],dt,DT)
-                
+                printR = True
+
+            
             if path != None and missionDone == False: 
-                
+                if printR == True:
+                    rospy.logout('%s|---- AUV '+str(auvID)+': Updatin Path %s',
+                                        BGreen, none)
+                    printR = False
                 heading.append(ryaw[idxMotion+idx])
                 pub[2].publish(np.array([int(auvID),rx[idxMotion+idx],
                                             ry[idxMotion+idx],ryaw[idxMotion+idx]], dtype=np.float32))
                 # PUBLISH THE CTRL_CMD
                 if len(rx)-1 <= idxMotion+idx:
+                    
                     idxMotion += 0
                 else:
                     if auvID != 2:
@@ -226,7 +232,6 @@ def run_auv_node(pub,auv,obs,Ts,Tf,auvNum):
                         if t > h.config.TIME_DURATION/2 and AUV_failure == True:
                             idxMotion += 0
                         else:
-                            
                             idxMotion += 1
             
             if int(t) == (h.config.TIME_DURATION-1):
@@ -247,6 +252,7 @@ def shutdownCllbk(targetNum):
     '''PUT DATA SAVING HERE'''
     for i in range(targetNum):
         np.savetxt(log_path+'/'+str(auvID)+'-trackErr.txt',trackErr[i])
+        np.savetxt(log_path+'/'+str(auvID)+'-x_hat_'+str(targetNum)+'.txt',xi_hat[i])
 
 
     np.savetxt(log_path+'/'+str(auvID)+'surge_vel.txt',surge_vel)

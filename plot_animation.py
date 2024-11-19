@@ -9,7 +9,7 @@ from matplotlib.gridspec import GridSpec
 
 # Environment initialization
 pkg_directory = os.path.dirname(pathlib.Path(__file__).parent.resolve())+'/uwmsn-sim'
-log_directory = os.path.dirname(pathlib.Path(__file__).parent.resolve())+'/logs'
+log_directory = os.path.dirname(pathlib.Path(__file__).parent.resolve())+'/logs'#'/logs-scenario1-u_min=0.0'
 class_directory = pkg_directory+'/src'+'/Classes'
 
 # Import config file 
@@ -60,25 +60,29 @@ for i in range(auvNum):
     # Estimation Data
     err = np.loadtxt(log_directory+'/'+str(i+1)+'-trackErr.txt')
     tracking_errors.append(err)
-    '''TODO Add the possibility of monitoring all the estimations
-    tmp = np.loadtxt(log_directory+'/'+str(i+1)+'-x_hat_2.txt')
+    #TODO Add the possibility of monitoring all the estimations
+    '''tmp = np.loadtxt(log_directory+'/'+str(2)+'-x_hat_'+str(1)+'.txt')
     x_hat_ = np.zeros((len(tmp),4))
     cov = np.zeros((len(tmp),4))
-    for j in range(4):
-        x_hat_[:,j] = np.loadtxt(log_directory+'/'+str(i+1)+'-x_hat_'+str(j+1)+'.txt')
-        cov[:,j] = np.loadtxt(log_directory+'/'+str(i+1)+'-cov'+str(j+1)+'.txt')
+    for j in range(auvNum):
+        for k in range(targetNum):
+            x_hat_[:,j] = np.loadtxt(log_directory+'/'+str(j)+'-x_hat_'+str(k)+'.txt')
+            cov[:,j] = np.loadtxt(log_directory+'/'+str(j)+'-x_hat_'+str(k)+'.txt')
     x_hat.append(x_hat_)
     P.append(cov)'''
     
 
 # LOAD FILES FOR PLOT ESTIMATION (temporary)
-'''cov_x = np.loadtxt(log_directory+'/'+str(1)+'-cov'+str(1)+'.txt')
-cov_y = np.loadtxt(log_directory+'/'+str(1)+'-cov'+str(2)+'.txt')   
-cov_vx = np.loadtxt(log_directory+'/'+str(1)+'-cov'+str(3)+'.txt') 
-cov_vy = np.loadtxt(log_directory+'/'+str(1)+'-cov'+str(4)+'.txt') 
-x_hat_x = np.loadtxt(log_directory+'/'+str(1)+'-x_hat_'+str(1)+'.txt')
-x_hat_y = np.loadtxt(log_directory+'/'+str(1)+'-x_hat_'+str(2)+'.txt')'''
+#cov_x = np.loadtxt(log_directory+'/'+str(1)+'-cov'+str(1)+'.txt')
+#cov_y = np.loadtxt(log_directory+'/'+str(1)+'-cov'+str(2)+'.txt')   
+#cov_vx = np.loadtxt(log_directory+'/'+str(1)+'-cov'+str(3)+'.txt') 
+#cov_vy = np.loadtxt(log_directory+'/'+str(1)+'-cov'+str(4)+'.txt') 
 
+x_hat = np.loadtxt(log_directory+'/'+str(1)+'-x_hat_'+str(1)+'.txt')
+#x_hat_y = np.loadtxt(log_directory+'/'+str(1)+'-x_hat_'+str(1)+'.txt')
+x_hat_x = x_hat[:,0]
+x_hat_y = x_hat[:,1]
+print(x_hat_x[0])
 ###############################################
 # Animated plot
 
@@ -109,6 +113,8 @@ a_x = [[] for _ in range(auvNum)]
 a_y = [[] for _ in range(auvNum)]
 l_x = [[] for _ in range(auvNum)]
 l_y = [[] for _ in range(auvNum)]
+dist = [[] for _ in range(auvNum)]
+dist1, dist2,dist3 = [], [], []
 t_x = [[] for _ in range(targetNum)]
 t_y = [[] for _ in range(targetNum)]
 phi_lists = np.zeros((4, samples, 2))  # Structured as (AUVs, samples, 2 angles)
@@ -127,6 +133,13 @@ for k in range(targetNum):
         
         for i in range(samples):
             angle = atan2(tmp_y[i] - tmp_t_y[i], tmp_x[i] - tmp_t_x[i])
+            if j == 0:
+                dist1.append(np.sqrt((tmp_y[i] - tmp_t_y[i])**2+(tmp_x[i] - tmp_t_x[i])**2))
+            elif j == 1:
+                dist2.append(np.sqrt((tmp_y[i] - tmp_t_y[i])**2+(tmp_x[i] - tmp_t_x[i])**2))
+            else:
+                dist3.append(np.sqrt((tmp_y[i] - tmp_t_y[i])**2+(tmp_x[i] - tmp_t_x[i])**2))
+            
             phi_lists[j, i] = [sin(angle), -cos(angle)]
             
             # Storing positions and line data for potential plotting or debugging
@@ -136,6 +149,7 @@ for k in range(targetNum):
             a_y[j].append(tmp_y[i])
             l_x[j].append([tmp_x[i], tmp_t_x[i]])
             l_y[j].append([tmp_y[i], tmp_t_y[i]])
+            
 
     # Populate phi and compute cost with conditions
     for i in range(samples):
@@ -143,9 +157,9 @@ for k in range(targetNum):
             phi[:3] = phi_lists[:3, i]  #TODO better Only assign the first 3 AUVs' data
         else:
             phi[:4] = phi_lists[:4, i]  # Assign all 4 AUVs' data
-        
-        cost = header.utils.computeCost(phi)
-        list_phi[i] += cost
+        cost1 = header.utils.computeCost(phi[:2,:])
+        cost2 = header.utils.computeCost(phi[1:,:])
+        list_phi[i] += cost1 + cost2 #+ dist1[i] + dist2[i] + dist3[i]
 
 # Initialize strings fo legends
 vars = ['Target','\\hat{\\xi}','AUVs','LOSS FUNCTION']
@@ -239,9 +253,15 @@ from matplotlib.patches import Circle
 target_lines = [ax1.plot([], [], 'r', linewidth=lw / 2)[0] for _ in range(targetNum)]
 target_scatters = [ax1.scatter([], [], c='r', linewidths=lw) for _ in range(targetNum)]
 
+# Initialiaze estimation params
+est_scatters = [ax1.scatter([], [], c='azure',edgecolors='y', linewidths=lw) for _ in range(auvNum)]
+est_scatters = [ax1.scatter([],[],c='azure',edgecolors='y',linewidths=lw) for _ in range(auvNum)]
+
 # Initialize lines and scatter points for AUVs
 auv_lines = [ax1.plot([], [], 'darkslategrey', linewidth=lw / 2)[0] for _ in range(auvNum)]
 auv_scatters = [ax1.scatter([], [], c='darkslategrey', linewidths=lw) for _ in range(auvNum)]
+init_auv = [ax1.text(a_x[i][0], a_y[i][0],r'$ %s $' % agents_vars[i]) 
+            for i in range(auvNum)]
 
 # Initialize LOS lines
 los_lines = [ax1.plot([], [], 'g--', linewidth=lw / 4)[0] for _ in range(auvNum)]
@@ -256,6 +276,7 @@ for circle in auv_circles:
 ax1.set_xlabel('x (m)')
 ax1.set_ylabel('y (m)')
 ax1.grid()
+ax1.legend()
 ax1.axis('equal')
 ax1.set_xlim([-600, +600])
 ax1.set_ylim([-600, +600])
@@ -264,11 +285,11 @@ ax1.set_ylim([-600, +600])
 def init():
     for line in auv_lines + los_lines + target_lines + cost_lines + error_plots:
         line.set_data([], [])
-    for scatter in auv_scatters + target_scatters:
+    for scatter in auv_scatters + target_scatters +  est_scatters:
         scatter.set_offsets(np.empty((0, 2)))  # Ensure empty 2D array
     for circle in auv_circles:
         circle.set_center((0, 0))  # Reset circle positions
-    return auv_lines + auv_scatters + los_lines + target_lines + cost_lines + error_plots + auv_circles
+    return est_scatters + auv_lines + auv_scatters + los_lines + target_lines + cost_lines + error_plots + auv_circles
 
 # Update function for each frame
 normFrame = [[] for _ in range(auvNum)]
@@ -277,6 +298,7 @@ def update(frame):
     # Normalize frame to total samples (for synchronous evolution)
     for i in range(auvNum):
         normFrame[i] = (int(frame / samples * len(tracking_errors[i])))
+        
 
     # Update the loss function line
     cost_lines[0].set_data(t[:frame], list_phi[:frame])
@@ -289,6 +311,8 @@ def update(frame):
         # Update the circle position
         auv_circles[i].set_center((a_x[i][frame], a_y[i][frame]))
 
+        
+
         # Update LOS lines if available up to the current frame
         los_lines[i].set_data(l_x[i][frame], l_y[i][frame])
 
@@ -299,6 +323,10 @@ def update(frame):
         target_lines[i].set_data(t_x[i][:frame], t_y[i][:frame])
         target_scatters[i].set_offsets(np.array([[t_x[i][frame], t_y[i][frame]]]))
 
+    # Updtae the estimation
+    array = np.array([x_hat_x[normFrame[0]], x_hat_y[normFrame[0]]])
+    est_scatters[0].set_offsets(array)
+
     # Example condition to change colors or clear elements
     if frame >= simTime / 2 and AUV_failure:
         los_lines[1].set_data([], [])  # Clear LOS line for AUV 2 if AUV fails
@@ -306,7 +334,7 @@ def update(frame):
     else:
         auv_scatters[1].set_facecolor('darkslategrey')
 
-    return auv_lines + auv_scatters + los_lines + target_lines + cost_lines + error_plots + auv_circles
+    return est_scatters + auv_lines + auv_scatters + los_lines + target_lines + cost_lines + error_plots + auv_circles
 
 # Run the animation
 ani = animation.FuncAnimation(fig, update, frames=samples, init_func=init, blit=True, interval=1)

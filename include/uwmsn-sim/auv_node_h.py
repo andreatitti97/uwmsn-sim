@@ -26,7 +26,7 @@ utils = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(utils)
 
 
-def updatePathRoutine(ax,ay,s,headingRef,surgeRef,dt,DT):
+def updatePathRoutine(ID,ax,ay,s,headingRef,surgeRef,dt,DT):
 
     numSamples = 4
     # Initialized starting position
@@ -49,6 +49,7 @@ def updatePathRoutine(ax,ay,s,headingRef,surgeRef,dt,DT):
     if len(ax) > 1 and len(ay) > 1:
         
         path = planner.CubicSpline2D(ax, ay)
+        
         [rx, ry, ryaw, rk, s, surge] = utils.calc_spline_course(path,dt)
 
         tmp = []
