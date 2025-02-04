@@ -91,7 +91,6 @@ def run_auv_node(pub,auv,obs,Ts,Tf,auvNum):
     if wait_for_start_signal():
         rospy.loginfo("Starting agent operations.")
 
-
         ## SIMULATION LOOP ############################################################################################################
         while not rospy.is_shutdown():
             
@@ -195,8 +194,7 @@ def run_auv_node(pub,auv,obs,Ts,Tf,auvNum):
                             missionDone= True
                         else:
                             pub[1].publish(Matrix(data=msgTx.flatten().tolist(), rows=rows, cols=cols))
-
-                            
+                    
                         msgTx = [] #empty the list after sending al the msgs
                         ############################################################################################################
         
@@ -209,18 +207,29 @@ def run_auv_node(pub,auv,obs,Ts,Tf,auvNum):
                 ax, ay = [senPose[0]], [senPose[1]]#the "first waypoint is the initial vehicle state"
                 path, idxMotion, idx, rx, ry, ryaw = h.updatePathRoutine(auvID,ax,ay,senPose,
                                                                 ctrlPolicy[3:3+H+1],ctrlPolicy[3+H+1:-1],dt,DT)
+                
+                desHeading = ctrlPolicy[3]
+                desSurge = ctrlPolicy[3+H+1]
                 printR = True
+
 
             
             if path != None and missionDone == False: 
                 if printR == True:
-                    rospy.logout('%s|---- AUV '+str(auvID)+': Updatin Path %s',
+                    rospy.logout('%s|---- AUV '+str(auvID)+': Updating Path %s',
                                         BGreen, none)
                     printR = False
-                heading.append(ryaw[idxMotion+idx])
-                pub[2].publish(np.array([int(auvID),rx[idxMotion+idx],
+                    # PUBLISH THE CTRL_CMD
+
+                #heading.append(ryaw[idxMotion+idx])
+                
+                
+                '''pub[2].publish(np.array([int(auvID),rx[idxMotion+idx],
                                             ry[idxMotion+idx],ryaw[idxMotion+idx]], dtype=np.float32))
-                # PUBLISH THE CTRL_CMD
+                '''
+                pub[2].publish(np.array([int(auvID),desHeading,
+                                            desSurge,ryaw[idxMotion+idx]], dtype=np.float32))
+                
                 if len(rx)-1 <= idxMotion+idx:
                     
                     idxMotion += 0

@@ -9,7 +9,7 @@ from matplotlib.gridspec import GridSpec
 
 # Environment initialization
 pkg_directory = os.path.dirname(pathlib.Path(__file__).parent.resolve())+'/uwmsn-sim'
-log_directory = os.path.dirname(pathlib.Path(__file__).parent.resolve())+'/logs'#'/logs-scenario1-u_min=0.0'
+log_directory = os.path.dirname(pathlib.Path(__file__).parent.resolve())+'/logs'
 class_directory = pkg_directory+'/src'+'/Classes'
 
 # Import config file 
@@ -78,11 +78,11 @@ for i in range(auvNum):
 #cov_vx = np.loadtxt(log_directory+'/'+str(1)+'-cov'+str(3)+'.txt') 
 #cov_vy = np.loadtxt(log_directory+'/'+str(1)+'-cov'+str(4)+'.txt') 
 
-x_hat = np.loadtxt(log_directory+'/'+str(1)+'-x_hat_'+str(1)+'.txt')
-#x_hat_y = np.loadtxt(log_directory+'/'+str(1)+'-x_hat_'+str(1)+'.txt')
+'''x_hat = np.loadtxt(log_directory+'/'+str(1)+'-x_hat_'+str(1)+'.txt')
+x_hat_y = np.loadtxt(log_directory+'/'+str(1)+'-x_hat_'+str(1)+'.txt')
 x_hat_x = x_hat[:,0]
-x_hat_y = x_hat[:,1]
-print(x_hat_x[0])
+x_hat_y = x_hat[:,1]'''
+#print(x_hat_x[0])
 ###############################################
 # Animated plot
 
@@ -95,7 +95,7 @@ AUV_failure = False
 
 # Downsampling script
 original_samples = samples
-sampling = 100
+sampling = 20
 samples = int(np.ceil(original_samples / sampling))
 
 # Downsample target positions
@@ -311,8 +311,6 @@ def update(frame):
         # Update the circle position
         auv_circles[i].set_center((a_x[i][frame], a_y[i][frame]))
 
-        
-
         # Update LOS lines if available up to the current frame
         los_lines[i].set_data(l_x[i][frame], l_y[i][frame])
 
@@ -324,8 +322,8 @@ def update(frame):
         target_scatters[i].set_offsets(np.array([[t_x[i][frame], t_y[i][frame]]]))
 
     # Updtae the estimation
-    array = np.array([x_hat_x[normFrame[0]], x_hat_y[normFrame[0]]])
-    est_scatters[0].set_offsets(array)
+    #array = np.array([x_hat_x[normFrame[0]], x_hat_y[normFrame[0]]])
+    #est_scatters[0].set_offsets(array)
 
     # Example condition to change colors or clear elements
     if frame >= simTime / 2 and AUV_failure:

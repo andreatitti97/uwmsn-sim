@@ -9,7 +9,7 @@ from matplotlib.gridspec import GridSpec
 
 # Environment initialization
 pkg_directory = os.path.dirname(pathlib.Path(__file__).parent.resolve())+'/uwmsn-sim'
-log_directory = os.path.dirname(pathlib.Path(__file__).parent.resolve())+'/logs'
+log_directory = os.path.dirname(pathlib.Path(__file__).parent.resolve())+'/logs_FINAL'
 class_directory = pkg_directory+'/src'+'/Classes'
 
 # Import config file 

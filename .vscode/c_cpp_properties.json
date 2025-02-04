@@ -1,0 +1,35 @@
+{
+  "configurations": [
+    {
+      "browse": {
+        "databaseFilename": "${default}",
+        "limitSymbolsToIncludedHeaders": false
+      },
+      "includePath": [
+        "/home/andrea/Desktop/phd_ros_ws/devel/include/**",
+        "/home/andrea/Desktop/damps_ws/devel/include/**",
+        "/opt/ros/noetic/include/**",
+        "/home/andrea/Desktop/damps_ws/src/distributed_ctrl/mission_ctrl/bag_recorder/include/**",
+        "/home/andrea/Desktop/damps_ws/src/consensus/bot_algorithm/include/**",
+        "/home/andrea/Desktop/damps_ws/src/distributed_ctrl/distributed_ctrl_msgs/include/**",
+        "/home/andrea/Desktop/damps_ws/src/distributed_ctrl/mission_ctrl/guidance_ctrl/include/**",
+        "/home/andrea/Desktop/damps_ws/src/distributed_ctrl/mission_ctrl/mission_manager/include/**",
+        "/home/andrea/Desktop/damps_ws/src/consensus/pam_sensor/include/**",
+        "/home/andrea/Desktop/damps_ws/src/damps_simulation/simulation_monitor/include/**",
+        "/home/andrea/Desktop/damps_ws/src/consensus/target_pkg/include/**",
+        "/home/andrea/Desktop/phd_ros_ws/src/uw-communication/include/**",
+        "/home/andrea/Desktop/phd_ros_ws/src/uwmsn-motion_opt/include/**",
+        "/home/andrea/Desktop/phd_ros_ws/src/uwmsn-sim/include/**",
+        "/home/andrea/Desktop/phd_ros_ws/src/uwmsn_msgs/include/**",
+        "/home/andrea/Desktop/damps_ws/src/damps_simulation/vehicle_model/include/**",
+        "/usr/include/**"
+      ],
+      "name": "ROS",
+      "intelliSenseMode": "gcc-x64",
+      "compilerPath": "/usr/bin/gcc",
+      "cStandard": "gnu11",
+      "cppStandard": "c++14"
+    }
+  ],
+  "version": 4
+}

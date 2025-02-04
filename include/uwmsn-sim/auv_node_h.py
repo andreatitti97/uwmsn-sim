@@ -37,10 +37,10 @@ def updatePathRoutine(ID,ax,ay,s,headingRef,surgeRef,dt,DT):
     for i in range(config.H):
         for _ in range(numSamples): #more samples for better curve fitting()
             t_f = t_i+(headingRef[i]/int(DT/(DT/numSamples)))     
-            if surgeRef[i] > 10e-4:      
+            #if surgeRef[i] > 10e-4:      
                
-                ax.append(np.cos(t_f)*surgeRef[i]*(DT/numSamples)+a_i[0])
-                ay.append(np.sin(t_f)*surgeRef[i]*(DT/numSamples)+a_i[1])
+            ax.append(np.cos(t_f)*surgeRef[i]*(DT/numSamples)+a_i[0])
+            ay.append(np.sin(t_f)*surgeRef[i]*(DT/numSamples)+a_i[1])
             
             a_i = [ax[-1],ay[-1]]
             t_i = t_f

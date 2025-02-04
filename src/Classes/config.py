@@ -47,8 +47,8 @@ TM = 2 #measurements sampling period (s), lower than this impossible due to AVS 
 P_max = 40 # regressor MAX length 40
 P_min = 5 #regressor min length
 buffLen = 3 #buffer length for storing received pkts
-SIGMA_MEAS = 0.1 #(rad^2) --> 4.5° (as assumed in DAMPS and by cassino)
-k_phi_thresh = 7 #Thresh sul condizionamento del regressore per aggiornare la stima
+SIGMA_MEAS = 0.08 #(rad^2) --> 4.5° (as assumed in DAMPS and by cassino)
+k_phi_thresh = 50.0 #Thresh sul condizionamento del regressore per aggiornare la stima
 
 
 # AUVs Team Settings
@@ -78,14 +78,15 @@ if random_init == True:
         AUV_XY[i,1] = point[1]
 
 else:
-    AUV_XY[2,0] = -38
-    AUV_XY[2,1] = 200
 
-    AUV_XY[1,0] = +10
-    AUV_XY[1,1] = 10
+    AUV_XY[0,0] = 10
+    AUV_XY[0,1] = -10
 
-    AUV_XY[0,0] = -150
-    AUV_XY[0,1] = -100
+    AUV_XY[1,0] = -38
+    AUV_XY[1,1] = 200
+
+    AUV_XY[2,0] = -150
+    AUV_XY[2,1] = -100
 
 # Communication Policy Paramaters
 Ts = 4 #TDMA: slot time # time sampling always equal to Ts/2 -- considering pkt=64B and v=480bps
@@ -130,10 +131,10 @@ for i in range(len(dist)):
 # Optimization Parameters --- alpha = 0.15, gamma = 1.0 (almost fixed formation)
 alpha_w = 0.99 #fixed form 0.45#0.15
 gamma_w = 0.1 #fixed form 0.85#0.25#1.0
-RANGE_TO_TARGET = 2*min_distance #
+RANGE_TO_TARGET = 3*min_distance/2 #
 
 U = 5  # number of control choices (should be an ODD number)
-u_max = 45*math.pi/180
+u_max = 30*math.pi/180
 delta_u = 5*math.pi/180
 MAX = 60*math.pi/180
 MIN = 10*math.pi/180
@@ -164,10 +165,15 @@ TARGET_INIT = [+2000,-2500, math.pi, 2.5, 0.0, 0.0, 0.0] #[x(m),y(m),theta(rad),
 #TARGET_INIT = [-150,+300, math.pi, 0.4, 0.0, 0.0, 0.0] #realistic moving 2
 #TARGET_INIT = [-200,+10, math.pi, 0.4, 0.0, 0.0, 0.0] #ideal moving 2
 # PAPER JOURNAL
-#TARGET_INIT = [-150,0, math.pi+math.pi/2-math.pi/6, 0.5, 0.0, 0.0, 0.0] # validation 1
+#TARGET_INIT = [-150,0, math.pi+math.pi/2-math.pi/6, 0.5, 0.0, 0.0, 0.0] 
 
-TARGET_INIT = [-300,-50, math.pi+math.pi/2-math.pi/6, 0.3, 0.0, 0.0, 0.0] # SCENARIO 2
+TARGET_INIT = [-300,-50, math.pi+math.pi/2-math.pi/6, 0.3, 0.0, 0.0, 0.0] 
+
+
 TARGET_INIT = [-250,105, np.pi-np.pi/6, 0.2, 0.0, 0.0, 0.0] # SCENARIO 1 
+TARGET_INIT = [-350,250, np.pi, 0.2, 0.0, 0.0, 0.0] # SCENARIO 2
+TARGET_INIT = [-250,350, np.pi-np.pi/3, 0.2, 0.0, 0.0, 0.0] # SCENARIO 3
+TARGET_INIT = [0,-350, -np.pi/6, 0.2, 0.0, 0.0, 0.0] # SCENARIO 3
 
 alpha_0, omega_0,alpha_dot_0,omega_dot_0 = TARGET_INIT[3],TARGET_INIT[4],TARGET_INIT[5],TARGET_INIT[6]
 

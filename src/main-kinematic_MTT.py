@@ -119,7 +119,10 @@ def run_simulation(target_list, auvNum, pub_s_state, pub_t_state, pub_init_opt):
             tmp = paths[i]
             if tmp[0] != None:
                 
-                auvs_xy[i,0], auvs_xy[i,1], auvs_xy[i,2]  = tmp[0], tmp[1], tmp[2]
+                #auvs_xy[i,0], auvs_xy[i,1], auvs_xy[i,2]  = tmp[0], tmp[1], tmp[2]
+                auvs_xy[i,2] = auvs_xy[i,2] + tmp[2]
+                auvs_xy[i,0] = auvs_xy[i,0] + np.cos(tmp[0])*tmp[1]*dt
+                auvs_xy[i,1] = auvs_xy[i,1] + np.sin(tmp[0])*tmp[1]*dt #
 
         # Move Targets
         for i in range(targetNum):
