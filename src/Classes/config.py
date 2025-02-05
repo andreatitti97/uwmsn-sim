@@ -79,11 +79,11 @@ if random_init == True:
 
 else:
 
-    AUV_XY[0,0] = 10
-    AUV_XY[0,1] = -10
+    AUV_XY[0,0] = -38
+    AUV_XY[0,1] = 200
 
-    AUV_XY[1,0] = -38
-    AUV_XY[1,1] = 200
+    AUV_XY[1,0] = 10   
+    AUV_XY[1,1] = -10 
 
     AUV_XY[2,0] = -150
     AUV_XY[2,1] = -100
@@ -173,7 +173,9 @@ TARGET_INIT = [-300,-50, math.pi+math.pi/2-math.pi/6, 0.3, 0.0, 0.0, 0.0]
 TARGET_INIT = [-250,105, np.pi-np.pi/6, 0.2, 0.0, 0.0, 0.0] # SCENARIO 1 
 TARGET_INIT = [-350,250, np.pi, 0.2, 0.0, 0.0, 0.0] # SCENARIO 2
 TARGET_INIT = [-250,350, np.pi-np.pi/3, 0.2, 0.0, 0.0, 0.0] # SCENARIO 3
-TARGET_INIT = [0,-350, -np.pi/6, 0.2, 0.0, 0.0, 0.0] # SCENARIO 3
+TARGET_INIT = [0,-350, -np.pi/6, 0.2, 0.0, 0.0, 0.0] # SCENARIO 4
+TARGET_INIT = [400,-100, -np.pi/2, 0.2, 0.0, 0.0, 0.0] # SCENARIO 4
+
 
 alpha_0, omega_0,alpha_dot_0,omega_dot_0 = TARGET_INIT[3],TARGET_INIT[4],TARGET_INIT[5],TARGET_INIT[6]
 

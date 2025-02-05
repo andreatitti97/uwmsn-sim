@@ -205,7 +205,7 @@ def run_auv_node(pub,auv,obs,Ts,Tf,auvNum):
                 BGreen, f_ctrlPolicy, none)
 
                 ax, ay = [senPose[0]], [senPose[1]]#the "first waypoint is the initial vehicle state"
-                path, idxMotion, idx, rx, ry, ryaw = h.updatePathRoutine(auvID,ax,ay,senPose,
+                path, idxMotion, idx, rx, ry, ryaw = h.updatePathRoutine(auvID,senPose,
                                                                 ctrlPolicy[3:3+H+1],ctrlPolicy[3+H+1:-1],dt,DT)
                 
                 desHeading = ctrlPolicy[3]
@@ -221,14 +221,14 @@ def run_auv_node(pub,auv,obs,Ts,Tf,auvNum):
                     printR = False
                     # PUBLISH THE CTRL_CMD
 
-                #heading.append(ryaw[idxMotion+idx])
+                heading.append(ryaw[idxMotion+idx])
                 
                 
-                '''pub[2].publish(np.array([int(auvID),rx[idxMotion+idx],
+                pub[2].publish(np.array([int(auvID),rx[idxMotion+idx],
                                             ry[idxMotion+idx],ryaw[idxMotion+idx]], dtype=np.float32))
-                '''
-                pub[2].publish(np.array([int(auvID),desHeading,
-                                            desSurge,ryaw[idxMotion+idx]], dtype=np.float32))
+                
+                '''pub[2].publish(np.array([int(auvID),desHeading,
+                                            desSurge,ryaw[idxMotion+idx]], dtype=np.float32))'''
                 
                 if len(rx)-1 <= idxMotion+idx:
                     

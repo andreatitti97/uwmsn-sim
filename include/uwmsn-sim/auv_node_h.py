@@ -3,7 +3,7 @@
 import os
 import importlib.util, pathlib
 import numpy as np
-
+import time
 # Import Costum classes
 class_path = pathlib.Path(__file__).parent.resolve()
 class_path = os.path.dirname(os.path.dirname(class_path))
@@ -26,31 +26,34 @@ utils = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(utils)
 
 
-def updatePathRoutine(ID,ax,ay,s,headingRef,surgeRef,dt,DT):
+def updatePathRoutine(ID,s,headingRef,surgeRef,dt,DT):
 
-    numSamples = 4
+    numSamples = 200
+    ax, ay = [], []
     # Initialized starting position
     a_i = [s[0],s[1]]
-    t_i = s[2]
+    h_i = s[2]
+    print('s',s)
 
     # Compute new headingRef according to the given heading change
     for i in range(config.H):
         for _ in range(numSamples): #more samples for better curve fitting()
-            t_f = t_i+(headingRef[i]/int(DT/(DT/numSamples)))     
-            #if surgeRef[i] > 10e-4:      
+            h_f = h_i+(headingRef[i]/int(DT/(DT/numSamples)))     
+            if surgeRef[i] > 10e-4:      
                
-            ax.append(np.cos(t_f)*surgeRef[i]*(DT/numSamples)+a_i[0])
-            ay.append(np.sin(t_f)*surgeRef[i]*(DT/numSamples)+a_i[1])
+                a_i[0] = a_i[0]+np.cos(h_f)*surgeRef[i]*(DT/numSamples)
+                a_i[1] = a_i[1]+np.sin(h_f)*surgeRef[i]*(DT/numSamples)
+                ax.append(a_i[0])
+                ay.append(a_i[1])
             
-            a_i = [ax[-1],ay[-1]]
-            t_i = t_f
+            h_i = h_f
 
     # Generate new path 
     if len(ax) > 1 and len(ay) > 1:
         
         path = planner.CubicSpline2D(ax, ay)
         
-        [rx, ry, ryaw, rk, s, surge] = utils.calc_spline_course(path,dt)
+        [rx, ry, ryaw, rk, spline, surge] = utils.calc_spline_course(path,dt)
 
         tmp = []
         for i in range(len(rx)):
@@ -58,12 +61,20 @@ def updatePathRoutine(ID,ax,ay,s,headingRef,surgeRef,dt,DT):
             tmp.append(np.sqrt((s[0]-rx[i])**2+(s[1]-ry[i])**2))
             
         idx = tmp.index(min(tmp))
+        idx = 0
         idx_motion = 0
     else:
         idx_motion, idx = 0, 0
         rx, ry, ryaw = [s[0]], [s[1]], [s[2]]
         path = None
 
+    '''print('ax out', ax)
+    print('ay out', ay)
+    time.sleep(5)
+    print('rx',rx)
+    print('ry',ry)
+    print('ryaw',ryaw)
+    time.sleep(50)'''
     return path, idx_motion, idx, rx, ry, ryaw
 
 def orderByTimestamp(data_list):
