@@ -33,7 +33,6 @@ def updatePathRoutine(ID,s,headingRef,surgeRef,dt,DT):
     # Initialized starting position
     a_i = [s[0],s[1]]
     h_i = s[2]
-    print('s',s)
 
     # Compute new headingRef according to the given heading change
     for i in range(config.H):
@@ -68,13 +67,6 @@ def updatePathRoutine(ID,s,headingRef,surgeRef,dt,DT):
         rx, ry, ryaw = [s[0]], [s[1]], [s[2]]
         path = None
 
-    '''print('ax out', ax)
-    print('ay out', ay)
-    time.sleep(5)
-    print('rx',rx)
-    print('ry',ry)
-    print('ryaw',ryaw)
-    time.sleep(50)'''
     return path, idx_motion, idx, rx, ry, ryaw
 
 def orderByTimestamp(data_list):

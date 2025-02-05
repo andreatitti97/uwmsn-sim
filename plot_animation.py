@@ -221,6 +221,7 @@ for i, (t_err, err) in enumerate(zip(t_prova, tracking_errors)):
 epsi_line = ax3.plot(t_prova[0], epsi, 'r--', linewidth=lw, label=r'$ %s $' % vars_math[-1])   
 
 ax3.set_ylim([0,max_value+1])
+ax3.set_ylim([0,150])
 ax3.set_xlabel('t (s)', labelpad=0.01)
 ax3.set_ylabel('RMSE (m)')
 ax3.legend(fontsize=fs/5, loc='upper right')
@@ -321,7 +322,7 @@ def update(frame):
         target_lines[i].set_data(t_x[i][:frame], t_y[i][:frame])
         target_scatters[i].set_offsets(np.array([[t_x[i][frame], t_y[i][frame]]]))
 
-    # Updtae the estimation
+    # Update the estimation
     #array = np.array([x_hat_x[normFrame[0]], x_hat_y[normFrame[0]]])
     #est_scatters[0].set_offsets(array)
 

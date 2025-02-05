@@ -52,13 +52,13 @@ k_phi_thresh = 50.0 #Thresh sul condizionamento del regressore per aggiornare la
 
 
 # AUVs Team Settings
-AUV_MAX_VEL = 1.5 #(m/s) -
+AUV_MAX_VEL = 2.0 #(m/s) -
 AUV_failure = False #auv2 will fail after t = TIME_DURATION/2
 AUV2_bridge = True
 netTopology = [[] for _ in range(auvNum)]
-netTopology[0] = [2] #put the ID of the neigbours of agent 1
+netTopology[0] = [2,3] #put the ID of the neigbours of agent 1
 netTopology[1] = [1,3] #put the ID of the neigbours of agent 2
-netTopology[2] = [2] #put the ID of the neigbours of agent 3
+netTopology[2] = [2,1] #put the ID of the neigbours of agent 3
 
 # Randomize initial agents position or chose initial positions
 AUV_XY = np.zeros((4,3))
@@ -79,6 +79,18 @@ if random_init == True:
 
 else:
 
+    
+    #MORE CLUTTERED INITIAL POSITION
+    AUV_XY[0,0] = 50
+    AUV_XY[0,1] = 100
+
+    AUV_XY[1,0] = 10   
+    AUV_XY[1,1] = -10 
+
+    AUV_XY[2,0] = -150
+    AUV_XY[2,1] = -50
+
+    '''# BASE INITIAL POSITION
     AUV_XY[0,0] = -38
     AUV_XY[0,1] = 200
 
@@ -86,7 +98,7 @@ else:
     AUV_XY[1,1] = -10 
 
     AUV_XY[2,0] = -150
-    AUV_XY[2,1] = -100
+    AUV_XY[2,1] = -100'''
 
 # Communication Policy Paramaters
 Ts = 4 #TDMA: slot time # time sampling always equal to Ts/2 -- considering pkt=64B and v=480bps
@@ -131,7 +143,7 @@ for i in range(len(dist)):
 # Optimization Parameters --- alpha = 0.15, gamma = 1.0 (almost fixed formation)
 alpha_w = 0.99 #fixed form 0.45#0.15
 gamma_w = 0.1 #fixed form 0.85#0.25#1.0
-RANGE_TO_TARGET = 3*min_distance/2 #
+RANGE_TO_TARGET = min_distance*2 #
 
 U = 5  # number of control choices (should be an ODD number)
 u_max = 30*math.pi/180
@@ -170,12 +182,13 @@ TARGET_INIT = [+2000,-2500, math.pi, 2.5, 0.0, 0.0, 0.0] #[x(m),y(m),theta(rad),
 TARGET_INIT = [-300,-50, math.pi+math.pi/2-math.pi/6, 0.3, 0.0, 0.0, 0.0] 
 
 
-TARGET_INIT = [-250,105, np.pi-np.pi/6, 0.2, 0.0, 0.0, 0.0] # SCENARIO 1 
+ 
 TARGET_INIT = [-350,250, np.pi, 0.2, 0.0, 0.0, 0.0] # SCENARIO 2
 TARGET_INIT = [-250,350, np.pi-np.pi/3, 0.2, 0.0, 0.0, 0.0] # SCENARIO 3
 TARGET_INIT = [0,-350, -np.pi/6, 0.2, 0.0, 0.0, 0.0] # SCENARIO 4
-TARGET_INIT = [400,-100, -np.pi/2, 0.2, 0.0, 0.0, 0.0] # SCENARIO 4
-
+TARGET_INIT = [400,-100, -np.pi/2, 0.2, 0.0, 0.0, 0.0] # SCENARIO 5
+TARGET_INIT = [600,-200, np.pi/2, 0.2, 0.0, 0.0, 0.0] # SCENARIO 6
+TARGET_INIT = [-250,105, np.pi-np.pi/6, 0.2, 0.0, 0.0, 0.0] # SCENARIO 1
 
 alpha_0, omega_0,alpha_dot_0,omega_dot_0 = TARGET_INIT[3],TARGET_INIT[4],TARGET_INIT[5],TARGET_INIT[6]
 
