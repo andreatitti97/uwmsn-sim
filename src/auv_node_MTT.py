@@ -191,10 +191,11 @@ def run_auv_node(pub,auv,obs,Ts,Tf,auvNum):
                         # TODO: Now the stop condition is not working for the MTT
                         if d_s_xi <= desRange:
                             rospy.loginfo('%s|---- AUV '+str(auvID)+' MISSION ACCOMPLISHED')
-                            missionDone= True
+                            missionDone = True
                         else:
+                            rospy.loginfo('%s|---- AUV '+str(auvID)+' OPTIMIZATION STARTING')
                             pub[1].publish(Matrix(data=msgTx.flatten().tolist(), rows=rows, cols=cols))
-                    
+                            missionDone = False
                         msgTx = [] #empty the list after sending al the msgs
                         ############################################################################################################
         
@@ -204,7 +205,6 @@ def run_auv_node(pub,auv,obs,Ts,Tf,auvNum):
                 rospy.logout('%s|---- AUV '+str(auvID)+': Optimization Done!, Output Policy [state (X,Y,Theta), headings (rad), surge (m/s)] --> %s%s',
                 BGreen, f_ctrlPolicy, none)
 
-                ax, ay = [senPose[0]], [senPose[1]]#the "first waypoint is the initial vehicle state"
                 path, idxMotion, idx, rx, ry, ryaw = h.updatePathRoutine(auvID,senPose,
                                                                 ctrlPolicy[3:3+H+1],ctrlPolicy[3+H+1:-1],dt,DT)
 
@@ -219,13 +219,11 @@ def run_auv_node(pub,auv,obs,Ts,Tf,auvNum):
                     printR = False
                     # PUBLISH THE CTRL_CMD
 
-                heading.append(ryaw[idxMotion+idx])
-                
-                
+                heading.append(ryaw[idxMotion+idx])              
                 pub[2].publish(np.array([int(auvID),rx[idxMotion+idx],
                                             ry[idxMotion+idx],ryaw[idxMotion+idx]], dtype=np.float32))
+                
                 if len(rx)-1 <= idxMotion+idx:
-                    
                     idxMotion += 0
                 else:
                     if auvID != 2:

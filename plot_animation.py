@@ -51,7 +51,7 @@ for i in range(auvNum):
     auv_y_traj[:,i] = np.loadtxt(log_directory+'/auv_y_traj'+str(i+1)+'.txt')
 
     #surge_vel[i] = np.loadtxt(log_directory+'/'+str(i+1)+'surge_vel.txt')
-    heading[i] = np.loadtxt(log_directory+'/'+str(i+1)+'heading.txt')*180/np.pi
+    #heading[i] = np.loadtxt(log_directory+'/'+str(i+1)+'heading.txt')*180/np.pi
 
     # Optimization Data
     avgTime.append(np.loadtxt(log_directory+'/wall_times'+str(i+1)+'.txt')) 
@@ -268,7 +268,7 @@ init_auv = [ax1.text(a_x[i][0], a_y[i][0],r'$ %s $' % agents_vars[i])
 los_lines = [ax1.plot([], [], 'g--', linewidth=lw / 4)[0] for _ in range(auvNum)]
 
 # Initialize AUV circles
-radius = header.config.min_distance
+radius = header.config.min_distance/2
 auv_circles = [Circle((0, 0), radius, color='blue', alpha=0.3) for _ in range(auvNum)]
 for circle in auv_circles:
     ax1.add_patch(circle)

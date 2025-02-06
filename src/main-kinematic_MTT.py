@@ -118,7 +118,6 @@ def run_simulation(target_list, auvNum, pub_s_state, pub_t_state, pub_init_opt):
         for i in range(auvNum):
             tmp = paths[i]
             if tmp[0] != None:
-                
                 auvs_xy[i,0], auvs_xy[i,1], auvs_xy[i,2]  = tmp[0], tmp[1], tmp[2]
 
         # Move Targets

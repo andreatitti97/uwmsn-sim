@@ -29,6 +29,7 @@ spec.loader.exec_module(utils)
 def updatePathRoutine(ID,s,headingRef,surgeRef,dt,DT):
 
     numSamples = 200
+    idx_motion, idx = 0, 0
     ax, ay = [], []
     # Initialized starting position
     a_i = [s[0],s[1]]
@@ -49,21 +50,9 @@ def updatePathRoutine(ID,s,headingRef,surgeRef,dt,DT):
 
     # Generate new path 
     if len(ax) > 1 and len(ay) > 1:
-        
         path = planner.CubicSpline2D(ax, ay)
-        
         [rx, ry, ryaw, rk, spline, surge] = utils.calc_spline_course(path,dt)
-
-        tmp = []
-        for i in range(len(rx)):
-            
-            tmp.append(np.sqrt((s[0]-rx[i])**2+(s[1]-ry[i])**2))
-            
-        idx = tmp.index(min(tmp))
-        idx = 0
-        idx_motion = 0
     else:
-        idx_motion, idx = 0, 0
         rx, ry, ryaw = [s[0]], [s[1]], [s[2]]
         path = None
 

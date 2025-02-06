@@ -143,7 +143,7 @@ for i in range(len(dist)):
 # Optimization Parameters --- alpha = 0.15, gamma = 1.0 (almost fixed formation)
 alpha_w = 0.99 #fixed form 0.45#0.15
 gamma_w = 0.1 #fixed form 0.85#0.25#1.0
-RANGE_TO_TARGET = min_distance*2 #
+RANGE_TO_TARGET = min_distance*3 #
 
 U = 5  # number of control choices (should be an ODD number)
 u_max = 30*math.pi/180
@@ -185,10 +185,13 @@ TARGET_INIT = [-300,-50, math.pi+math.pi/2-math.pi/6, 0.3, 0.0, 0.0, 0.0]
  
 TARGET_INIT = [-350,250, np.pi, 0.2, 0.0, 0.0, 0.0] # SCENARIO 2
 TARGET_INIT = [-250,350, np.pi-np.pi/3, 0.2, 0.0, 0.0, 0.0] # SCENARIO 3
+
+
+
+TARGET_INIT = [-250,105, np.pi-np.pi/6, 0.2, 0.0, 0.0, 0.0] # SCENARIO 1
 TARGET_INIT = [0,-350, -np.pi/6, 0.2, 0.0, 0.0, 0.0] # SCENARIO 4
 TARGET_INIT = [400,-100, -np.pi/2, 0.2, 0.0, 0.0, 0.0] # SCENARIO 5
 TARGET_INIT = [600,-200, np.pi/2, 0.2, 0.0, 0.0, 0.0] # SCENARIO 6
-TARGET_INIT = [-250,105, np.pi-np.pi/6, 0.2, 0.0, 0.0, 0.0] # SCENARIO 1
 
 alpha_0, omega_0,alpha_dot_0,omega_dot_0 = TARGET_INIT[3],TARGET_INIT[4],TARGET_INIT[5],TARGET_INIT[6]
 

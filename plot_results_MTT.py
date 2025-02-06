@@ -22,7 +22,7 @@ spec.loader.exec_module(header)
 sim_info = np.loadtxt(log_directory+'/sim_info.txt')
 sim_data = np.loadtxt(log_directory+'/sim_data.txt')
 ctrl_set = np.loadtxt(log_directory+'/ctrl_set.txt')
-samples = np.loadtxt(log_directory+'/samples.txt')
+
 print('Simulation info: [Slot Time (TDMA), Minimum Distance to the target (m), alpha_w, gamma_w, Dthresh]', sim_info)
 auvNum = int(sim_data[0])
 targetNum = int(sim_data[1])
@@ -49,15 +49,15 @@ for i in range(int(auvNum)):
     auv_x_traj[:,i] = np.loadtxt(log_directory+'/auv_x_traj'+str(i+1)+'.txt')
     auv_y_traj[:,i] = np.loadtxt(log_directory+'/auv_y_traj'+str(i+1)+'.txt')
 
-    surge_vel[i] = np.loadtxt(log_directory+'/'+str(i+1)+'surge_vel')
-    heading[i] = np.loadtxt(log_directory+'/'+str(i+1)+'heading')*180/np.pi
+    #surge_vel[i] = np.loadtxt(log_directory+'/'+str(i+1)+'surge_vel')
+    #heading[i] = np.loadtxt(log_directory+'/'+str(i+1)+'heading')*180/np.pi
 
     # Optimization Data
     avgTime.append(np.loadtxt(log_directory+'/wall_times'+str(i+1)+'.txt')) 
     avgNodes.append(np.loadtxt(log_directory+'/nodes'+str(i+1)+'.txt'))    
 
     # Estimation Data
-    err = np.loadtxt(log_directory+'/'+str(i+1)+'-trackErr')
+    err = np.loadtxt(log_directory+'/'+str(i+1)+'-trackErr.txt')
     tracking_errors.append(err)
     '''tmp = np.loadtxt(log_directory+'/'+str(i+1)+'-x_hat_2.txt')
     x_hat_ = np.zeros((len(tmp),4))
@@ -71,49 +71,72 @@ for i in range(int(auvNum)):
 
 # Downsampling script
 original_samples = samples
-sampling = 2
-samples = int(original_samples/sampling)
-target_x = np.zeros((samples,int(targetNum)))
-target_y = np.zeros((samples,int(targetNum)))
-for i in range(targetNum):
-    tmp_x = target_x_traj[:,i]
-    tmp_y = target_x_traj[:,i]
+sampling = 20
+samples = int(np.ceil(original_samples / sampling))
 
-    target_x[:,i] = tmp_x[::sampling]
-    target_y[:,i] = tmp_y[::sampling]
+# Downsample target positions
+target_x = target_x_traj[::sampling, :targetNum]
+target_y = target_y_traj[::sampling, :targetNum]
 
-
-auv_x = np.zeros((samples,int(auvNum)))
-auv_y = np.zeros((samples,int(auvNum)))
-x = np.linspace(0,simTime,original_samples) 
-t = np.linspace(0,simTime,samples)#subsampled set
-
-for i in range(int(auvNum)):
-    tmp_x = auv_x_traj[:,i]
-    model = make_interp_spline(x, auv_x_traj[:,i],k=9) #TODO CHECK ROUNDING UP PROBLEM FOR INTERP
-    auv_x[:,i] = model(t)
-
-    tmp_y = auv_y_traj[:,i]
-
-    model = make_interp_spline(x, auv_y_traj[:,i],k=9) #TODO CHECK ROUNDING UP PROBLEM FOR INTERP
-    auv_y[:,i] = model(t)
-
-    tmp = surge_vel[i]
-    surge_vel[i] = tmp[::sampling]
-    tmp = heading[i]
-    heading[i] = tmp[::sampling]
+# Downsample AUV positions and other properties
+auv_x = auv_x_traj[::sampling, :auvNum]
+auv_y = auv_y_traj[::sampling, :auvNum]
+surge_vel = [vel[::sampling] for vel in surge_vel[:auvNum]]
+heading = [head[::sampling] for head in heading[:auvNum]]
 
 
-# Utils functions
-def computeCost(phi):
+# Initialize data structures with predefined sizes
+a_x = [[] for _ in range(auvNum)]
+a_y = [[] for _ in range(auvNum)]
+l_x = [[] for _ in range(auvNum)]
+l_y = [[] for _ in range(auvNum)]
+dist = [[] for _ in range(auvNum)]
+dist1, dist2,dist3 = [], [], []
+t_x = [[] for _ in range(targetNum)]
+t_y = [[] for _ in range(targetNum)]
+phi_lists = np.zeros((4, samples, 2))  # Structured as (AUVs, samples, 2 angles)
 
-    length_y = len(phi)
-    W = np.zeros((length_y,length_y))
-    for i in range(length_y):
-        W[i,i] = 1.0
-    PHI = np.dot(np.transpose(phi),np.dot(np.linalg.inv(W),phi))
+phi = np.zeros((4, 2))
+list_phi = np.zeros(samples)
 
-    return np.linalg.norm(np.linalg.inv(PHI),ord=2)*np.linalg.norm(PHI,ord=2)
+# Populate phi_lists based on target positions
+for k in range(targetNum):
+    tmp_t_x = target_x[:, k]
+    tmp_t_y = target_y[:, k]
+
+    for j in range(auvNum):
+        tmp_x = auv_x[:, j]
+        tmp_y = auv_y[:, j]
+        
+        for i in range(samples):
+            angle = atan2(tmp_y[i] - tmp_t_y[i], tmp_x[i] - tmp_t_x[i])
+            if j == 0:
+                dist1.append(np.sqrt((tmp_y[i] - tmp_t_y[i])**2+(tmp_x[i] - tmp_t_x[i])**2))
+            elif j == 1:
+                dist2.append(np.sqrt((tmp_y[i] - tmp_t_y[i])**2+(tmp_x[i] - tmp_t_x[i])**2))
+            else:
+                dist3.append(np.sqrt((tmp_y[i] - tmp_t_y[i])**2+(tmp_x[i] - tmp_t_x[i])**2))
+            
+            phi_lists[j, i] = [np.sin(angle), -np.cos(angle)]
+            
+            # Storing positions and line data for potential plotting or debugging
+            t_x[k].append(tmp_t_x[i])
+            t_y[k].append(tmp_t_y[i])
+            a_x[j].append(tmp_x[i])
+            a_y[j].append(tmp_y[i])
+            l_x[j].append([tmp_x[i], tmp_t_x[i]])
+            l_y[j].append([tmp_y[i], tmp_t_y[i]])
+            
+
+    # Populate phi and compute cost with conditions
+    for i in range(samples):
+        if header.config.AUV_failure:
+            phi[:3] = phi_lists[:3, i]  #TODO better Only assign the first 3 AUVs' data
+        else:
+            phi[:4] = phi_lists[:4, i]  # Assign all 4 AUVs' data
+        cost1 = header.utils.computeCost(phi[:2,:])
+        cost2 = header.utils.computeCost(phi[1:,:])
+        list_phi[i] += cost1 + cost2 #+ dist1[i] + dist2[i] + dist3[i]
 
 
 # Print some simulation info
@@ -123,46 +146,6 @@ for i in range(int(auvNum)):
     #print('OPTIMIZATION STATS --> Average Optimization Time AUV ID:',i+1,sum(avgTime[i])/len(avgTime[i]))
     print('AUV ID RMSE (m):',i+1,(sum(tracking_errors[i])/len(tracking_errors[i])))
 
-# Compute the trend of k(Phi)
-phi = np.zeros((4,2))
-list_phi, phi1, phi2, phi3, phi4 = [], [], [], [], []
-
-for k in range(targetNum):
-    tmp_t_x = target_x[:,k]
-    tmp_t_y = target_y[:,k]
-    
-    for j in range(int(auvNum)):
-        tmp_x = auv_x[:,j]
-        tmp_y = auv_y[:,j]
-        for i in range(samples):
-            b = atan2(tmp_y[i]-tmp_t_y[i],tmp_x[i]-tmp_t_x[i])
-            if j == 0:
-                phi1.append([np.sin(b), -np.cos(b)])
-            if j == 1:
-                phi2.append([np.sin(b), -np.cos(b)])
-            if j == 2:
-                phi3.append([np.sin(b), -np.cos(b)])
-            if j == 3:
-                phi4.append([np.sin(b), -np.cos(b)])
-
-for i in range(len(phi1)):
-    if header.config.AUV_failure == True:
-        if i < samples/2:
-            phi[0] = phi1[i]
-            phi[1] = phi2[i]
-            phi[2] = phi3[i]
-            #phi[3] = phi4[i]
-        else:
-
-            phi[0] = phi1[i]
-            phi[1] = phi2[i]
-    else:
-        phi[0] = phi1[i]
-        phi[1] = phi2[i]
-        phi[2] = phi3[i]
-
-    cost = computeCost(phi)
-    list_phi.append(cost)
 
 #np.savetxt('/home/andrea/Documents/controlo_paper_results/official_results/validation1/logs/logs_COMPARISON_ERRORS/cond_range3',list_phi)
 #np.savetxt('/home/andrea/Documents/controlo_paper_results/official_results/validation1/logs/logs_COMPARISON_ERRORS/err_range3',tracking_errors[0])
