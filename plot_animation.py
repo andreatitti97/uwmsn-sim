@@ -194,9 +194,9 @@ ax4.set_xlim([0,100])
 ax4.set_ylabel('Simulation Info')
 
 ax4.text(10,78,'Simulation Time: '+str(simTime)+' (s) \n Accelerated view',fontsize=2*tw/3)
-ax4.text(10,60,'Packet Delivery Ratio: 75 %',fontsize=2*tw/3)
-ax4.text(10,30,'Measurament noise '+r'$ %s $'%vars_math[3]+' = 5 (deg)\n+Outliers 20%',fontsize=2*tw/3)
-ax4.text(10,20,'TDMA slot time: 4 (sec)',fontsize=2*tw/3)
+ax4.text(10,60,'Packet Delivery Ratio: '+str(header.config.PDR)+' %',fontsize=2*tw/3)
+ax4.text(10,30,'Measurament noise '+r'$ %s $'%vars_math[3]+' = '+str(np.ceil(header.config.SIGMA_MEAS*180/np.pi))+' (deg)\n+Outliers 0%',fontsize=2*tw/3)
+ax4.text(10,20,'TDMA slot time: '+str(header.config.Ts)+' (sec)',fontsize=2*tw/3)
 #ax4.text(10,2,'Average optimization time = '+str(np.round(avgTimeOpt*5,3))+' (sec)',fontsize=2*tw/3)
 #ax4.set_title('Simulation Parameters',y=-0.01)
 plt.tick_params(left = False, right = False , labelleft = False , 

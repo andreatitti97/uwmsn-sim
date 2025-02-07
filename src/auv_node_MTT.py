@@ -189,7 +189,7 @@ def run_auv_node(pub,auv,obs,Ts,Tf,auvNum):
                                     blue,f_xi_hat_i,d_s_xi,none)#TODO print the estimate not the msg
                             
                         # TODO: Now the stop condition is not working for the MTT
-                        if d_s_xi <= desRange:
+                        if d_s_xi <= desRange and k_phi < 6.0:
                             rospy.loginfo('%s|---- AUV '+str(auvID)+' MISSION ACCOMPLISHED')
                             missionDone = True
                         else:
