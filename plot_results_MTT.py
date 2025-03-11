@@ -33,7 +33,7 @@ auv_x_traj = np.zeros(((samples),(auvNum)))
 auv_y_traj = np.zeros(((samples),(auvNum)))
 target_x_traj = np.zeros(((samples),(auvNum)))
 target_y_traj = np.zeros(((samples),(auvNum)))
-
+guidanceETC = [[] for _ in range((auvNum))]
 surge_vel = [[] for _ in range((auvNum))]
 heading = [[] for _ in range(auvNum)]
 x_hat, tracking_errors, P, avgNodes, avgTime = [], [], [], [], []
@@ -49,12 +49,15 @@ for i in range(int(auvNum)):
     auv_x_traj[:,i] = np.loadtxt(log_directory+'/auv_x_traj'+str(i+1)+'.txt')
     auv_y_traj[:,i] = np.loadtxt(log_directory+'/auv_y_traj'+str(i+1)+'.txt')
 
+    guidanceETC[i] = np.loadtxt(log_directory+'/'+str(i+1)+'etcGuidance.txt')
     #surge_vel[i] = np.loadtxt(log_directory+'/'+str(i+1)+'surge_vel')
     #heading[i] = np.loadtxt(log_directory+'/'+str(i+1)+'heading')*180/np.pi
 
     # Optimization Data
     avgTime.append(np.loadtxt(log_directory+'/wall_times'+str(i+1)+'.txt')) 
     avgNodes.append(np.loadtxt(log_directory+'/nodes'+str(i+1)+'.txt'))    
+
+    #
 
     # Estimation Data
     err = np.loadtxt(log_directory+'/'+str(i+1)+'-trackErr.txt')
@@ -161,6 +164,35 @@ math_vars = ['\\kappa(\\Phi)','\\xi','C^{(d)}+C^{(g)}']
 agents_vars = ['s_1','s_2','s_3','s_4']
 time_vars = ['(t_{0})','(t_{f})','(t_{0}=t_{f})']
 
+###########################################################
+# Plot Communication info
+# Plot Communication info
+figComm, axComm = plt.subplots(figsize=(10, 5 * auvNum))
+
+Ts = 12
+colors = plt.cm.get_cmap('tab10', auvNum)  # Get a colormap with a different color for each AUV
+
+for j in range(auvNum):
+    if guidanceETC[j] is not None:
+        guidanceETC[j] = guidanceETC[j].tolist()  # Convert numpy array to list
+        for i in range(len(guidanceETC[j])):
+            guidanceETC[j][i] = int(guidanceETC[j][i])
+        
+        # Ensure each AUV has a ping at i * Ts
+        guidanceETC[j].append(j * Ts)
+        guidanceETC[j] = sorted(guidanceETC[j])
+        
+        pings = np.linspace(0, simTime, len(guidanceETC[j]))
+        pingAUV1 = [j + 1] * len(guidanceETC[j])  # Offset each AUV's y-value by its index
+        axComm.scatter(guidanceETC[j], pingAUV1, label=f'AUV {j+1}', color=colors(j))
+
+axComm.set_xlabel('pings', fontsize=fs)
+axComm.set_ylabel('AUV ID', fontsize=fs)
+axComm.legend(fontsize=fs * 2 / 3)
+axComm.grid()
+axComm.tick_params(axis='both', which='major', labelsize=(fs * 2) / 3)
+
+plt.show()
 
 ##########################################################
 # Plot trend conditioning estimation problem

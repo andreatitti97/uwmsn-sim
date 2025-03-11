@@ -145,7 +145,7 @@ gamma_w = 0.1 #fixed form 0.85#0.25#1.0
 RANGE_TO_TARGET = min_distance*2 #
 
 U = 5  # number of control choices (should be an ODD number)
-u_max = 30*math.pi/180
+u_max = 45*math.pi/180
 delta_u = 5*math.pi/180
 MAX = 60*math.pi/180
 MIN = 10*math.pi/180

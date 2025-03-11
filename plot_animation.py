@@ -204,12 +204,31 @@ plt.tick_params(left = False, right = False , labelleft = False ,
 
 
 ############################ PLOT TRACKING ERROR #############################
+
+def generate_sequence(start, end, width):
+    """
+    Generate a sequence of values from start to end with a given step width.
+    Ensures the last value is included if possible.
+
+    :param start: Initial value
+    :param end: Final value
+    :param width: Step width
+    :return: List of evenly spaced values
+    """
+    return np.arange(start, end, width).tolist()
+
 # Initialize lists to hold plots
 error_plots = []
+initial_ping = [0,0,0]
+pings = []
+for i in range(int(auvNum)):
+    pings.append([])
+    pings[i] = generate_sequence(initial_ping[i],simTime,header.config.Ts*auvNum)
 
-t_prova = [np.linspace(0, simTime, len(tracking_errors[i])) for i in range(int(auvNum))]
+t_prova = [np.linspace(initial_ping[i], simTime, len(tracking_errors[i])) for i in range(int(auvNum))]
 epsi = np.zeros(len(t_prova[0]))  # Single list of zeros for epsi across all AUVs
-error_plots = [ax3.plot([], [], linewidth=lw / 2, label=agents_vars[i])[0] for i in range(auvNum)]
+error_plots = [ax3.plot([], [], linewidth=lw / 3, label=agents_vars[i],marker='x',mew=lw)[0] for i in range(auvNum)]
+error_pings = [ax3.scatter([], [], linewidth=lw, label=agents_vars[i],marker='x') for i in range(auvNum)]
 
 # Loop through each AUV to initialize error plots
 for i, (t_err, err) in enumerate(zip(t_prova, tracking_errors)):
@@ -286,21 +305,25 @@ ax1.set_ylim([-600, +600])
 def init():
     for line in auv_lines + los_lines + target_lines + cost_lines + error_plots:
         line.set_data([], [])
-    for scatter in auv_scatters + target_scatters +  est_scatters:
+    for scatter in auv_scatters + target_scatters +  est_scatters + error_pings:
         scatter.set_offsets(np.empty((0, 2)))  # Ensure empty 2D array
     for circle in auv_circles:
         circle.set_center((0, 0))  # Reset circle positions
-    return est_scatters + auv_lines + auv_scatters + los_lines + target_lines + cost_lines + error_plots + auv_circles
+    return est_scatters + auv_lines + auv_scatters + los_lines + target_lines + cost_lines + error_pings + error_plots + auv_circles
 
 # Update function for each frame
 normFrame = [[] for _ in range(auvNum)]
-
+normFrame2 = [[] for _ in range(auvNum)]
+next_pings = pings
+print(len(pings[0]))
 def update(frame):
     # Normalize frame to total samples (for synchronous evolution)
     for i in range(auvNum):
         normFrame[i] = (int(frame / samples * len(tracking_errors[i])))
-        
-
+        normFrame2[i] = (int(frame / samples*len(pings[i])))
+    #print('frame',frame)
+    #print('normaFrame',normFrame)
+    #print('normaFrame2',normFrame2)
     # Update the loss function line
     cost_lines[0].set_data(t[:frame], list_phi[:frame])
 
@@ -317,6 +340,17 @@ def update(frame):
 
         # Update tracking error
         error_plots[i].set_data(t_prova[i][:normFrame[i]], tracking_errors[i][:normFrame[i]])
+        #error_pings[i].set_offsets(np.array([[t_prova[i][normFrame[i]], tracking_errors[i][normFrame[i]]]]))
+        
+        tmp = next_pings[i]
+        
+        
+        '''if (int(np.floor(frame)) == tmp[0] or frame == 0) and len(pings[i])>=normFrame[i]:
+            if i == 0:
+                print('FRAME',int(np.floor(frame)))
+                print('PING', tmp[0])
+            error_pings[i].set_offsets(np.array([[pings[i][normFrame[i]], tracking_errors[i][normFrame[i]]]]))
+            next_pings[i].pop(0)'''
 
     for i in range(targetNum):
         target_lines[i].set_data(t_x[i][:frame], t_y[i][:frame])
@@ -333,7 +367,7 @@ def update(frame):
     else:
         auv_scatters[1].set_facecolor('darkslategrey')
 
-    return est_scatters + auv_lines + auv_scatters + los_lines + target_lines + cost_lines + error_plots + auv_circles
+    return est_scatters + auv_lines + auv_scatters + los_lines + target_lines + cost_lines + error_pings + error_plots + auv_circles
 
 # Run the animation
 ani = animation.FuncAnimation(fig, update, frames=samples, init_func=init, blit=True, interval=1)

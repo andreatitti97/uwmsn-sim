@@ -42,6 +42,9 @@ heading, surge_vel = [], []
 trackErr = [[] for _ in range(targetNumSim)]
 xi_hat = [[] for _ in range(targetNumSim)]
 
+# Empty list for ETC statistics
+etcEstimation = []
+etcGuidance = []
 
 def run_auv_node(pub,auv,obs,Ts,Tf,auvNum):
 
@@ -54,7 +57,7 @@ def run_auv_node(pub,auv,obs,Ts,Tf,auvNum):
             Tf  : frame time of the TDMA protocol
             auvNum : number ora AUVs
     """
-    global senPose, targetsData, measRx, auvID, ctrlPolicy
+    global senPose, targetsData, measRx, auvID, ctrlPolicy, etcEstimation, etcGuidance
 
     # ROS simulation parameters
     t_scaler, TM = h.config.TIME_SCALER, h.config.TM
@@ -75,12 +78,22 @@ def run_auv_node(pub,auv,obs,Ts,Tf,auvNum):
     targetNum = len(obs)
 
     # Init time variables and counters and lists
-    t, count1, clkTdma, clkSmpl, tol = 0,0,0,0,1
+    t, count1, clkTdma, clkSmpl, tol, countETC = 0,0,0,0,1,0
     measTx, msgTx = [], []
+    # data structures ETC
+    cov_tilde = [np.matrix([[0],[0],[0],[0]]) for _ in range(targetNum)]
+    xi_hat_tilde = [[] for _ in range(targetNum)]
+    initEtcEstimation = False
+    initEtcGuidance = False
+
+    # Data structurestargets estimation
     measTable = [[] for _ in range(len(targetsData))]
     measRxOld = [[0,0,0,0,0] for _ in range(targetNum)]
+    # Init bool
     path = None
     missionDone = False
+    once = True
+ 
     # Start listeners and init waypoints data structure
     ax, ay = [senPose[0]], [senPose[1]] #the "first waypoint is the initial vehicle pos"
     
@@ -144,6 +157,9 @@ def run_auv_node(pub,auv,obs,Ts,Tf,auvNum):
                     for i in range(targetNum):
                         
                         targetInfo = targetsData[i]
+
+
+
                         if targetInfo[3] != 0:#check if the target actually exist
                             if len(measTable[i]) > P_min:  #to be sure there are enough measurements avoiding sing matrix
 
@@ -164,8 +180,38 @@ def run_auv_node(pub,auv,obs,Ts,Tf,auvNum):
                                         for k in range(4):
                                             confirmedEst.append(cov[j,k])
                                     msgTx.append(confirmedEst)
-                                
-                        
+                                    t_est = t
+                                 
+                        # ETC mechansim, check xi_hat_tilde        
+                                    if initEtcEstimation == False:
+                                        cov_tilde[i] = cov
+                                        xi_hat_tilde[i] = obs[i].state
+                                        initEtcEstimation = True
+                                    else:
+                                        delta_t = t-t_est
+                                        F = np.matrix([[1,0,delta_t,0],
+                                                        [0,1,0,delta_t],
+                                                        [0,0,1,0],
+                                                        [0,0,0,1]])
+                                        
+                                        xi_hat_tilde[i] = np.dot(F,xi_hat_tilde[i])
+                                        
+                                        
+                                        
+                                        cov_tilde[i] = np.dot(F,np.dot(cov_tilde[i],F.T))
+                                                                                
+                                        KLD = 0.5*np.trace(np.dot(cov**(-1),cov_tilde[i])-np.identity(4))+0.5+np.linalg.norm(xi_hat_tilde[i]-obs[i].state)+0.5*np.log(np.linalg.det(cov)/np.linalg.det(cov_tilde))
+                                        print('KLD',KLD)
+                                        if KLD > 10:
+                                            # transmit updated state
+                                            cov_tilde[i] = cov
+                                            xi_hat_tilde[i] = obs[i].state
+                                            etcEstimation.append(t)
+                                            print('---------------------- ETC: Update Estimation')
+                                        else:
+                                            t_est = t
+
+                                        
                     # TRIGGER THE OPTIMIZATION IF NEW ESTIMATIONS DONE + SAVE TRACKING DATA ########################    
                     if msgTx != []:
                         msgTx = np.array(msgTx,dtype=np.float32)
@@ -188,6 +234,9 @@ def run_auv_node(pub,auv,obs,Ts,Tf,auvNum):
                                         +' State Estimation [m,m/s] --> %s Range Target %s  %s',
                                     blue,f_xi_hat_i,d_s_xi,none)#TODO print the estimate not the msg
                             
+
+
+
                         # TODO: Now the stop condition is not working for the MTT
                         if d_s_xi <= desRange and k_phi < 6.0:
                             rospy.loginfo('%s|---- AUV '+str(auvID)+' MISSION ACCOMPLISHED')
@@ -205,10 +254,38 @@ def run_auv_node(pub,auv,obs,Ts,Tf,auvNum):
                 rospy.logout('%s|---- AUV '+str(auvID)+': Optimization Done!, Output Policy [state (X,Y,Theta), headings (rad), surge (m/s)] --> %s%s',
                 BGreen, f_ctrlPolicy, none)
 
-                path, idxMotion, idx, rx, ry, ryaw = h.updatePathRoutine(auvID,senPose,
-                                                                ctrlPolicy[3:3+H+1],ctrlPolicy[3+H+1:-1],dt,DT)
 
-                printR = True
+
+                if once == True:
+
+                    path, idxMotion, idx, rx, ry, ryaw = h.updatePathRoutine(auvID,senPose,
+                                                                    ctrlPolicy[3:3+H+1],ctrlPolicy[3+H+1:-1],dt,DT)
+                    if initEtcGuidance == False:
+                        theta_tilde = np.round(ctrlPolicy[4],2)
+                        u_tilde = np.round(ctrlPolicy[3+H+2],2)
+                        initEtcGuidance = True
+                    else:
+                        if auvID == 1:
+                            
+                            print('current surge',' current heading')
+                            print(ctrlPolicy[3],ctrlPolicy[3+H+1])
+                        if theta_tilde != np.round(ctrlPolicy[3],2) or u_tilde != np.round(ctrlPolicy[3+H+1],2) or countETC==H:
+                            #theta_tilde = ctrlPolicy[3]
+                            #u_tilde = ctrlPolicy[3+H+1]
+                            etcGuidance.append(t)
+                            print('---------------------- ETC: Update Guidance')
+                            countETC = 0
+                        else:
+                            countETC += 1
+                        theta_tilde = np.round(ctrlPolicy[4],2)
+                        u_tilde = np.round(ctrlPolicy[3+H+2],2)
+
+                    if auvID == 1:
+                        print('theta_tilde',theta_tilde)
+                        print('u_tilde',u_tilde) 
+
+                    printR = True
+                    #once = False
 
 
             
@@ -257,6 +334,9 @@ def shutdownCllbk(targetNum):
 
 
     np.savetxt(log_path+'/'+str(auvID)+'surge_vel.txt',surge_vel)
+    np.savetxt(log_path+'/'+str(auvID)+'heading.txt',heading)
+    np.savetxt(log_path+'/'+str(auvID)+'etcGuidance.txt',etcGuidance)
+    np.savetxt(log_path+'/'+str(auvID)+'etcEstimation.txt',etcEstimation)
     np.savetxt(log_path+'/'+str(auvID)+'heading.txt',heading)
     magenta = "\033[0;35m"
     none = "\033[0m"
