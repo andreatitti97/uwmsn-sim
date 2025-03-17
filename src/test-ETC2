@@ -1,0 +1,111 @@
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy.interpolate import interp1d
+from fastdtw import fastdtw
+from scipy.spatial.distance import euclidean
+
+# Simulation parameters
+T_R = 20  # Number of RHC update periods (coarser time scale)
+T_C = 100  # Number of continuous time steps (finer time scale)
+H = 5  # MPC horizon
+base_threshold = 3.5  # Base threshold for retransmission
+packet_loss_factor = 0.2  # Packet loss factor
+latency_factor = 0.1  # Latency factor
+alpha = 1  # Influence of consensus error on threshold
+consensus_type  = 'converge'
+
+
+# Generate control sequence evolution using interpolation
+def generate_control_evolution(T_R, T_C, H):
+    """ Simulates a continuous evolution of control sequences. """
+    discrete_times = np.linspace(0, T_C, T_R)  # RHC update times
+    continuous_times = np.arange(T_C)  # Continuous time steps
+    
+    # Generate discrete control sequences
+    surge_discrete = np.random.uniform(-1, 1, T_R)
+    sway_discrete = np.random.uniform(-1, 1, T_R)
+    
+    # Interpolate for continuous evolution
+    surge_interp = interp1d(discrete_times, surge_discrete, kind='linear')
+    sway_interp = interp1d(discrete_times, sway_discrete, kind='linear')
+    
+    # Generate continuous control sequences
+    surge_continuous = surge_interp(continuous_times)
+    sway_continuous = sway_interp(continuous_times)
+    
+    return np.column_stack((surge_continuous, sway_continuous))
+
+# Compute DTW distance between two control sequences
+def compute_dtw(U_k, U_k1):
+    U_k_tuples = [tuple(x) for x in U_k]
+    U_k1_tuples = [tuple(x) for x in U_k1]
+    distance, _ = fastdtw(U_k_tuples, U_k1_tuples, dist=euclidean)
+    return distance
+
+# Simulate different consensus behaviors
+def consensus_error_behavior(T_C, behavior_type):
+    if behavior_type == 'sinusoidal':
+        return np.abs(np.sin(np.linspace(0, 2 * np.pi, T_C)))
+    elif behavior_type == 'random':
+        return np.random.uniform(0, 1, T_C)
+    elif behavior_type == 'converge':
+        return np.exp(-np.linspace(0, 5, T_C))
+    else:
+        raise ValueError("Invalid behavior type.")
+
+# Run the simulation
+def run_simulation():
+    control_sequence = generate_control_evolution(T_R, T_C, H)
+    consensus_error = consensus_error_behavior(T_C, consensus_type)
+    
+    dtw_distances = []
+    adaptive_thresholds = []
+    retransmissions = []
+    divergence_trend = []
+    
+    for t in range(1, T_C):
+        U_k = control_sequence[max(0, t - H):t]  # Past control
+        U_k1 = control_sequence[t:t + H]  # Current control
+        
+        dtw_distance = compute_dtw(U_k, U_k1)
+        adaptive_threshold = base_threshold - alpha * consensus_error[t]
+        
+        retransmit = dtw_distance > adaptive_threshold
+        dtw_distances.append(dtw_distance)
+        adaptive_thresholds.append(adaptive_threshold)
+        retransmissions.append(retransmit)
+        
+        # Track divergence behavior
+        divergence = np.linalg.norm(control_sequence[t] - control_sequence[t - 1])
+        divergence_trend.append(divergence if not retransmit else 0)  # Reset divergence on retransmission
+
+    # Plot results
+    plt.figure(figsize=(10, 6))
+    plt.plot(dtw_distances, label='DTW Distance', color='blue')
+    plt.plot(adaptive_thresholds, label='Adaptive Threshold', color='red', linestyle='--')
+    plt.scatter(np.where(retransmissions)[0], [dtw_distances[i] for i in np.where(retransmissions)[0]], color='green', label='Retransmissions')
+    plt.xlabel('Continuous Time Steps')
+    plt.ylabel('Distance / Threshold')
+    plt.legend()
+    plt.title('DTW Distance vs Adaptive Threshold')
+    plt.show()
+
+    plt.figure(figsize=(10, 6))
+    plt.plot(consensus_error, label='Consensus Error', color='orange', linestyle='-.')
+    plt.plot(adaptive_thresholds, label='Adaptive Threshold', color='red', linestyle='--')
+    plt.xlabel('Continuous Time Steps')
+    plt.ylabel('Consensus Error / Threshold')
+    plt.legend()
+    plt.title('Adaptive Threshold vs Consensus Error')
+    plt.show()
+
+    plt.figure(figsize=(10, 6))
+    plt.plot(divergence_trend, label='Divergence (U_k vs U_k+1)', color='purple')
+    plt.plot(adaptive_thresholds, label='Adaptive Threshold', color='red', linestyle='--')
+    plt.xlabel('Continuous Time Steps')
+    plt.ylabel('Divergence / Threshold')
+    plt.legend()
+    plt.title('Divergence vs Adaptive Threshold')
+    plt.show()
+
+run_simulation()

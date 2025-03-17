@@ -9,6 +9,9 @@ from rospy_tutorials.msg import Floats
 from rospy.numpy_msg import numpy_msg
 from uwmsn_msgs.msg import Matrix
 from std_srvs.srv import Trigger
+# Modules for DTW
+from fastdtw import fastdtw
+from scipy.spatial.distance import euclidean
 
 # Environment: Define the relevant paths
 pkg_directory = os.path.dirname(pathlib.Path(__file__).parent.resolve())
@@ -45,6 +48,42 @@ xi_hat = [[] for _ in range(targetNumSim)]
 # Empty list for ETC statistics
 etcEstimation = []
 etcGuidance = []
+
+
+# Compute DTW (Dynamic Time Warping) distance between two 2D control sequences
+def compute_dtw(U_k, U_k1):
+    """
+    Compute the DTW distance between two control sequences U_k and U_k1.
+    Each sequence is a 2D array (time steps with surge and sway).
+    """
+    # Ensure U_k and U_k1 are 2D arrays
+    U_k = np.array(U_k).reshape(-1, 2)  # Ensure each control point is 2D
+    U_k1 = np.array(U_k1).reshape(-1, 2)
+
+    # Convert the control sequences into a list of tuples for DTW
+    U_k_tuples = [tuple(x) for x in U_k]  # Each control point is a 2D tuple
+    U_k1_tuples = [tuple(x) for x in U_k1]
+    
+    distance, _ = fastdtw(U_k_tuples, U_k1_tuples, dist=euclidean)
+    return distance
+
+# Decide whether to retransmit based on the DTW distance and adaptive threshold
+def retransmit_decision(U_k, U_k1, base_threshold, packet_loss_factor, latency_factor, consensus_error, alpha):
+    """
+    Decide whether to retransmit based on the discrepancy between control sequences (DTW) 
+    and the adaptive threshold considering packet loss, latency, and consensus error.
+    """
+    # Compute the DTW distance between U_k and U_k1
+    dtw_distance = compute_dtw(U_k, U_k1)
+    
+    # Update the adaptive threshold based on consensus error
+    adaptive_threshold = base_threshold #- alpha * consensus_error
+
+    retransmit = dtw_distance >= adaptive_threshold
+    return retransmit, adaptive_threshold, dtw_distance
+
+
+
 
 def run_auv_node(pub,auv,obs,Ts,Tf,auvNum):
 
@@ -253,36 +292,50 @@ def run_auv_node(pub,auv,obs,Ts,Tf,auvNum):
                 f_ctrlPolicy = [f"{val:.2f}" for val in ctrlPolicy]
                 rospy.logout('%s|---- AUV '+str(auvID)+': Optimization Done!, Output Policy [state (X,Y,Theta), headings (rad), surge (m/s)] --> %s%s',
                 BGreen, f_ctrlPolicy, none)
-
+                tmp = []
+                for i in range(H):
+                    tmp.append([ctrlPolicy[3+i], ctrlPolicy[4+H+i]])
+                U_k = [tuple(u) for u in tmp]
 
 
                 if once == True:
 
                     path, idxMotion, idx, rx, ry, ryaw = h.updatePathRoutine(auvID,senPose,
                                                                     ctrlPolicy[3:3+H+1],ctrlPolicy[3+H+1:-1],dt,DT)
+                    
+                    if auvID == 1 and initEtcGuidance == True:
+                        print('u_k',U_k)
+                        print('u_k1',U_k1) 
+                    
+                    
                     if initEtcGuidance == False:
                         theta_tilde = np.round(ctrlPolicy[4],2)
                         u_tilde = np.round(ctrlPolicy[3+H+2],2)
+                        
+                        tmp = []
+                        for i in range(H):
+                            tmp.append([ctrlPolicy[3+i], ctrlPolicy[4+H+i]])
+                        U_k1 = [tuple(u) for u in tmp]
                         initEtcGuidance = True
                     else:
-                        if auvID == 1:
-                            
-                            print('current surge',' current heading')
-                            print(ctrlPolicy[3],ctrlPolicy[3+H+1])
-                        if theta_tilde != np.round(ctrlPolicy[3],2) or u_tilde != np.round(ctrlPolicy[3+H+1],2) or countETC==H:
+
+                        #if theta_tilde != np.round(ctrlPolicy[3],2) or u_tilde != np.round(ctrlPolicy[3+H+1],2) or countETC==H:
+                        decision, thresh, dtw_distance = retransmit_decision(U_k,U_k1,1.0,0.1,0.1,0.1,0.1)
+                        if decision or countETC==H:
                             #theta_tilde = ctrlPolicy[3]
                             #u_tilde = ctrlPolicy[3+H+1]
                             etcGuidance.append(t)
-                            print('---------------------- ETC: Update Guidance')
+                            if auvID == 1:
+                                print('---------------------- ETC: Update Guidance')
                             countETC = 0
                         else:
                             countETC += 1
                         theta_tilde = np.round(ctrlPolicy[4],2)
                         u_tilde = np.round(ctrlPolicy[3+H+2],2)
-
-                    if auvID == 1:
-                        print('theta_tilde',theta_tilde)
-                        print('u_tilde',u_tilde) 
+                        tmp = []
+                        for i in range(H):
+                            tmp.append([ctrlPolicy[3+i], ctrlPolicy[4+H+i]])
+                        U_k1 = [tuple(u) for u in tmp]
 
                     printR = True
                     #once = False
@@ -296,6 +349,7 @@ def run_auv_node(pub,auv,obs,Ts,Tf,auvNum):
                     printR = False
                     # PUBLISH THE CTRL_CMD
 
+                
                 heading.append(ryaw[idxMotion+idx])              
                 pub[2].publish(np.array([int(auvID),rx[idxMotion+idx],
                                             ry[idxMotion+idx],ryaw[idxMotion+idx]], dtype=np.float32))

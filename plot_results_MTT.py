@@ -44,6 +44,11 @@ for i in range(1):
     target_x_traj[:,i] = np.loadtxt(log_directory+'/target_x_traj'+str(i+1)+'.txt')
     target_y_traj[:,i] = np.loadtxt(log_directory+'/target_y_traj'+str(i+1)+'.txt')
 
+
+tmp = np.loadtxt(log_directory+'/'+str(i+1)+'-x_hat_1.txt')
+n_estimations = len(tmp)
+
+
 for i in range(int(auvNum)):
     # AUVs Simulation Data - TO DOWNSAMPLE
     auv_x_traj[:,i] = np.loadtxt(log_directory+'/auv_x_traj'+str(i+1)+'.txt')
@@ -62,15 +67,19 @@ for i in range(int(auvNum)):
     # Estimation Data
     err = np.loadtxt(log_directory+'/'+str(i+1)+'-trackErr.txt')
     tracking_errors.append(err)
-    '''tmp = np.loadtxt(log_directory+'/'+str(i+1)+'-x_hat_2.txt')
-    x_hat_ = np.zeros((len(tmp),4))
+
+    x_hat_j = np.zeros((n_estimations,4))
     
-    cov = np.zeros((len(tmp),4))
-    for j in range(4):
-        x_hat_[:,j] = np.loadtxt(log_directory+'/'+str(i+1)+'-x_hat_'+str(j+1)+'.txt')
-        cov[:,j] = np.loadtxt(log_directory+'/'+str(i+1)+'-cov'+str(j+1)+'.txt')
-    x_hat.append(x_hat_)
-    P.append(cov)'''
+    cov = np.zeros((n_estimations,4))
+    #for j in range(auvNum):
+    x_hat_j = np.loadtxt(log_directory+'/'+str(i+1)+'-x_hat_1.txt')
+    if len(x_hat_j) < n_estimations:
+        n_estimations = len(x_hat_j)
+
+        #cov[:,j] = np.loadtxt(log_directory+'/'+str(i+1)+'-cov_1.txt')
+    x_hat.append(x_hat_j[:n_estimations,:])
+    #P.append(cov)
+print(n_estimations)
 
 # Downsampling script
 original_samples = samples
@@ -192,16 +201,15 @@ axComm.legend(fontsize=fs * 2 / 3)
 axComm.grid()
 axComm.tick_params(axis='both', which='major', labelsize=(fs * 2) / 3)
 
-plt.show()
 
 ##########################################################
 # Plot trend conditioning estimation problem
 fig, ax = plt.subplots()
 t_axis = np.linspace(0,600,len(list_phi))
-max = max(list_phi)
+max_ = max(list_phi)
 tmp = []
 for i in range(samples):
-    tmp.append(list_phi[i]/max)
+    tmp.append(list_phi[i]/max_)
 
 ax.plot(t_axis,list_phi,label='Loss Function',linewidth=lw)
 opt_value = []
@@ -244,14 +252,14 @@ ax.text(target_x[0]-100,target_y[0],r'$ %s $'%math_vars[1]+r'$ %s $'%time_vars[0
 cb = fig.colorbar(c_map, ax=ax)
 cb.set_label('t (s)',fontsize=fs)
 cb.ax.tick_params(labelsize=(fs/3)*2)
-
+FAILURE = False
 for i in range(int(auvNum)):
     
     if i == 0:
         ax.plot([auv_x[-1,i],
             target_x[-1,0]],[auv_y[-1,i],target_y[-1,0]],'r--',linewidth=lw/3,label='LOS'+r'$ %s $'%time_vars[1])
     else:
-        if i != 1:
+        if i != 1 or FAILURE == False:
             ax.plot([auv_x[-1,i],
                 target_x[-1,0]],[auv_y[-1,i],target_y[-1,0]],'r--',linewidth=lw/3)
         
@@ -274,9 +282,10 @@ for i in range(int(auvNum)):
     ax.scatter(auv_x[0,i],auv_y[0,i],c='y',linewidths=sw*8)
     #ax.text(auv_x[-1,i]+c,auv_y[-1,i]+d,r'$ %s $'%agents_vars[i]+r'$ %s $'%time_vars[1],fontsize=tw)
     if i == 1:  
-        ax.text(auv_x[-1,i]+15,auv_y[-1,i],'FAILURE',fontsize=2*tw/3)
+        if FAILURE == True:
+            ax.text(auv_x[-1,i]+15,auv_y[-1,i],'FAILURE',fontsize=2*tw/3)
         ax.scatter(auv_x[-1,i],auv_y[-1,i],marker='X',c='r',linewidths=sw*15)
-    else:
+    else:   
         ax.scatter(auv_x[-1,i],auv_y[-1,i],c='r',linewidths=sw*8)
 
 
@@ -328,29 +337,77 @@ ax.set_ylabel('y (m)',fontsize=fs)
 ax.grid()
 ax.axis('equal')
 ax.legend(fontsize=(fs*2)/3,loc='lower right')
-plt.show()
+
 
 ##########################################################
-# Plot tracking error
+# Plot tracking error in separate subplots
+fig, axes = plt.subplots(auvNum, 1, figsize=(8, 3 * auvNum), sharex=True)
+math_vars = ['AUV1', 'AUV2', 'AUV3', '\\epsilon']
+t = np.linspace(0, simTime, n_estimations)
+epsi = 10.0
+epsi = np.zeros_like(t)+epsi  # Zero reference line
+
+max_ = max(tracking_errors[0])
+for i in range(auvNum):
+    max_tmp = max(tracking_errors[i])
+        
+    if max_tmp > max_: 
+        max_ = max_tmp
+
+for i in range(auvNum):
+
+    axes[i].plot(t, tracking_errors[i][:n_estimations], label=rf'$ {math_vars[i]} $', linewidth=lw, marker='o',color=colors(i))
+    axes[i].plot(t, epsi, 'r--', linewidth=lw, label=rf'$ {math_vars[-1]} $')
+    if i == 1:
+        axes[i].set_ylabel('RMSE (m)', fontsize=fs)
+    axes[i].legend(fontsize=fs * 2 / 3)
+    axes[i].grid()
+    axes[i].tick_params(axis='y', labelsize=fs * 2 / 3)
+    axes[i].tick_params(axis='x', labelsize=fs * 2 / 3)
+    axes[i].set_ylim([0, max_])
+    
+
+axes[-1].set_xlabel('t (s)', fontsize=fs)
+
+plt.xticks(fontsize=fs * 2 / 3)
+#plt.tight_layout()
+
+##########################################################
+# Plot consensus dynamic derivative
 fig, ax = plt.subplots()
-math_vars = ['AUV1','AUV2','AUV3','\\epsilon']
-for i in range(int(auvNum)):
+math_vars = ['\\dot{\\xi}(t)']
+consensus_dyn = []
+t = np.linspace(0, simTime, n_estimations)
+colors = plt.cm.get_cmap('tab10', auvNum)  # Get a colormap with a different color for each AUV
 
-    t = np.linspace(0,500,len(tracking_errors[i]))
-    tmp = tracking_errors[i]
-    ax.plot(t,tmp,label=r'$ %s $'%math_vars[i],linewidth=lw)
-    max_value = tmp.max()
+x_hat1 = x_hat[0]
+x_hat2 = x_hat[1]
+x_hat3 = x_hat[2]
+epsi = 1.5
+epsi_max = np.zeros_like(t)+epsi
+epsi_min = np.zeros_like(t)-epsi
 
-epsi = []    
-for i in range(len(t)):
-    epsi.append(0.0)
-ax.plot(t,epsi,'r--',linewidth=lw,label=r'$ %s $'%math_vars[-1])    
+# Compute the consensus dynamic as the sum of pairwise differences (norms)
+for i in range(n_estimations):
+    diff1 = np.linalg.norm(x_hat1[i] - x_hat2[i])
+    diff2 = np.linalg.norm(x_hat1[i] - x_hat3[i])
+    diff3 = np.linalg.norm(x_hat2[i] - x_hat3[i])
+    consensus_dyn.append(diff1 + diff2 + diff3)
+
+
+# Compute the numerical derivative (first derivative) of the consensus dynamic
+consensus_derivative = np.gradient(consensus_dyn, t)
+
+ax.plot(t, consensus_derivative, linewidth=lw, marker='o', label=r'$ %s $' % math_vars[0])
+#ax.plot(t, consensus_derivative, linewidth=lw, marker='o', label=r'$ %s $' % math_vars[0])
+ax.plot(t, epsi_min, 'r--', linewidth=lw, label=r'$ -\epsilon $')
+ax.plot(t, epsi_max, 'r--', linewidth=lw, label=r'$ +\epsilon $')
 ax.set_xlabel('t (s)', fontsize=fs)
-ax.set_ylabel('RMSE (m)',fontsize=fs)
+ax.set_ylabel('Consensus Dynamic', fontsize=fs)
 ax.legend(fontsize=fs*2/3)
 ax.grid()
-plt.yticks(fontsize=(fs*2)/3, rotation = 0)#to set dimension and orientation of tick labels
-plt.xticks(fontsize=(fs*2)/3, rotation=0)#to set dimension and orientation of tick labels
+plt.show()
+
 
 ##########################################################
 #plot distance to target
@@ -386,72 +443,9 @@ ax.grid()
 plt.yticks(fontsize=(fs*2)/3, rotation = 0)#to set dimension and orientation of tick labels
 plt.xticks(fontsize=(fs*2)/3, rotation=0)#to set dimension and orientation of tick labels
 
-fig5, ax = plt.subplots()
-ax.plot(list_phi,y,linewidth=lw/2)
-ax.scatter(list_phi[-1],y[-1],linewidths=lw/2)
-ax.grid()
-ax.legend(fontsize=fs*2/3)
-ax.grid()
-plt.yticks(fontsize=(fs*2)/3, rotation = 0)#to set dimension and orientation of tick labels
-plt.xticks(fontsize=(fs*2)/3, rotation=0)#to set dimension and orientation of tick labels
-
-
-##########################################################
-# Plot SNR between the AUVs given the desired topology
-
-fig6, ax = plt.subplots()
-sampling = 1
-math_vars = ['snr_{ij}(dB)','snr_{12}','snr_{23}','thresh snr']
-
-f = header.config.f
-acoustic_loss =  0.11*(f**2/(1+f**2))+44*(f**2/(4100+f**2))+(2.75*(1e-4)*(f**2))+0.003 #f is in kHz
-
-
-snr_12= []
-snr_23 = []
-
-
-tmp_x_1 = auv_x[:,0]
-tmp_y_1 = auv_y[:,0]
-tmp_x_2 = auv_x[:,1]
-tmp_y_2 = auv_y[:,1]
-tmp_x_3 = auv_x[:,2]
-tmp_y_3 = auv_y[:,2]
-NL = 0#header.config.NL
-loops = len(tmp_x)
-for j in range(loops):
-    if j == loops/2:
-        NL = 0#80
-    dist_12 = np.sqrt((tmp_x_1[j]-tmp_x_2[j])**2+(tmp_y_1[j]-tmp_y_2[j])**2)
-    dist_23 = np.sqrt((tmp_x_2[j]-tmp_x_3[j])**2+(tmp_y_2[j]-tmp_y_3[j])**2)
-
-    TL_12 = 20*np.log(dist_12) + (dist_12*acoustic_loss*1e-3)
-    TL_23 = 20*np.log(dist_23) + (dist_23*acoustic_loss*1e-3)
-                    
-    snr_12.append(header.config.SL - NL - TL_12 + header.config.DI)
-    snr_23.append(header.config.SL - NL - TL_23 + header.config.DI)
-
-ax.plot(t,snr_12,label=r'$ %s $'%math_vars[1],linewidth=lw) 
-ax.plot(t,snr_23,label=r'$ %s $'%math_vars[2],linewidth=lw)
-desired_snr = []
-noise_change = []
-for i in range(loops):
-    desired_snr.append(header.config.DThresh)
-    noise_change.append(header.config.TIME_DURATION/2)
-ax.plot(t,desired_snr,'r--',label=r'$ %s $'%math_vars[2],linewidth=lw)
-plt.axvline(x=header.config.TIME_DURATION/2,color='k',label='NOISE CHANGE',linewidth=lw)
-
-ax.set_ylabel(r'$ %s $'%math_vars[0], fontsize=fs)
-ax.set_xlabel('t (s)', fontsize =fs)
-ax.legend(fontsize=fs)
-ax.grid()
-plt.yticks(fontsize=(fs)/3, rotation = 0)#to set dimension and orientation of tick labels
-plt.xticks(fontsize=(fs)/3, rotation = 0)#to set dimension and orientation of tick labels
-
-
 ########################################################################
-# Plot COST FUNCTIONS SUM
-#plot distance to target
+# Plot INDIVIDUAL COST FUNCTIONS
+
 fig5, ax = plt.subplots()
 sampling = 1
 math_vars = ['loss function 1','loss function 2','loss function 3']
@@ -490,7 +484,7 @@ ax.grid()
 plt.yticks(fontsize=(fs*2)/3, rotation = 0)#to set dimension and orientation of tick labels
 plt.xticks(fontsize=(fs*2)/3, rotation=0)#to set dimension and orientation of tick labels
 
-fig5, ax = plt.subplots()
+'''fig5, ax = plt.subplots()
 ax.plot(list_phi,dist_reward,linewidth=lw/2)
 ax.plot(1/cost_g,cost_d,linewidth=lw/2)
 ax.scatter(list_phi[-1],dist_reward[-1],linewidths=lw/2)
@@ -500,7 +494,7 @@ ax.grid()
 plt.yticks(fontsize=(fs*2)/3, rotation = 0)#to set dimension and orientation of tick labels
 plt.xticks(fontsize=(fs*2)/3, rotation=0)#to set dimension and orientation of tick labels
 
-#plt.show()
+plt.show()'''
 
 
 '''Interpolation script
@@ -628,4 +622,58 @@ ax.grid()
 plt.yticks(fontsize=(fs*2)/3, rotation = 0)#to set dimension and orientation of tick labels
 plt.xticks(fontsize=(fs*2)/3, rotation=0)#to set dimension and orientation of tick labels
 plt.show()
+'''
+
+##########################################################
+# Plot SNR between the AUVs given the desired topology
+
+'''fig6, ax = plt.subplots()
+sampling = 1
+math_vars = ['snr_{ij}(dB)','snr_{12}','snr_{23}','thresh snr']
+
+f = header.config.f
+acoustic_loss =  0.11*(f**2/(1+f**2))+44*(f**2/(4100+f**2))+(2.75*(1e-4)*(f**2))+0.003 #f is in kHz
+
+
+snr_12= []
+snr_23 = []
+
+
+tmp_x_1 = auv_x[:,0]
+tmp_y_1 = auv_y[:,0]
+tmp_x_2 = auv_x[:,1]
+tmp_y_2 = auv_y[:,1]
+tmp_x_3 = auv_x[:,2]
+tmp_y_3 = auv_y[:,2]
+NL = 0#header.config.NL
+loops = len(tmp_x)
+for j in range(loops):
+    if j == loops/2:
+        NL = 0#80
+    dist_12 = np.sqrt((tmp_x_1[j]-tmp_x_2[j])**2+(tmp_y_1[j]-tmp_y_2[j])**2)
+    dist_23 = np.sqrt((tmp_x_2[j]-tmp_x_3[j])**2+(tmp_y_2[j]-tmp_y_3[j])**2)
+
+    TL_12 = 20*np.log(dist_12) + (dist_12*acoustic_loss*1e-3)
+    TL_23 = 20*np.log(dist_23) + (dist_23*acoustic_loss*1e-3)
+                    
+    snr_12.append(header.config.SL - NL - TL_12 + header.config.DI)
+    snr_23.append(header.config.SL - NL - TL_23 + header.config.DI)
+
+ax.plot(t,snr_12,label=r'$ %s $'%math_vars[1],linewidth=lw) 
+ax.plot(t,snr_23,label=r'$ %s $'%math_vars[2],linewidth=lw)
+desired_snr = []
+noise_change = []
+for i in range(loops):
+    desired_snr.append(header.config.DThresh)
+    noise_change.append(header.config.TIME_DURATION/2)
+ax.plot(t,desired_snr,'r--',label=r'$ %s $'%math_vars[2],linewidth=lw)
+plt.axvline(x=header.config.TIME_DURATION/2,color='k',label='NOISE CHANGE',linewidth=lw)
+
+ax.set_ylabel(r'$ %s $'%math_vars[0], fontsize=fs)
+ax.set_xlabel('t (s)', fontsize =fs)
+ax.legend(fontsize=fs)
+ax.grid()
+plt.yticks(fontsize=(fs)/3, rotation = 0)#to set dimension and orientation of tick labels
+plt.xticks(fontsize=(fs)/3, rotation = 0)#to set dimension and orientation of tick labels
+
 '''

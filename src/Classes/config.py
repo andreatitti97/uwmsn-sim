@@ -110,7 +110,7 @@ for i in range(len(AUV_XY)-1):
 avg_d = sum(dist)/(len(dist))
 d = avg_d
 gamma = avg_d*3 #Sigmoid parameter for packet loss --> depends on the distance (tune only alpha)
-PDR = 100
+PDR = 95 #Packet Delivery Ratio
 
 # Acoustic Model Parameters
 SL = 186 #we worked with modem at 182 - 168 db
@@ -179,9 +179,6 @@ TARGET_INIT = [+2000,-2500, math.pi, 2.5, 0.0, 0.0, 0.0] #[x(m),y(m),theta(rad),
 #TARGET_INIT = [-150,0, math.pi+math.pi/2-math.pi/6, 0.5, 0.0, 0.0, 0.0] 
 
 TARGET_INIT = [-300,-50, math.pi+math.pi/2-math.pi/6, 0.3, 0.0, 0.0, 0.0] 
-
-
- 
 TARGET_INIT = [-350,250, np.pi, 0.2, 0.0, 0.0, 0.0] # SCENARIO 2
 TARGET_INIT = [-250,350, np.pi-np.pi/3, 0.2, 0.0, 0.0, 0.0] # SCENARIO 3
 TARGET_INIT = [-250,105, np.pi-np.pi/6, 0.2, 0.0, 0.0, 0.0] # SCENARIO 1
@@ -191,9 +188,12 @@ TARGET_INIT = [0,-350, -np.pi/6, 0.2, 0.0, 0.0, 0.0] # SCENARIO 4
 
 alpha_0, omega_0,alpha_dot_0,omega_dot_0 = TARGET_INIT[3],TARGET_INIT[4],TARGET_INIT[5],TARGET_INIT[6]
 
+v_n = 0.01 #(m/s)
+a = 0.0 #(-)
+
 MAX_TARGET_VEL = 3 #(m/s) (only if target nTARGET_INIT = [-250,105, np.pi-np.pi/6, 0.2, 0.0, 0.0, 0.0] # SCENARIO 1o costant vels)
 MIN_TARGET_VEL = 3 #(m/s)
-sin_pattern = False
+sin_pattern = True
 
 for i in range(len(AUV_XY)):
     AUV_XY[i,2] = math.atan2(TARGET_INIT[1]-AUV_XY[i,1],TARGET_INIT[0]-AUV_XY[i,0])
