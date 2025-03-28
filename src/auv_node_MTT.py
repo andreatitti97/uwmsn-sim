@@ -292,6 +292,9 @@ def run_auv_node(pub,auv,obs,Ts,Tf,auvNum):
                 f_ctrlPolicy = [f"{val:.2f}" for val in ctrlPolicy]
                 rospy.logout('%s|---- AUV '+str(auvID)+': Optimization Done!, Output Policy [state (X,Y,Theta), headings (rad), surge (m/s)] --> %s%s',
                 BGreen, f_ctrlPolicy, none)
+                if AUV_failure == True and t > h.config.TIME_DURATION/2 and auvID == 2:
+                    rospy.logout('%s|---- AUV '+str(auvID)+': AUV2 Failure%s',BGreen,none)
+                    ctrlPolicy = [0.0 for _ in range(3+2*(H+1))]
                 tmp = []
                 for i in range(H):
                     tmp.append([ctrlPolicy[3+i], ctrlPolicy[4+H+i]])

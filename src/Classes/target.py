@@ -49,8 +49,8 @@ class Target:
         self.label = label
         self.t = 0
         if sin_pattern == True:
-            self.v_n = config.v_n#(m/s)
-            self.a = config.a #(-)
+            self.a = config.a#(m/s)
+            self.omega = config.omega #(-)
 
 
     def set_start_target_poses(self, pose):
@@ -79,12 +79,15 @@ class Target:
         self.t += dt
         self.pose.theta = self.pose.theta + (self.ang_vel+self.ang_acc * dt)*dt 
         if sin_pattern == True:
-            self.pose.x = self.pose.x + self.v_n*np.sin(self.a*self.t+np.pi)
+            #self.pose.x = self.pose.x + self.a*np.sin(self.omega*self.t+np.pi)*dt
+            #self.pose.y = self.pose.y + self.lin_vel*dt
+            self.pose.y = self.pose.y + self.a*np.cos(self.omega*self.t+np.pi)*dt
+            self.pose.x = self.pose.x + self.lin_vel*dt
         else:
             self.pose.x = self.pose.x + (self.lin_vel+self.lin_acc*dt) * \
                 np.cos(self.pose.theta) * dt 
         
-        self.pose.y = self.pose.y + (self.lin_vel+self.lin_acc*dt) * \
-            np.sin(self.pose.theta) * dt 
+            self.pose.y = self.pose.y + (self.lin_vel+self.lin_acc*dt) * \
+                np.sin(self.pose.theta) * dt 
         
         

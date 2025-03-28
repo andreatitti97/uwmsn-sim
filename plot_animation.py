@@ -117,7 +117,7 @@ dist = [[] for _ in range(auvNum)]
 dist1, dist2,dist3 = [], [], []
 t_x = [[] for _ in range(targetNum)]
 t_y = [[] for _ in range(targetNum)]
-phi_lists = np.zeros((4, samples, 2))  # Structured as (AUVs, samples, 2 angles)
+phi_lists = np.zeros((auvNum, samples, 2))  # Structured as (AUVs, samples, 2 angles)
 
 phi = np.zeros((4, 2))
 list_phi = np.zeros(samples)
@@ -150,16 +150,18 @@ for k in range(targetNum):
             l_x[j].append([tmp_x[i], tmp_t_x[i]])
             l_y[j].append([tmp_y[i], tmp_t_y[i]])
             
-
+    once = False
     # Populate phi and compute cost with conditions
     for i in range(samples):
-        if header.config.AUV_failure:
-            phi[:3] = phi_lists[:3, i]  #TODO better Only assign the first 3 AUVs' data
+        if header.config.AUV_failure and i >= samples / 2:
+            if once == False:
+                phi_lists = np.delete(phi_lists, (1), axis=0)#for now only AUV2 can fail
+                once = True
+            phi[:auvNum-1] = phi_lists[:, i]
         else:
-            phi[:4] = phi_lists[:4, i]  # Assign all 4 AUVs' data
-        cost1 = header.utils.computeCost(phi[:2,:])
-        cost2 = header.utils.computeCost(phi[1:,:])
-        list_phi[i] += cost1 + cost2 #+ dist1[i] + dist2[i] + dist3[i]
+            phi[:auvNum] = phi_lists[:auvNum, i]  # Assign all 4 AUVs' data
+        cost = header.utils.computeCost(phi)
+        list_phi[i] += cost#cost1 + cost2 #+ dist1[i] + dist2[i] + dist3[i]
 
 # Initialize strings fo legends
 vars = ['Target','\\hat{\\xi}','AUVs','LOSS FUNCTION']

@@ -36,7 +36,7 @@ def alpha_f(f):
     
 ############################################################ SIMULATION SETUP ########################################################
 # Simulation parameters
-TIME_DURATION = 800 # (s)
+TIME_DURATION = 600 # (s)
 TIME_SCALER = 1# in [1 - 10] values near 10 may be source of errors (to fast for ROS stack)
 TIME_STEP = 0.01*TIME_SCALER
 targetNum = 3 #this is the maximum number of target considered in the simulator
@@ -52,7 +52,7 @@ k_phi_thresh = 50.0 #Thresh sul condizionamento del regressore per aggiornare la
 
 
 # AUVs Team Settings
-AUV_MAX_VEL = 2.0 #(m/s)
+AUV_MAX_VEL = 3.0 #(m/s)
 AUV_failure = False #auv2 will fail after t = TIME_DURATION/2
 netTopology = [[] for _ in range(auvNum)]
 netTopology[0] = [2,3] #put the ID of the neigbours of agent 1
@@ -78,16 +78,9 @@ if random_init == True:
 
 else:
 
+
+
     
-    #MORE CLUTTERED INITIAL POSITION
-    AUV_XY[0,0] = 50
-    AUV_XY[0,1] = 100
-
-    AUV_XY[1,0] = 10   
-    AUV_XY[1,1] = -10 
-
-    AUV_XY[2,0] = -150
-    AUV_XY[2,1] = -50
 
     # BASE INITIAL POSITION
     AUV_XY[0,0] = -38
@@ -98,6 +91,16 @@ else:
 
     AUV_XY[2,0] = -150
     AUV_XY[2,1] = -100
+
+    #MORE CLUTTERED INITIAL POSITION
+    AUV_XY[0,0] = 50
+    AUV_XY[0,1] = 100
+
+    AUV_XY[1,0] = 10   
+    AUV_XY[1,1] = -10 
+
+    AUV_XY[2,0] = -150
+    AUV_XY[2,1] = -50
 
 # Communication Policy Paramaters
 Ts = 4 #TDMA: slot time # time sampling always equal to Ts/2 -- considering pkt=64B and v=480bps
@@ -110,7 +113,7 @@ for i in range(len(AUV_XY)-1):
 avg_d = sum(dist)/(len(dist))
 d = avg_d
 gamma = avg_d*3 #Sigmoid parameter for packet loss --> depends on the distance (tune only alpha)
-PDR = 95 #Packet Delivery Ratio
+PDR = 100 #Packet Delivery Ratio
 
 # Acoustic Model Parameters
 SL = 186 #we worked with modem at 182 - 168 db
@@ -140,7 +143,7 @@ for i in range(len(dist)):
         print('SNR '+str(i)+'-'+str(i+1),SL -TL - NL - DI)
 '''
 # Optimization Parameters --- alpha = 0.15, gamma = 1.0 (almost fixed formation)
-alpha_w = 0.99 #fixed form 0.45#0.15
+alpha_w = 0.6 #fixed form 0.45#0.15
 gamma_w = 0.1 #fixed form 0.85#0.25#1.0
 RANGE_TO_TARGET = min_distance*2 #
 
@@ -179,17 +182,29 @@ TARGET_INIT = [+2000,-2500, math.pi, 2.5, 0.0, 0.0, 0.0] #[x(m),y(m),theta(rad),
 #TARGET_INIT = [-150,0, math.pi+math.pi/2-math.pi/6, 0.5, 0.0, 0.0, 0.0] 
 
 TARGET_INIT = [-300,-50, math.pi+math.pi/2-math.pi/6, 0.3, 0.0, 0.0, 0.0] 
-TARGET_INIT = [-350,250, np.pi, 0.2, 0.0, 0.0, 0.0] # SCENARIO 2
-TARGET_INIT = [-250,350, np.pi-np.pi/3, 0.2, 0.0, 0.0, 0.0] # SCENARIO 3
+
+
+
+
+
 TARGET_INIT = [-250,105, np.pi-np.pi/6, 0.2, 0.0, 0.0, 0.0] # SCENARIO 1
+
+TARGET_INIT = [-250,350, np.pi-np.pi/3, 0.2, 0.0, 0.0, 0.0] # SCENARIO 3
 TARGET_INIT = [600,-200, np.pi/2, 0.2, 0.0, 0.0, 0.0] # SCENARIO 6
-TARGET_INIT = [400,-100, -np.pi/2, 0.2, 0.0, 0.0, 0.0] # SCENARIO 5
-TARGET_INIT = [0,-350, -np.pi/6, 0.2, 0.0, 0.0, 0.0] # SCENARIO 4
+
+
+
+TARGET_INIT = [-350,250, np.pi, 0.2, 0.0, 0.0, 0.0] # SCENARIO 1
+
+
+TARGET_INIT = [-250,250, np.pi-np.pi/3, 0.2, 0.0, 0.0, 0.0] # SCENARIO 3
+TARGET_INIT = [0,-350, -np.pi/6, 0.15, 0.0, 0.0, 0.0] # SCENARIO 2
+TARGET_INIT = [400,-100, np.pi, 0.2, 0.0, 0.0, 0.0] # SCENARIO 5
 
 alpha_0, omega_0,alpha_dot_0,omega_dot_0 = TARGET_INIT[3],TARGET_INIT[4],TARGET_INIT[5],TARGET_INIT[6]
 
-v_n = 0.01 #(m/s)
-a = 0.0 #(-)
+a = -0.1 #(m/s) increase for more amplitude of the "turn"
+omega = +0.01 #(-) #increase for faster sinusoidal beahviour
 
 MAX_TARGET_VEL = 3 #(m/s) (only if target nTARGET_INIT = [-250,105, np.pi-np.pi/6, 0.2, 0.0, 0.0, 0.0] # SCENARIO 1o costant vels)
 MIN_TARGET_VEL = 3 #(m/s)

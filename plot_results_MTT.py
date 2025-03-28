@@ -79,7 +79,6 @@ for i in range(int(auvNum)):
         #cov[:,j] = np.loadtxt(log_directory+'/'+str(i+1)+'-cov_1.txt')
     x_hat.append(x_hat_j[:n_estimations,:])
     #P.append(cov)
-print(n_estimations)
 
 # Downsampling script
 original_samples = samples
@@ -106,7 +105,7 @@ dist = [[] for _ in range(auvNum)]
 dist1, dist2,dist3 = [], [], []
 t_x = [[] for _ in range(targetNum)]
 t_y = [[] for _ in range(targetNum)]
-phi_lists = np.zeros((4, samples, 2))  # Structured as (AUVs, samples, 2 angles)
+phi_lists = np.zeros((auvNum, samples, 2))  # Structured as (AUVs, samples, 2 angles)
 
 phi = np.zeros((4, 2))
 list_phi = np.zeros(samples)
@@ -139,16 +138,21 @@ for k in range(targetNum):
             l_x[j].append([tmp_x[i], tmp_t_x[i]])
             l_y[j].append([tmp_y[i], tmp_t_y[i]])
             
-
+    once = False
     # Populate phi and compute cost with conditions
     for i in range(samples):
-        if header.config.AUV_failure:
-            phi[:3] = phi_lists[:3, i]  #TODO better Only assign the first 3 AUVs' data
+        if header.config.AUV_failure and i >= samples / 2:
+            if once == False:
+                phi_lists = np.delete(phi_lists, (1), axis=0)#for now only AUV2 can fail
+                once = True
+            phi[:auvNum-1] = phi_lists[:, i]
         else:
-            phi[:4] = phi_lists[:4, i]  # Assign all 4 AUVs' data
-        cost1 = header.utils.computeCost(phi[:2,:])
-        cost2 = header.utils.computeCost(phi[1:,:])
-        list_phi[i] += cost1 + cost2 #+ dist1[i] + dist2[i] + dist3[i]
+            phi[:auvNum] = phi_lists[:auvNum, i]  # Assign all 4 AUVs' data
+        #cost1 = header.utils.computeCost(phi[:2,:])
+        #cost2 = header.utils.computeCost(phi[1:,:])
+
+        cost = header.utils.computeCost(phi)
+        list_phi[i] += cost#cost1 + cost2 #+ dist1[i] + dist2[i] + dist3[i]
 
 
 # Print some simulation info
@@ -156,7 +160,10 @@ print('SIMULATION INFO [auvNum - Simulation Time (s) - Slot Time (s)]',sim_info)
 print('Acoustic Communication Stat [PDR AUV1,PDR AUV2,PDR AUV3,PDR AUV4]:',PDR)
 for i in range(int(auvNum)):
     #print('OPTIMIZATION STATS --> Average Optimization Time AUV ID:',i+1,sum(avgTime[i])/len(avgTime[i]))
-    print('AUV ID RMSE (m):',i+1,(sum(tracking_errors[i])/len(tracking_errors[i])))
+    mean_error = (sum(tracking_errors[i])/len(tracking_errors[i]))
+
+    variance_error = np.var(tracking_errors[i])#sum((e - mean_error) ** 2 for e in tracking_errors[i]) / len(tracking_errors[i])
+    print(f'AUV ID {i+1} RMSE (m): {mean_error:.3f}, Std Dev: {np.sqrt(variance_error):.3f}')
 
 
 #np.savetxt('/home/andrea/Documents/controlo_paper_results/official_results/validation1/logs/logs_COMPARISON_ERRORS/cond_range3',list_phi)
@@ -164,10 +171,13 @@ for i in range(int(auvNum)):
 #np.savetxt('/home/andrea/Desktop/cost_gamma=0.3',list_phi)
 ##########################################################
 # PLOT SETUP
-fs = 42
-lw = 5
+fs = 50
+lw = 8
 sw = 1
 tw = 40
+lwsw = 200
+ticks_size = 50
+ms = 15
 math_vars = ['\\kappa(\\Phi)','\\xi','C^{(d)}+C^{(g)}']
 
 agents_vars = ['s_1','s_2','s_3','s_4']
@@ -175,11 +185,11 @@ time_vars = ['(t_{0})','(t_{f})','(t_{0}=t_{f})']
 
 ###########################################################
 # Plot Communication info
-# Plot Communication info
+
 figComm, axComm = plt.subplots(figsize=(10, 5 * auvNum))
 
 Ts = 12
-colors = plt.cm.get_cmap('tab10', auvNum)  # Get a colormap with a different color for each AUV
+colors = plt.cm.get_cmap('Accent', auvNum)  # Get a colormap with a different color for each AUV
 
 for j in range(auvNum):
     if guidanceETC[j] is not None:
@@ -193,19 +203,21 @@ for j in range(auvNum):
         
         pings = np.linspace(0, simTime, len(guidanceETC[j]))
         pingAUV1 = [j + 1] * len(guidanceETC[j])  # Offset each AUV's y-value by its index
-        axComm.scatter(guidanceETC[j], pingAUV1, label=f'AUV {j+1}', color=colors(j))
+        axComm.scatter(guidanceETC[j], pingAUV1, label=f'ping AUV {j+1}', color=colors(j), marker='X', s=500, linewidths=1)
+        
+axComm.set_yticks(np.linspace(1, auvNum, auvNum))  # Increase horizontal grid lines
 
-axComm.set_xlabel('pings', fontsize=fs)
+axComm.set_xlabel('t(s)', fontsize=fs)
 axComm.set_ylabel('AUV ID', fontsize=fs)
-axComm.legend(fontsize=fs * 2 / 3)
+#axComm.legend(fontsize=fs * 3 / 5)
 axComm.grid()
-axComm.tick_params(axis='both', which='major', labelsize=(fs * 2) / 3)
+axComm.tick_params(axis='both', which='major', labelsize=ticks_size)
 
 
 ##########################################################
 # Plot trend conditioning estimation problem
 fig, ax = plt.subplots()
-t_axis = np.linspace(0,600,len(list_phi))
+t_axis = np.linspace(0,simTime,len(list_phi))
 max_ = max(list_phi)
 tmp = []
 for i in range(samples):
@@ -215,60 +227,148 @@ ax.plot(t_axis,list_phi,label='Loss Function',linewidth=lw)
 opt_value = []
 for i in range(samples):
     opt_value.append(1)
-ax.plot(t_axis,opt_value,'r--',label='Optimal Value',linewidth=lw)
+ax.plot(t_axis,opt_value,'r:',label='Optimal Value',linewidth=lw/2)
 ax.set_xlabel('t (s)', fontsize = fs)
 #ax.set_ylabel(r'$ %s $'%math_vars[2], fontsize=fs)
 ax.set_ylabel('Cumulative Objective', fontsize=fs)
-ax.legend(fontsize=fs*2/3)
+ax.legend(fontsize=fs)
 ax.grid()
-plt.yticks(fontsize=(fs*2)/3, rotation = 0)#to set dimension and orientation of tick labels
-plt.xticks(fontsize=(fs*2)/3, rotation=0)#to set dimension and orientation of tick labels
+plt.yticks(fontsize=ticks_size, rotation = 0)#to set dimension and orientation of tick labels
+plt.xticks(fontsize=ticks_size, rotation=0)#to set dimension and orientation of tick labels
 #plt.show()
+
+##########################################################
+# Plot tracking error in separate subplots
+fig, axes = plt.subplots(auvNum, 1, figsize=(8, 3 * auvNum), sharex=True)
+math_vars = ['AUV1', 'AUV2', 'AUV3', '\\epsilon']
+t = np.linspace(0, simTime, n_estimations)
+epsi = 15.0
+epsi = np.zeros_like(t)+epsi  # Zero reference line
+
+max_ = max(tracking_errors[0])
+for i in range(auvNum):
+    max_tmp = max(tracking_errors[i])
+        
+    if max_tmp > max_: 
+        max_ = max_tmp
+
+num_y_ticks = 4  # Define how many horizontal grid lines you want
+
+for i in range(auvNum):
+
+    axes[i].plot(t, tracking_errors[i][:n_estimations], label=rf'$ {math_vars[i]} $', 
+                 linewidth=lw, marker='o', markersize=ms, color=colors(i))
+
+    axes[i].plot(t, epsi, 'r:', linewidth=lw*2/3, label=rf'$ {math_vars[-1]} $')
+    
+    if i == 1:
+        axes[i].set_ylabel('RMSE (m)', fontsize=42)
+    
+    axes[i].legend(fontsize=25)
+    axes[i].grid()
+    axes[i].tick_params(axis='y', labelsize=fs*2/3)
+    axes[i].tick_params(axis='x', labelsize=fs*2/3)
+    #axes[i].set_ylim([0, max_])
+    
+    #axes[i].set_yticks(np.linspace(0, max_, num_y_ticks))  # Increase horizontal grid lines
+
+axes[-1].set_xlabel('t (s)', fontsize=42)
+plt.xticks(fontsize=fs*2/3)
+
+
+##########################################################
+# Plot consensus dynamic derivative
+fig, ax = plt.subplots()
+math_vars = ['\\dot{\\xi}(t)']
+consensus_dyn = []
+t = np.linspace(0, simTime, n_estimations)
+colors = plt.cm.get_cmap('tab10', auvNum)  # Get a colormap with a different color for each AUV
+
+x_hat1 = x_hat[0]
+x_hat2 = x_hat[1]
+x_hat3 = x_hat[2]
+epsi = 1.5
+epsi_max = np.zeros_like(t)+epsi
+epsi_min = np.zeros_like(t)-epsi
+
+# Compute the consensus dynamic as the sum of pairwise differences (norms)
+for i in range(n_estimations):
+    diff1 = np.linalg.norm(x_hat1[i] - x_hat2[i])
+    diff2 = np.linalg.norm(x_hat1[i] - x_hat3[i])
+    diff3 = np.linalg.norm(x_hat2[i] - x_hat3[i])
+    consensus_dyn.append(diff1 + diff2 + diff3)
+
+
+# Compute the numerical derivative (first derivative) of the consensus dynamic
+consensus_derivative = np.gradient(consensus_dyn, t)
+
+ax.plot(t, consensus_derivative, linewidth=lw, marker='o', markersize=ms, label=r'$ %s $' % math_vars[0])
+#ax.plot(t, consensus_derivative, linewidth=lw, marker='o', label=r'$ %s $' % math_vars[0])
+ax.plot(t, epsi_min, 'r:', linewidth=lw, label=r'$ -\epsilon $')
+ax.plot(t, epsi_max, 'r:', linewidth=lw, label=r'$ +\epsilon $')
+ax.set_xlabel('t (s)', fontsize=fs)
+ax.set_ylabel(r'$ %s $' % math_vars[0], fontsize=fs)
+ax.legend(fontsize=ticks_size)
+ax.grid()
+plt.yticks(fontsize=ticks_size, rotation = 0)#to set dimension and orientation of tick labels
+plt.xticks(fontsize=ticks_size, rotation=0)#to set dimension and orientation of tick labels
 
 ##########################################################
 # Plot simulation scenario
 
+# PLOT SETUP
+fs = 42
+lw = 5
+sw = 1
+tw = 40
+lwsw = 150
+ms = 2
+math_vars = ['\\kappa(\\Phi)','\\xi','C^{(d)}+C^{(g)}']
+agents_vars = ['s_1','s_2','s_3','s_4']
+time_vars = ['(t_{0})','(t_{f})','(t_{0}=t_{f})']
+
 fig2, ax = plt.subplots()
 plt.yticks(fontsize=(fs*2)/3, rotation = 0)#to set dimension and orientation of tick labels
 plt.xticks(fontsize=(fs*2)/3, rotation=0)#to set dimension and orientation of tick labels
-test = []
-a = 0
-for i in range(samples):
-    a = 0 + i#samples - i
-    test.append(a*10)
 
-c_map = ax.scatter(target_x[:,0],target_y[:,0],c=test,cmap='autumn_r',vmin=0, vmax=simTime,linewidths=sw)
-ax.scatter(target_x[0],target_y[0],c='y',marker='o',linewidths=sw*8)
-ax.scatter(target_x[-1],target_y[-1],c='k',linewidths=sw*12)
-ax.scatter(target_x[-1],target_y[-1],c='r',linewidths=sw*8)
+
+test = np.linspace(0, simTime, samples)  # Create a test array for color mapping
+
+c_map = ax.scatter(target_x[:, 0], target_y[:, 0], c=test, cmap='autumn_r', vmin=0, vmax=simTime, linewidths=sw)
+
+ax.scatter(target_x[0],target_y[0],c='y',marker='X',s=lwsw,linewidths=ms,label=r'$ %s $'%math_vars[1]+r'$ %s $'%time_vars[0])
+#ax.scatter(target_x[0],target_y[0],c='k',linewidths=sw*12)
+ax.scatter(target_x[-1],target_y[-1],c='r',marker='X',s=lwsw,linewidths=ms,label=r'$ %s $'%math_vars[1]+r'$ %s $'%time_vars[1])
+#ax.scatter(target_x[-1],target_y[-1],c='r',linewidths=sw*8)
 
 
 #ax.text(target_x[-1],target_y[-1]-23,r'$ %s $'%math_vars[1]+r'$ %s $'%time_vars[2],fontsize=(tw/3)*2)
-ax.text(target_x[-1]-100,target_y[-1],r'$ %s $'%math_vars[1]+r'$ %s $'%time_vars[1],fontsize=tw)
-ax.text(target_x[0]-100,target_y[0],r'$ %s $'%math_vars[1]+r'$ %s $'%time_vars[0],fontsize=tw)
+#ax.text(target_x[-1]-200,target_y[-1],r'$ %s $'%math_vars[1]+r'$ %s $'%time_vars[1],fontsize=tw)
+#ax.text(target_x[0]-150,target_y[0],r'$ %s $'%math_vars[1]+r'$ %s $'%time_vars[0],fontsize=tw)
 
 #ax.text(target_x[-1]+5,target_y[-1]+2,r'$ %s $'%math_vars[1]+r'$ %s $'%time_vars[2],fontsize=(tw/3)*2)
 
 cb = fig.colorbar(c_map, ax=ax)
 cb.set_label('t (s)',fontsize=fs)
 cb.ax.tick_params(labelsize=(fs/3)*2)
-FAILURE = False
+FAILURE = header.config.AUV_failure
+
 for i in range(int(auvNum)):
     
     if i == 0:
         ax.plot([auv_x[-1,i],
-            target_x[-1,0]],[auv_y[-1,i],target_y[-1,0]],'r--',linewidth=lw/3,label='LOS'+r'$ %s $'%time_vars[1])
+            target_x[-1,0]],[auv_y[-1,i],target_y[-1,0]],'r:',linewidth=lw/3,label='LOS'+r'$ %s $'%time_vars[1])
     else:
         if i != 1 or FAILURE == False:
             ax.plot([auv_x[-1,i],
-                target_x[-1,0]],[auv_y[-1,i],target_y[-1,0]],'r--',linewidth=lw/3)
+                target_x[-1,0]],[auv_y[-1,i],target_y[-1,0]],'r:',linewidth=lw/3)
         
     if i == 0:
-        a,b,c,d = -55,-55,-25,0
+        a,b = 20,-55
     elif i == 1:
-        a,b,c,d = -60,-45,-25,-35
+        a,b = 40,-45
     else:
-        a,b,c,d = -120,+30,-30,+30
+        a,b = -120,+30
 
     '''if i == 0:
         a,b,c,d = +5,+0,+2,0
@@ -281,9 +381,9 @@ for i in range(int(auvNum)):
     ax.text(auv_x[0,i]+a,auv_y[0,i]+b,r'$ %s $'%agents_vars[i]+r'$ %s $'%time_vars[0],fontsize=tw)
     ax.scatter(auv_x[0,i],auv_y[0,i],c='y',linewidths=sw*8)
     #ax.text(auv_x[-1,i]+c,auv_y[-1,i]+d,r'$ %s $'%agents_vars[i]+r'$ %s $'%time_vars[1],fontsize=tw)
-    if i == 1:  
-        if FAILURE == True:
-            ax.text(auv_x[-1,i]+15,auv_y[-1,i],'FAILURE',fontsize=2*tw/3)
+    if i == 1 and FAILURE==True:  
+        
+        ax.text(auv_x[-1,i]+15,auv_y[-1,i],'FAILURE',fontsize=2*tw/3)
         ax.scatter(auv_x[-1,i],auv_y[-1,i],marker='X',c='r',linewidths=sw*15)
     else:   
         ax.scatter(auv_x[-1,i],auv_y[-1,i],c='r',linewidths=sw*8)
@@ -336,77 +436,16 @@ ax.set_xlabel('x (m)',fontsize=fs)
 ax.set_ylabel('y (m)',fontsize=fs)
 ax.grid()
 ax.axis('equal')
-ax.legend(fontsize=(fs*2)/3,loc='lower right')
-
-
-##########################################################
-# Plot tracking error in separate subplots
-fig, axes = plt.subplots(auvNum, 1, figsize=(8, 3 * auvNum), sharex=True)
-math_vars = ['AUV1', 'AUV2', 'AUV3', '\\epsilon']
-t = np.linspace(0, simTime, n_estimations)
-epsi = 10.0
-epsi = np.zeros_like(t)+epsi  # Zero reference line
-
-max_ = max(tracking_errors[0])
-for i in range(auvNum):
-    max_tmp = max(tracking_errors[i])
-        
-    if max_tmp > max_: 
-        max_ = max_tmp
-
-for i in range(auvNum):
-
-    axes[i].plot(t, tracking_errors[i][:n_estimations], label=rf'$ {math_vars[i]} $', linewidth=lw, marker='o',color=colors(i))
-    axes[i].plot(t, epsi, 'r--', linewidth=lw, label=rf'$ {math_vars[-1]} $')
-    if i == 1:
-        axes[i].set_ylabel('RMSE (m)', fontsize=fs)
-    axes[i].legend(fontsize=fs * 2 / 3)
-    axes[i].grid()
-    axes[i].tick_params(axis='y', labelsize=fs * 2 / 3)
-    axes[i].tick_params(axis='x', labelsize=fs * 2 / 3)
-    axes[i].set_ylim([0, max_])
-    
-
-axes[-1].set_xlabel('t (s)', fontsize=fs)
-
-plt.xticks(fontsize=fs * 2 / 3)
-#plt.tight_layout()
-
-##########################################################
-# Plot consensus dynamic derivative
-fig, ax = plt.subplots()
-math_vars = ['\\dot{\\xi}(t)']
-consensus_dyn = []
-t = np.linspace(0, simTime, n_estimations)
-colors = plt.cm.get_cmap('tab10', auvNum)  # Get a colormap with a different color for each AUV
-
-x_hat1 = x_hat[0]
-x_hat2 = x_hat[1]
-x_hat3 = x_hat[2]
-epsi = 1.5
-epsi_max = np.zeros_like(t)+epsi
-epsi_min = np.zeros_like(t)-epsi
-
-# Compute the consensus dynamic as the sum of pairwise differences (norms)
-for i in range(n_estimations):
-    diff1 = np.linalg.norm(x_hat1[i] - x_hat2[i])
-    diff2 = np.linalg.norm(x_hat1[i] - x_hat3[i])
-    diff3 = np.linalg.norm(x_hat2[i] - x_hat3[i])
-    consensus_dyn.append(diff1 + diff2 + diff3)
-
-
-# Compute the numerical derivative (first derivative) of the consensus dynamic
-consensus_derivative = np.gradient(consensus_dyn, t)
-
-ax.plot(t, consensus_derivative, linewidth=lw, marker='o', label=r'$ %s $' % math_vars[0])
-#ax.plot(t, consensus_derivative, linewidth=lw, marker='o', label=r'$ %s $' % math_vars[0])
-ax.plot(t, epsi_min, 'r--', linewidth=lw, label=r'$ -\epsilon $')
-ax.plot(t, epsi_max, 'r--', linewidth=lw, label=r'$ +\epsilon $')
-ax.set_xlabel('t (s)', fontsize=fs)
-ax.set_ylabel('Consensus Dynamic', fontsize=fs)
-ax.legend(fontsize=fs*2/3)
-ax.grid()
+ax.legend(fontsize=(fs*2)/3)
 plt.show()
+
+
+
+
+
+
+
+
 
 
 ##########################################################
@@ -426,7 +465,7 @@ for i in range(int(auvNum)):
     for j in range(samples):
 
         low_thresh.append(lthres)
-        dist.append(np.sqrt((target_x[j]-tmp_x[j])**2+(target_y[j]-tmp_y[j])**2)-a)
+        dist.append(np.sqrt((target_x[j]-tmp_x[j])**2+(target_y[j]-tmp_y[j])**2))
         
         
     model = make_interp_spline(x, dist[::sampling])
@@ -437,7 +476,7 @@ for i in range(int(auvNum)):
 
 ax.set_xlabel('t (s)',fontsize=fs)
 ax.set_ylabel('d (m)',fontsize=fs)
-ax.plot(t,low_thresh,'r--',linewidth=lw/2,label=r'$ %s $'%math_vars[4])
+ax.plot(t,low_thresh,'r:',linewidth=lw/2,label=r'$ %s $'%math_vars[4])
 ax.legend(fontsize=fs*2/3)
 ax.grid()
 plt.yticks(fontsize=(fs*2)/3, rotation = 0)#to set dimension and orientation of tick labels
@@ -483,6 +522,20 @@ ax.legend(fontsize=fs*2/3)
 ax.grid()
 plt.yticks(fontsize=(fs*2)/3, rotation = 0)#to set dimension and orientation of tick labels
 plt.xticks(fontsize=(fs*2)/3, rotation=0)#to set dimension and orientation of tick labels
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 '''fig5, ax = plt.subplots()
 ax.plot(list_phi,dist_reward,linewidth=lw/2)
@@ -666,7 +719,7 @@ noise_change = []
 for i in range(loops):
     desired_snr.append(header.config.DThresh)
     noise_change.append(header.config.TIME_DURATION/2)
-ax.plot(t,desired_snr,'r--',label=r'$ %s $'%math_vars[2],linewidth=lw)
+ax.plot(t,desired_snr,'r:',label=r'$ %s $'%math_vars[2],linewidth=lw)
 plt.axvline(x=header.config.TIME_DURATION/2,color='k',label='NOISE CHANGE',linewidth=lw)
 
 ax.set_ylabel(r'$ %s $'%math_vars[0], fontsize=fs)
