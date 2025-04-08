@@ -143,7 +143,7 @@ for k in range(targetNum):
     for i in range(samples):
         if header.config.AUV_failure and i >= samples / 2:
             if once == False:
-                phi_lists = np.delete(phi_lists, (1), axis=0)#for now only AUV2 can fail
+                phi_lists = np.delete(phi_lists, (0), axis=0)#for now only AUV2 can fail
                 once = True
             phi[:auvNum-1] = phi_lists[:, i]
         else:
@@ -231,49 +231,57 @@ ax.plot(t_axis,opt_value,'r:',label='Optimal Value',linewidth=lw/2)
 ax.set_xlabel('t (s)', fontsize = fs)
 #ax.set_ylabel(r'$ %s $'%math_vars[2], fontsize=fs)
 ax.set_ylabel('Cumulative Objective', fontsize=fs)
-ax.legend(fontsize=fs)
+ax.legend(fontsize=fs*2/3)
 ax.grid()
 plt.yticks(fontsize=ticks_size, rotation = 0)#to set dimension and orientation of tick labels
 plt.xticks(fontsize=ticks_size, rotation=0)#to set dimension and orientation of tick labels
 #plt.show()
-
+np.savetxt('/home/andrea/Desktop/NL=50db',list_phi)
 ##########################################################
 # Plot tracking error in separate subplots
-fig, axes = plt.subplots(auvNum, 1, figsize=(8, 3 * auvNum), sharex=True)
+
+failed_auv = 1  # Index of the failed AUV (e.g., AUV2 fails, which is index 1)
+FAILURE = header.config.AUV_failure
+# Determine active AUVs
+if FAILURE:
+    active_auvs = [i for i in range(auvNum) if i != failed_auv]
+else:
+    active_auvs = list(range(auvNum))
+
+# Number of active AUVs
+active_auvNum = len(active_auvs)
+
+fig, axes = plt.subplots(active_auvNum, 1, figsize=(8, 3 * active_auvNum), sharex=True)
+#fig.subplots_adjust(left=0.12, right=0.14, top=0.90, bottom=0.88)
 math_vars = ['AUV1', 'AUV2', 'AUV3', '\\epsilon']
 t = np.linspace(0, simTime, n_estimations)
-epsi = 15.0
-epsi = np.zeros_like(t)+epsi  # Zero reference line
+epsi = np.zeros_like(t) + 15.0  # 15 meter error - reference line
 
-max_ = max(tracking_errors[0])
-for i in range(auvNum):
-    max_tmp = max(tracking_errors[i])
-        
-    if max_tmp > max_: 
-        max_ = max_tmp
+max_ = max(max(tracking_errors[i]) for i in active_auvs)
 
 num_y_ticks = 4  # Define how many horizontal grid lines you want
 
-for i in range(auvNum):
+# Ensure axes is iterable when there's only one subplot
+if active_auvNum == 1:
+    axes = [axes]
 
-    axes[i].plot(t, tracking_errors[i][:n_estimations], label=rf'$ {math_vars[i]} $', 
-                 linewidth=lw, marker='o', markersize=ms, color=colors(i))
+for idx, i in enumerate(active_auvs):  # Iterate over active AUV indices
+    axes[idx].plot(t, tracking_errors[i][:n_estimations], label=rf'$ {math_vars[i]} $', 
+                   linewidth=lw, marker='o', markersize=ms, color=colors(i))
 
-    axes[i].plot(t, epsi, 'r:', linewidth=lw*2/3, label=rf'$ {math_vars[-1]} $')
+    axes[idx].plot(t, epsi, 'r:', linewidth=lw * 2 / 3, label=rf'$ {math_vars[-1]} $')
     
-    if i == 1:
-        axes[i].set_ylabel('RMSE (m)', fontsize=42)
+    if idx == 1 or (active_auvNum == 1 and idx == 0):
+        axes[idx].set_ylabel('RMSE (m)', fontsize=42)#12 spaces for auv failure
     
-    axes[i].legend(fontsize=25)
-    axes[i].grid()
-    axes[i].tick_params(axis='y', labelsize=fs*2/3)
-    axes[i].tick_params(axis='x', labelsize=fs*2/3)
-    #axes[i].set_ylim([0, max_])
+    axes[idx].legend(fontsize=25)
+    axes[idx].grid()
+    axes[idx].tick_params(axis='y', labelsize=fs * 2 / 3)
+    axes[idx].tick_params(axis='x', labelsize=fs * 2 / 3)
     
-    #axes[i].set_yticks(np.linspace(0, max_, num_y_ticks))  # Increase horizontal grid lines
-
 axes[-1].set_xlabel('t (s)', fontsize=42)
-plt.xticks(fontsize=fs*2/3)
+plt.xticks(fontsize=fs * 2 / 3)
+
 
 
 ##########################################################
@@ -328,9 +336,11 @@ agents_vars = ['s_1','s_2','s_3','s_4']
 time_vars = ['(t_{0})','(t_{f})','(t_{0}=t_{f})']
 
 fig2, ax = plt.subplots()
+#fig2.subplots_adjust(left=0.12, right=0.14, top=0.90, bottom=0.88)
+#ax = fig2.add_axes([0.2, 0.2, 0.88, 0.88])  # [left, bottom, width, height] in figure coordinates
+
 plt.yticks(fontsize=(fs*2)/3, rotation = 0)#to set dimension and orientation of tick labels
 plt.xticks(fontsize=(fs*2)/3, rotation=0)#to set dimension and orientation of tick labels
-
 
 test = np.linspace(0, simTime, samples)  # Create a test array for color mapping
 
@@ -351,24 +361,24 @@ ax.scatter(target_x[-1],target_y[-1],c='r',marker='X',s=lwsw,linewidths=ms,label
 cb = fig.colorbar(c_map, ax=ax)
 cb.set_label('t (s)',fontsize=fs)
 cb.ax.tick_params(labelsize=(fs/3)*2)
-FAILURE = header.config.AUV_failure
+
 
 for i in range(int(auvNum)):
     
-    if i == 0:
+    if i == 1:
         ax.plot([auv_x[-1,i],
             target_x[-1,0]],[auv_y[-1,i],target_y[-1,0]],'r:',linewidth=lw/3,label='LOS'+r'$ %s $'%time_vars[1])
     else:
-        if i != 1 or FAILURE == False:
+        if i != 0 or FAILURE == False:
             ax.plot([auv_x[-1,i],
                 target_x[-1,0]],[auv_y[-1,i],target_y[-1,0]],'r:',linewidth=lw/3)
         
     if i == 0:
-        a,b = 20,-55
+        a,b = -50,-35
     elif i == 1:
-        a,b = 40,-45
+        a,b = -50,25
     else:
-        a,b = -120,+30
+        a,b = -60,+25
 
     '''if i == 0:
         a,b,c,d = +5,+0,+2,0
@@ -381,9 +391,9 @@ for i in range(int(auvNum)):
     ax.text(auv_x[0,i]+a,auv_y[0,i]+b,r'$ %s $'%agents_vars[i]+r'$ %s $'%time_vars[0],fontsize=tw)
     ax.scatter(auv_x[0,i],auv_y[0,i],c='y',linewidths=sw*8)
     #ax.text(auv_x[-1,i]+c,auv_y[-1,i]+d,r'$ %s $'%agents_vars[i]+r'$ %s $'%time_vars[1],fontsize=tw)
-    if i == 1 and FAILURE==True:  
+    if i == 0 and FAILURE==True:  
         
-        ax.text(auv_x[-1,i]+15,auv_y[-1,i],'FAILURE',fontsize=2*tw/3)
+        ax.text(auv_x[-1,i]-100,auv_y[-1,i]-45,'FAILURE',fontsize=3*tw/5)
         ax.scatter(auv_x[-1,i],auv_y[-1,i],marker='X',c='r',linewidths=sw*15)
     else:   
         ax.scatter(auv_x[-1,i],auv_y[-1,i],c='r',linewidths=sw*8)
@@ -437,16 +447,8 @@ ax.set_ylabel('y (m)',fontsize=fs)
 ax.grid()
 ax.axis('equal')
 ax.legend(fontsize=(fs*2)/3)
+
 plt.show()
-
-
-
-
-
-
-
-
-
 
 ##########################################################
 #plot distance to target

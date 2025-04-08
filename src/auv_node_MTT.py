@@ -108,6 +108,7 @@ def run_auv_node(pub,auv,obs,Ts,Tf,auvNum):
     blue = "\033[1;34m"
     cyan = "\033[0;36m"
     BGreen="\[\033[1;32m\]" 
+    BRed = "\033[1;31m"
     none = "\033[0m"
 
     # Load simulation params from config file
@@ -289,12 +290,14 @@ def run_auv_node(pub,auv,obs,Ts,Tf,auvNum):
         
             #if the optimization has produced somthing update path, do this control always to avoid unnecessary waitings.
             if sum(ctrlPolicy) != sum(old_pi_bar):
+                
+                if AUV_failure == True and t > h.config.TIME_DURATION/2 and auvID == 1:
+                    rospy.logout('%s|---- AUV '+str(auvID)+': AUV1 Failure%s',BRed,none)
+                    ctrlPolicy = [0.0 for _ in range(3+2*(H+1))]
                 f_ctrlPolicy = [f"{val:.2f}" for val in ctrlPolicy]
                 rospy.logout('%s|---- AUV '+str(auvID)+': Optimization Done!, Output Policy [state (X,Y,Theta), headings (rad), surge (m/s)] --> %s%s',
                 BGreen, f_ctrlPolicy, none)
-                if AUV_failure == True and t > h.config.TIME_DURATION/2 and auvID == 2:
-                    rospy.logout('%s|---- AUV '+str(auvID)+': AUV2 Failure%s',BGreen,none)
-                    ctrlPolicy = [0.0 for _ in range(3+2*(H+1))]
+                
                 tmp = []
                 for i in range(H):
                     tmp.append([ctrlPolicy[3+i], ctrlPolicy[4+H+i]])
@@ -360,10 +363,10 @@ def run_auv_node(pub,auv,obs,Ts,Tf,auvNum):
                 if len(rx)-1 <= idxMotion+idx:
                     idxMotion += 0
                 else:
-                    if auvID != 2:
+                    if auvID != 1:
                         idxMotion += 1  
                     else:
-                        #SIMULATE AUV2_failure
+                        #SIMULATE AUV1_failure
                         if t > h.config.TIME_DURATION/2 and AUV_failure == True:
                             idxMotion += 0
                         else:

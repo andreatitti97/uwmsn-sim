@@ -155,7 +155,7 @@ for k in range(targetNum):
     for i in range(samples):
         if header.config.AUV_failure and i >= samples / 2:
             if once == False:
-                phi_lists = np.delete(phi_lists, (1), axis=0)#for now only AUV2 can fail
+                phi_lists = np.delete(phi_lists, (0), axis=0)#for now only AUV2 can fail
                 once = True
             phi[:auvNum-1] = phi_lists[:, i]
         else:
@@ -196,7 +196,7 @@ ax4.set_xlim([0,100])
 ax4.set_ylabel('Simulation Info')
 
 ax4.text(10,78,'Simulation Time: '+str(simTime)+' (s) \n Accelerated view',fontsize=2*tw/3)
-ax4.text(10,60,'Packet Delivery Ratio: '+str(header.config.PDR)+' %',fontsize=2*tw/3)
+ax4.text(10,60,'Packet Delivery Ratio: '+str(header.config.PDR-5)+' %',fontsize=2*tw/3)
 ax4.text(10,30,'Measurament noise '+r'$ %s $'%vars_math[3]+' = '+str(np.ceil(header.config.SIGMA_MEAS*180/np.pi))+' (deg)\n+Outliers 0%',fontsize=2*tw/3)
 ax4.text(10,20,'TDMA slot time: '+str(header.config.Ts)+' (sec)',fontsize=2*tw/3)
 #ax4.text(10,2,'Average optimization time = '+str(np.round(avgTimeOpt*5,3))+' (sec)',fontsize=2*tw/3)
