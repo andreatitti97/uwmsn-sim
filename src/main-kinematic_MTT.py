@@ -10,6 +10,7 @@ from rospy_tutorials.msg import Floats
 from rospy.numpy_msg import numpy_msg
 from uwmsn_msgs.msg import Matrix
 from std_srvs.srv import Trigger, TriggerResponse
+from scipy.spatial import distance_matrix
 
 # Environment: Define the relevant paths
 '''pathlib: output is an object path (sum a string using '/')
@@ -37,47 +38,6 @@ s_traj_x, s_traj_y = [[] for _ in range(auvNumSim)], [[] for _ in range(auvNumSi
 t_traj_x, t_traj_y = [[] for _ in range(auvNumSim)], [[] for _ in range(auvNumSim)]
 global t
 
-
-def kinematic_control_auv(s, x_des, y_des, theta_ref, K_p, dt, e_ij):
-    """
-    Implements kinematic control for an underactuated AUV.
-    
-    Parameters:
-    - s: np.array([x, y, theta]) -> Current state (position and heading)
-    - x_des: float -> Desired x position
-    - y_des: float -> Desired y position
-    - theta_ref: float -> Reference desired heading
-    - e_ij: list or np.array -> Errors with neighboring agents
-    - K_p: float -> Proportional gain for coordination term
-    - dt: float -> Time step for integration
-    
-    Returns:
-    - s_next: np.array([x_next, y_next, theta_next]) -> Updated state
-    - u: float -> Controlled surge velocity
-    - r: float -> Yaw rate control input
-    """
-    # Compute desired surge velocity
-    dx = x_des - s[0]
-    dy = y_des - s[1]
-    u_ref = np.sqrt(dx**2 + dy**2) / dt  # Compute reference surge velocity
-    
-    # Compute controlled surge velocity
-    u = u_ref - K_p * np.sum(e_ij)
-    
-    # Compute yaw rate (simple proportional control to follow reference heading)
-    r = (theta_ref - s[2]) / dt  # Approximating derivative as finite difference
-    
-    # Apply kinematic model
-    x, y, theta = s
-    x_next = x + u * np.cos(theta) * dt
-    y_next = y + u * np.sin(theta) * dt
-    theta_next = theta + r * dt
-    print('u',u)
-    print('r',r)
-    return np.array([x_next, y_next, theta_next]), u, r
-
-from scipy.spatial import distance_matrix
-
 def compute_distances(points):
     """
     Compute the pairwise distances between a set of points.
@@ -89,8 +49,6 @@ def compute_distances(points):
     numpy.ndarray: An (n, n) distance matrix.
     """
     return distance_matrix(points, points)
-
-
 
 def run_simulation(target_list, auvNum, pub_s_state, pub_t_state, pub_init_opt):
 
@@ -143,9 +101,6 @@ def run_simulation(target_list, auvNum, pub_s_state, pub_t_state, pub_init_opt):
         target = target_list[i]
         rospy.loginfo('|---- KINEMATIC SIMULATION: Initial Target(s) pose (m) --> %s',
                         [target.pose.x,target.pose.y,target.pose.theta])
-        
-
-
     rospy.sleep(1)
 
     ## SIMULATION LOOP ############################################################################################################
@@ -170,22 +125,11 @@ def run_simulation(target_list, auvNum, pub_s_state, pub_t_state, pub_init_opt):
             pub_t_state[i].publish(Matrix(data=consMat.flatten().tolist(), rows=rows, cols=cols))
 
         # Move Agents
+        MOVING_AGENTS = True
         for i in range(auvNum):
             tmp = paths[i]
-            if tmp[0] != None:
+            if tmp[0] != None and MOVING_AGENTS == True:
                 auvs_xy[i,0], auvs_xy[i,1], auvs_xy[i,2]  = tmp[0], tmp[1], tmp[2]
-                '''x_ref, y_ref, yaw_ref  = tmp[0], tmp[1], tmp[2]
-            
-                #points = np.array([[0, 0], [1, 1], [2, 2], [3, 3]])  # Example 2D points
-                #distances = compute_distances(points)
-                s, u, r = kinematic_control_auv([auvs_xy[i,0], auvs_xy[i,1], auvs_xy[i,2]], 
-                                                                x_ref, y_ref, yaw_ref,1.0, dt,  e_ij=0)
-                
-                
-                auvs_xy[i,0] = s[0]
-                auvs_xy[i,1] = s[1]
-                auvs_xy[i,2] = s[2]'''
-            
         # Move Targets
         for i in range(targetNum):
             target = target_list[i]
@@ -303,12 +247,8 @@ def main():
     for i in range(targetNum):
         target_list.append(h.target.Target(i+1,False))
 
-
     # Start listeners and run simulation
     listener(auvNum)
-
-    
-
     run_simulation(target_list, auvNum, pub_s_state, pub_t_state, pub_init_opt)  
     rospy.on_shutdown(lambda: shutdown_cllbk(auvNum,targetNum,t))
     rospy.spin()

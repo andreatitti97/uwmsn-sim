@@ -36,7 +36,7 @@ def alpha_f(f):
     
 ############################################################ SIMULATION SETUP ########################################################
 # Simulation parameters
-TIME_DURATION = 800 # (s)
+TIME_DURATION = 500 # (s)
 TIME_SCALER = 1# in [1 - 10] values near 10 may be source of errors (to fast for ROS stack)
 TIME_STEP = 0.01*TIME_SCALER
 targetNum = 3 #this is the maximum number of target considered in the simulator
@@ -47,13 +47,15 @@ TM = 2 #measurements sampling period (s), lower than this impossible due to AVS 
 P_max = 40 # regressor MAX length 40
 P_min = 5 #regressor min length
 buffLen = 3 #buffer length for storing received pkts
-SIGMA_MEAS = 0.06#0.08 #(rad^2) --> 4.5° (as assumed in DAMPS and by cassino)
-k_phi_thresh = 50.0 #Thresh sul condizionamento del regressore per aggiornare la stima
+SIGMA_MEAS = 0.04# #(rad^2) --> 4.5° (as assumed in DAMPS and by cassino)
+k_phi_thresh = 150.0# #Thresh sul condizionamento del regressore per aggiornare la stima
 
 
 # AUVs Team Settings
 AUV_MAX_VEL = 3.0 #(m/s)
 AUV_failure = False #auv1 will fail after t = TIME_DURATION/2
+failingAUV = 3 #ID AUV that will fail 
+etcActive = True
 netTopology = [[] for _ in range(auvNum)]
 netTopology[0] = [2] #put the ID of the neigbours of agent 1
 netTopology[1] = [1,3] #put the ID of the neigbours of agent 2
@@ -67,7 +69,7 @@ center = (0,0)
 
 random_init = False
 min_distance = 50 #Minimum distance between AUVs
-max_distance = 1000 #Maximum distance between AUVs
+max_distance = 500 #Maximum distance between AUVs
 
 if random_init == True:
     random_points = generate_random_points(area, min_distance, max_distance, center[0],center[1])
@@ -78,6 +80,21 @@ if random_init == True:
         AUV_XY[i,1] = point[1]
 
 else:
+
+   
+
+    # FAR INITIAL POSITION
+    AUV_XY[0,0] = 400
+    AUV_XY[0,1] = 400
+
+    AUV_XY[1,0] = 400   
+    AUV_XY[1,1] = 10
+
+    AUV_XY[2,0] = 10
+    AUV_XY[2,1] = 10
+
+
+  
     #MORE CLUTTERED INITIAL POSITION
     AUV_XY[0,0] = 50
     AUV_XY[0,1] = 100
@@ -89,7 +106,17 @@ else:
     AUV_XY[2,1] = -110
 
 
-    # BASE INITIAL POSITION
+  # FAR INITIAL POSITION alternative
+    AUV_XY[0,0] = 430
+    AUV_XY[0,1] = 200
+
+    AUV_XY[1,0] = 400   
+    AUV_XY[1,1] = 10
+
+    AUV_XY[2,0] = 10
+    AUV_XY[2,1] = 10
+
+         # BASE INITIAL POSITION
     AUV_XY[0,0] = -38
     AUV_XY[0,1] = 220
 
@@ -98,17 +125,6 @@ else:
 
     AUV_XY[2,0] = -150
     AUV_XY[2,1] = -100 
-
-      # FAR INITIAL POSITION
-    AUV_XY[0,0] = 400
-    AUV_XY[0,1] = 400
-
-    AUV_XY[1,0] = 400   
-    AUV_XY[1,1] = 10
-
-    AUV_XY[2,0] = 10
-    AUV_XY[2,1] = 10
-
 
 
 # Communication Policy Paramaters
@@ -130,7 +146,7 @@ PDR = 100 #Packet Delivery Ratio
 
 # Acoustic Model Parameters
 SL = 186 #we worked with modem at 182 - 168 db
-NL = 10 #db
+NL = 30 #db
 DI = 0 #directivity index a-dimensional
 c = 1500 #sound wave speed
 f = 10 #kHx ( frequency of the modem)
@@ -159,8 +175,8 @@ for i in range(len(dist)):
         print('SNR '+str(i)+'-'+str(i+1),SL -TL - NL - DI)
 
 # Optimization Parameters --- alpha = 0.15, gamma = 1.0 (almost fixed formation)
-alpha_w = 0.65 #fixed form 0.45#0.15
-gamma_w = 0.6 #fixed form 0.85#0.25#1.0
+alpha_w = 0.6 #fixed form 0.45#0.15
+gamma_w = 0.2 #fixed form 0.85#0.25#1.0
 RANGE_TO_TARGET = min_distance*2 #
 
 U = 5  # number of control choices (should be an ODD number)
@@ -204,19 +220,27 @@ TARGET_INIT = [-300,150, np.pi-np.pi/3, 0.2, 0.0, 0.0, 0.0]
 TARGET_INIT = [400,0, np.pi/2, 0.35, 0.0, 0.0, 0.0] 
 
 
-TARGET_INIT = [0,-350, -np.pi/6, 0.15, 0.0, 0.0, 0.0] # SCENARIO 1
-TARGET_INIT = [400,0, np.pi, 0.2, 0.0, 0.0, 0.0] # SCENARIO 2-3
-TARGET_INIT = [-600,25, np.pi/2, 0.35, 0.0, 0.0, 0.0]
 
-a = -0.4 #(m/s) increase for more amplitude of the "turn"
-omega = +0.05 #(-) #increase for faster sinusoidal beahviour
+
+TARGET_INIT = [400,0, np.pi, 0.2, 0.0, 0.0, 0.0] # SCENARIO 2-3
+
+
+
+TARGET_INIT = [-100,-350, -np.pi/2, -0.15, 0.0, 0.0, 0.0] # SCENARIO 1 bonus
+TARGET_INIT = [340,600, np.pi, -0.35, 0.0, 0.0, 0.0] # SCENARIO 5
+TARGET_INIT = [0,-350, -np.pi/6, -0.15, 0.0, 0.0, 0.0] # SCENARIO 1
+TARGET_INIT = [400,0, np.pi, 0.2, 0.0, 0.0, 0.0] # SCENARIO 2-3
+TARGET_INIT = [-600,25, np.pi/2, 0.35, 0.0, 0.0, 0.0] #scenario 4
+
+a = -0.6 #(m/s) increase for more amplitude of the "turn"
+omega = +0.03#(-) #increase for faster sinusoidal beahviour
 
 alpha_0, omega_0,alpha_dot_0,omega_dot_0 = TARGET_INIT[3],TARGET_INIT[4],TARGET_INIT[5],TARGET_INIT[6]
 
 
 MAX_TARGET_VEL = 3 #(m/s) (only if target nTARGET_INIT = [-250,105, np.pi-np.pi/6, 0.2, 0.0, 0.0, 0.0] # SCENARIO 1o costant vels)
 MIN_TARGET_VEL = 3 #(m/s)
-sin_pattern = True
+sin_pattern = False
 
 for i in range(len(AUV_XY)):
     AUV_XY[i,2] = math.atan2(TARGET_INIT[1]-AUV_XY[i,1],TARGET_INIT[0]-AUV_XY[i,0])

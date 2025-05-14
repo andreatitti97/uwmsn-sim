@@ -155,7 +155,7 @@ for k in range(targetNum):
     for i in range(samples):
         if header.config.AUV_failure and i >= samples / 2:
             if once == False:
-                phi_lists = np.delete(phi_lists, (0), axis=0)#for now only AUV2 can fail
+                phi_lists = np.delete(phi_lists, (2), axis=0)#for now only AUV2 can fail
                 once = True
             phi[:auvNum-1] = phi_lists[:, i]
         else:
@@ -163,7 +163,7 @@ for k in range(targetNum):
         cost = header.utils.computeCost(phi)
         list_phi[i] += cost#cost1 + cost2 #+ dist1[i] + dist2[i] + dist3[i]
 
-# Initialize strings fo legends
+# Initialize strings of legends
 vars = ['Target','\\hat{\\xi}','AUVs','LOSS FUNCTION']
 vars_math = ['\\kappa(\\Phi)','\\xi','C^{(d)}+C^{(g)}','\\sigma_m','\\epsilon']
 
@@ -300,8 +300,8 @@ ax1.set_ylabel('y (m)')
 ax1.grid()
 ax1.legend()
 ax1.axis('equal')
-ax1.set_xlim([-600, +600])
-ax1.set_ylim([-600, +600])
+ax1.set_xlim([-900, +900])
+ax1.set_ylim([-900, +900])
 
 # Initialization function
 def init():
@@ -317,7 +317,7 @@ def init():
 normFrame = [[] for _ in range(auvNum)]
 normFrame2 = [[] for _ in range(auvNum)]
 next_pings = pings
-print(len(pings[0]))
+
 def update(frame):
     # Normalize frame to total samples (for synchronous evolution)
     for i in range(auvNum):

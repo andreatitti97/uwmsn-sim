@@ -71,7 +71,7 @@ def computeCost_fi(phi):
 
     return np.linalg.norm(np.linalg.inv(PHI),ord=2)*np.linalg.norm(PHI,ord=2)
 
-def computeCov(y,phi):
+def computeCov2(y,phi):
 
     # Compute Covariance of the target state
     R = np.zeros((len(y),len(y))) #matrice diagonale perchè errori sulle singole misure indipendenti tra loro            
@@ -87,3 +87,74 @@ def computeCov(y,phi):
         
     return cov
 
+def computeCov(y, phi, regularization=0.001, inflation=1.5):
+    """
+    Compute the posterior covariance matrix for the estimator.
+
+    Parameters:
+    - y: list or array of measurements
+    - phi: 2D array (regressor), shape (n_samples, n_features)
+    - sigma_meas: standard deviation of measurement noise
+    - regularization: optional float for Tikhonov regularization (lambda)
+    - inflation: optional float to inflate the covariance (e.g., 2.0)
+
+    Returns:
+    - cov: covariance matrix (shape: n_features x n_features)
+    """
+    phi = np.array(phi)
+    y = np.array(y)
+    n = len(y)
+
+    # Compute measurement covariance (variance on diagonal)
+    R_inv = np.identity(n) / (config.SIGMA_MEAS ** 2)
+
+    # Optional regularization
+    if regularization is not None:
+        cov_inv = phi.T @ R_inv @ phi + regularization * np.identity(phi.shape[1])
+    else:
+        cov_inv = phi.T @ R_inv @ phi
+
+    cov = np.linalg.inv(cov_inv)
+
+    # Optional inflation
+    if inflation is not None:
+        cov *= inflation
+
+    return cov
+
+
+def kinematic_control_auv(s, x_des, y_des, theta_ref, K_p, dt, e_ij):
+    """
+    Implements kinematic control for an underactuated AUV.
+    
+    Parameters:
+    - s: np.array([x, y, theta]) -> Current state (position and heading)
+    - x_des: float -> Desired x position
+    - y_des: float -> Desired y position
+    - theta_ref: float -> Reference desired heading
+    - e_ij: list or np.array -> Errors with neighboring agents
+    - K_p: float -> Proportional gain for coordination term
+    - dt: float -> Time step for integration
+    
+    Returns:
+    - s_next: np.array([x_next, y_next, theta_next]) -> Updated state
+    - u: float -> Controlled surge velocity
+    - r: float -> Yaw rate control input
+    """
+    # Compute desired surge velocity
+    dx = x_des - s[0]
+    dy = y_des - s[1]
+    u_ref = np.sqrt(dx**2 + dy**2) / dt  # Compute reference surge velocity
+    
+    # Compute controlled surge velocity
+    u = u_ref - K_p * np.sum(e_ij)
+    
+    # Compute yaw rate (simple proportional control to follow reference heading)
+    r = (theta_ref - s[2]) / dt  # Approximating derivative as finite difference
+    
+    # Apply kinematic model
+    x, y, theta = s
+    x_next = x + u * np.cos(theta) * dt
+    y_next = y + u * np.sin(theta) * dt
+    theta_next = theta + r * dt
+    return np.array([x_next, y_next, theta_next]), u, r

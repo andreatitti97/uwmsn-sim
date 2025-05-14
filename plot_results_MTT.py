@@ -40,7 +40,7 @@ x_hat, tracking_errors, P, avgNodes, avgTime = [], [], [], [], []
 PDR = np.zeros(((auvNum),1))
 
 # Load target data - TO DOWNSAMPLE
-for i in range(1):
+for i in range(targetNum):
     target_x_traj[:,i] = np.loadtxt(log_directory+'/target_x_traj'+str(i+1)+'.txt')
     target_y_traj[:,i] = np.loadtxt(log_directory+'/target_y_traj'+str(i+1)+'.txt')
 
@@ -81,6 +81,9 @@ for i in range(int(auvNum)):
     #P.append(cov)
 
 # Downsampling script
+
+failed_auv = 1
+
 original_samples = samples
 sampling = 20
 samples = int(np.ceil(original_samples / sampling))
@@ -136,14 +139,17 @@ for k in range(targetNum):
             a_x[j].append(tmp_x[i])
             a_y[j].append(tmp_y[i])
             l_x[j].append([tmp_x[i], tmp_t_x[i]])
-            l_y[j].append([tmp_y[i], tmp_t_y[i]])
+            l_y[j].append([tmp_y[i], tmp_t_y[i]])#
             
     once = False
+    epsi = 0.0
     # Populate phi and compute cost with conditions
     for i in range(samples):
         if header.config.AUV_failure and i >= samples / 2:
+            if i >= samples / 2:
+                epsi = 0.0
             if once == False:
-                phi_lists = np.delete(phi_lists, (0), axis=0)#for now only AUV2 can fail
+                phi_lists = np.delete(phi_lists, (failed_auv-1), axis=0)#for now only AUV2 can fail
                 once = True
             phi[:auvNum-1] = phi_lists[:, i]
         else:
@@ -152,20 +158,25 @@ for k in range(targetNum):
         #cost2 = header.utils.computeCost(phi[1:,:])
 
         cost = header.utils.computeCost(phi)
-        list_phi[i] += cost#cost1 + cost2 #+ dist1[i] + dist2[i] + dist3[i]
+        
+        list_phi[i] += cost+epsi#cost1 + cost2 #+ dist1[i] + dist2[i] + dist3[i]
 
 
 # Print some simulation info
 print('SIMULATION INFO [auvNum - Simulation Time (s) - Slot Time (s)]',sim_info)   
 print('Acoustic Communication Stat [PDR AUV1,PDR AUV2,PDR AUV3,PDR AUV4]:',PDR)
+avgError = []
+avgVar = []
 for i in range(int(auvNum)):
     #print('OPTIMIZATION STATS --> Average Optimization Time AUV ID:',i+1,sum(avgTime[i])/len(avgTime[i]))
     mean_error = (sum(tracking_errors[i])/len(tracking_errors[i]))
 
     variance_error = np.var(tracking_errors[i])#sum((e - mean_error) ** 2 for e in tracking_errors[i]) / len(tracking_errors[i])
     print(f'AUV ID {i+1} RMSE (m): {mean_error:.3f}, Std Dev: {np.sqrt(variance_error):.3f}')
-
-
+    avgError.append(mean_error)
+    avgVar.append(np.sqrt(variance_error))
+print('AVERAGE TRACKING ERRORS:',np.sum(avgError)/len(avgError))
+print('AVERAGE VARIANCR:',np.sum(avgVar)/len(avgVar))
 #np.savetxt('/home/andrea/Documents/controlo_paper_results/official_results/validation1/logs/logs_COMPARISON_ERRORS/cond_range3',list_phi)
 #np.savetxt('/home/andrea/Documents/controlo_paper_results/official_results/validation1/logs/logs_COMPARISON_ERRORS/err_range3',tracking_errors[0])
 #np.savetxt('/home/andrea/Desktop/cost_gamma=0.3',list_phi)
@@ -186,32 +197,39 @@ time_vars = ['(t_{0})','(t_{f})','(t_{0}=t_{f})']
 ###########################################################
 # Plot Communication info
 
-figComm, axComm = plt.subplots(figsize=(10, 5 * auvNum))
+figComm, axComm = plt.subplots(figsize=(10, 5 * auvNum-1))
 
 Ts = 12
+min_time_diff = 12  # Minimum allowed time between two pings
 colors = plt.cm.get_cmap('Accent', auvNum)  # Get a colormap with a different color for each AUV
 
 for j in range(auvNum):
+    
     if guidanceETC[j] is not None:
         guidanceETC[j] = guidanceETC[j].tolist()  # Convert numpy array to list
         for i in range(len(guidanceETC[j])):
             guidanceETC[j][i] = int(guidanceETC[j][i])
         
-        # Ensure each AUV has a ping at i * Ts
+        # Ensure each AUV has a ping at j * Ts
         guidanceETC[j].append(j * Ts)
         guidanceETC[j] = sorted(guidanceETC[j])
         
-        pings = np.linspace(0, simTime, len(guidanceETC[j]))
-        pingAUV1 = [j + 1] * len(guidanceETC[j])  # Offset each AUV's y-value by its index
-        axComm.scatter(guidanceETC[j], pingAUV1, label=f'ping AUV {j+1}', color=colors(j), marker='X', s=500, linewidths=1)
-        
-axComm.set_yticks(np.linspace(1, auvNum, auvNum))  # Increase horizontal grid lines
+        # Filter out pings that are too close to each other
+        filtered_pings = [guidanceETC[j][0]]
+        for t in guidanceETC[j][1:]:
+            if t - filtered_pings[-1] >= min_time_diff:
+                filtered_pings.append(t)
 
+        pingAUVj = [j + 1] * len(filtered_pings)  # Offset each AUV's y-value by its index
+        axComm.scatter(filtered_pings, pingAUVj, label=f'ping AUV {j+1}', color=colors(j), marker='X', s=500, linewidths=1)
+
+axComm.set_yticks(np.linspace(1, auvNum, auvNum))  # Increase horizontal grid lines
 axComm.set_xlabel('t(s)', fontsize=fs)
 axComm.set_ylabel('AUV ID', fontsize=fs)
 #axComm.legend(fontsize=fs * 3 / 5)
 axComm.grid()
 axComm.tick_params(axis='both', which='major', labelsize=ticks_size)
+
 
 
 ##########################################################
@@ -236,15 +254,15 @@ ax.grid()
 plt.yticks(fontsize=ticks_size, rotation = 0)#to set dimension and orientation of tick labels
 plt.xticks(fontsize=ticks_size, rotation=0)#to set dimension and orientation of tick labels
 #plt.show()
-np.savetxt('/home/andrea/Desktop/NL=50db',list_phi)
+#np.savetxt('/home/andrea/Desktop/NL=50db',list_phi)
 ##########################################################
 # Plot tracking error in separate subplots
 
-failed_auv = 1  # Index of the failed AUV (e.g., AUV2 fails, which is index 1)
+  # Index of the failed AUV (e.g., AUV2 fails, which is index 1)
 FAILURE = header.config.AUV_failure
 # Determine active AUVs
 if FAILURE:
-    active_auvs = [i for i in range(auvNum) if i != failed_auv]
+    active_auvs = [i for i in range(auvNum) if i != failed_auv-1]
 else:
     active_auvs = list(range(auvNum))
 
@@ -272,7 +290,7 @@ for idx, i in enumerate(active_auvs):  # Iterate over active AUV indices
     axes[idx].plot(t, epsi, 'r:', linewidth=lw * 2 / 3, label=rf'$ {math_vars[-1]} $')
     
     if idx == 1 or (active_auvNum == 1 and idx == 0):
-        axes[idx].set_ylabel('RMSE (m)', fontsize=42)#12 spaces for auv failure
+        axes[idx].set_ylabel('            RMSE (m)', fontsize=42)#12 spaces for auv failure
     
     axes[idx].legend(fontsize=25)
     axes[idx].grid()
@@ -316,7 +334,7 @@ ax.plot(t, epsi_min, 'r:', linewidth=lw, label=r'$ -\epsilon $')
 ax.plot(t, epsi_max, 'r:', linewidth=lw, label=r'$ +\epsilon $')
 ax.set_xlabel('t (s)', fontsize=fs)
 ax.set_ylabel(r'$ %s $' % math_vars[0], fontsize=fs)
-ax.legend(fontsize=ticks_size)
+ax.legend(fontsize=ticks_size/2)
 ax.grid()
 plt.yticks(fontsize=ticks_size, rotation = 0)#to set dimension and orientation of tick labels
 plt.xticks(fontsize=ticks_size, rotation=0)#to set dimension and orientation of tick labels
@@ -365,11 +383,11 @@ cb.ax.tick_params(labelsize=(fs/3)*2)
 
 for i in range(int(auvNum)):
     
-    if i == 1:
+    if i == 1000:
         ax.plot([auv_x[-1,i],
             target_x[-1,0]],[auv_y[-1,i],target_y[-1,0]],'r:',linewidth=lw/3,label='LOS'+r'$ %s $'%time_vars[1])
     else:
-        if i != 0 or FAILURE == False:
+        if i != failed_auv-1 or FAILURE == False:
             ax.plot([auv_x[-1,i],
                 target_x[-1,0]],[auv_y[-1,i],target_y[-1,0]],'r:',linewidth=lw/3)
         
@@ -391,9 +409,9 @@ for i in range(int(auvNum)):
     ax.text(auv_x[0,i]+a,auv_y[0,i]+b,r'$ %s $'%agents_vars[i]+r'$ %s $'%time_vars[0],fontsize=tw)
     ax.scatter(auv_x[0,i],auv_y[0,i],c='y',linewidths=sw*8)
     #ax.text(auv_x[-1,i]+c,auv_y[-1,i]+d,r'$ %s $'%agents_vars[i]+r'$ %s $'%time_vars[1],fontsize=tw)
-    if i == 0 and FAILURE==True:  
+    if i == failed_auv-1 and FAILURE==True:  
         
-        ax.text(auv_x[-1,i]-100,auv_y[-1,i]-45,'FAILURE',fontsize=3*tw/5)
+        ax.text(auv_x[-1,i]-55,auv_y[-1,i]+20,'FAILURE',fontsize=3*tw/5)
         ax.scatter(auv_x[-1,i],auv_y[-1,i],marker='X',c='r',linewidths=sw*15)
     else:   
         ax.scatter(auv_x[-1,i],auv_y[-1,i],c='r',linewidths=sw*8)
