@@ -9,9 +9,6 @@ from rospy_tutorials.msg import Floats
 from rospy.numpy_msg import numpy_msg
 from uwmsn_msgs.msg import Matrix
 from std_srvs.srv import Trigger
-# Modules for DTW
-from fastdtw import fastdtw
-from scipy.spatial.distance import euclidean
 
 # Environment: Define the relevant paths
 pkg_directory = os.path.dirname(pathlib.Path(__file__).parent.resolve())
@@ -41,7 +38,6 @@ measRx = [[0,0,0,0,0] for _ in range(targetNumSim)]# everything initialized to 0
 ctrlPolicy = [0 for _ in range(len(senPose)+(h.config.H+1)*2)]
 
 # Empty list for plots
-heading, surge_vel = [], []
 trackErr = [[] for _ in range(targetNumSim)]
 xi_hat = [[] for _ in range(targetNumSim)]
 covariance = [[] for _ in range(targetNumSim)]
@@ -49,41 +45,33 @@ covariance = [[] for _ in range(targetNumSim)]
 etcEstimation = []
 etcGuidance = []
 
-
-# Compute DTW (Dynamic Time Warping) distance between two 2D control sequences
-def compute_dtw(U_k, U_k1):
-    """
-    Compute the DTW distance between two control sequences U_k and U_k1.
-    Each sequence is a 2D array (time steps with surge and sway).
-    """
-    # Ensure U_k and U_k1 are 2D arrays
-    U_k = np.array(U_k).reshape(-1, 2)  # Ensure each control point is 2D
-    U_k1 = np.array(U_k1).reshape(-1, 2)
-
-    # Convert the control sequences into a list of tuples for DTW
-    U_k_tuples = [tuple(x) for x in U_k]  # Each control point is a 2D tuple
-    U_k1_tuples = [tuple(x) for x in U_k1]
+# Weighted distance metric (ETC trigger)
+def weighted_distance(seq1, seq2, alpha=0.8):
+    w = np.array([alpha**(h) for h in range(len(seq1))])
+    d_i = 0.0
     
-    distance, _ = fastdtw(U_k_tuples, U_k1_tuples, dist=euclidean)
-    return distance
-
-# Decide whether to retransmit based on the DTW distance and adaptive threshold
-def retransmit_decision(U_k, U_k1, base_threshold, packet_loss_factor, latency_factor, consensus_error, alpha):
-    """
-    Decide whether to retransmit based on the discrepancy between control sequences (DTW) 
-    and the adaptive threshold considering packet loss, latency, and consensus error.
-    """
-    # Compute the DTW distance between U_k and U_k1
-    dtw_distance = compute_dtw(U_k, U_k1)
+    for i in range(len(seq1)):
+        tmp_seq1 = np.array(seq1[i])
+        tmp_seq2 = np.array(seq2[i])
+        d_i += w[i]*np.linalg.norm(tmp_seq1 - tmp_seq2)
     
-    # Update the adaptive threshold based on consensus error
-    adaptive_threshold = base_threshold #- alpha * consensus_error
+    return np.sum(d_i)
 
-    retransmit = dtw_distance >= adaptive_threshold
-    return retransmit, adaptive_threshold, dtw_distance
+def systemModel(senPose, U, H, dt):
 
+    s = [senPose[0], senPose[1], senPose[2]] # [x,y,theta]
+    # Initialize the list to store the predicted states
+    s_hat = []
+    # Compute new headingRef according to the given heading change
 
+    for i in range(H-1):
 
+        s[2] = s[2]+(U[3+H+i])       
+        s[0] = s[0]+np.cos(s[2])*U[3+i]*(dt)
+        s[1] = s[1]+np.sin(s[2])*U[3+i]*(dt)
+        s_hat.append([s[0],s[1],s[2]])
+
+    return s_hat
 
 def run_auv_node(pub,auv,obs,Ts,Tf,auvNum):
 
@@ -113,18 +101,16 @@ def run_auv_node(pub,auv,obs,Ts,Tf,auvNum):
 
     # Load simulation params from config file
     dt, k_thresh, desRange = h.config.TIME_STEP*t_scaler, h.config.k_phi_thresh, h.config.RANGE_TO_TARGET
-    AUV_failure, P_min, H = h.config.AUV_failure, h.config.P_min, h.config.H
+    AUV_failure, P_min, H, k_stopCondition = h.config.AUV_failure, h.config.P_min, h.config.H, h.config.k_stopCondition
     DT = h.config.Ts*auvNum
     targetNum = len(obs)
 
     # Init time variables and counters and lists
-    t, count1, clkTdma, clkSmpl, tol, countETC = 0,0,0,0,1,0
-    measTx, msgTx = [], []
-    # data structures ETC
-    cov_tilde = [np.matrix([[0],[0],[0],[0]]) for _ in range(targetNum)]
-    xi_hat_tilde = [[] for _ in range(targetNum)]
-    initEtcEstimation = False
-    initEtcGuidance = False
+    t, count1, clkTdma, clkSmpl, tol = 0,0,0,0,1,
+    measTx, msgTx = [], []    
+    
+    # Initialize ETC routine structures ETC
+    etcRoutine = h.etc.EventHandler(targetNum,H,DT)
 
     # Data structurestargets estimation
     measTable = [[] for _ in range(len(targetsData))]
@@ -132,15 +118,12 @@ def run_auv_node(pub,auv,obs,Ts,Tf,auvNum):
     # Init bool
     path = None
     missionDone = False
-    once = True
+
     # ETC on or off
     etcActive = h.config.etcActive
-    countETC = 0
     decision = True
  
     # Start listeners and init waypoints data structure
-    ax, ay = [senPose[0]], [senPose[1]] #the "first waypoint is the initial vehicle pos"
-    
     ctrlPolicy = [AUV_XY[auvID-1,i] for i in range(3)]+[0.0]*((h.config.H + 1) * 2)
     old_pi_bar = ctrlPolicy
     
@@ -193,7 +176,8 @@ def run_auv_node(pub,auv,obs,Ts,Tf,auvNum):
                         for i in range(len(measTx)-1):
                             measTx.pop(0)
                     else:
-                        if decision or countETC==H: 
+                        if etcRoutine.decisionGuidance == True:
+                            etcRoutine.decisionGuidance = False
                             for i in range(len(measTx)-1):
                                 measTx.pop(0)#remove measurements iff necessary to transmit etc
 
@@ -218,7 +202,7 @@ def run_auv_node(pub,auv,obs,Ts,Tf,auvNum):
                             phi, y = obs[i].regressor
                             measTable[i] = []
 
-                            # Compute cost and log it
+                            # Compute conditioning estimation and log it
                             k_phi = h.utils.computeCost(phi)
                             rospy.loginfo('%s|---- AUV %s Conditioning Estimation %s %s', blue, auvID, k_phi, none)
 
@@ -233,37 +217,12 @@ def run_auv_node(pub,auv,obs,Ts,Tf,auvNum):
                                 confirmed_est += [obs[i].state[j, 0] for j in range(4)]
                                 confirmed_est += [cov[j, k] for j in range(4) for k in range(4)]
                                 msgTx.append(confirmed_est)
-                                t_est = t
 
-                                # ETC mechanism
-                                if not initEtcEstimation:
-                                    cov_tilde[i] = cov
-                                    xi_hat_tilde[i] = obs[i].state
-                                    initEtcEstimation = True
-                                else:
-                                    delta_t = t - t_est
-                                    F = np.array([
-                                        [1, 0, delta_t, 0],
-                                        [0, 1, 0, delta_t],
-                                        [0, 0, 1, 0],
-                                        [0, 0, 0, 1]
-                                    ])
-
-                                    xi_hat_tilde[i] = F @ xi_hat_tilde[i]
-                                    cov_tilde[i] = F @ cov_tilde[i] @ F.T
-
-                                    kld_trace = np.trace(np.linalg.inv(cov) @ cov_tilde[i] - np.eye(4))
-                                    kld_logdet = np.log(np.linalg.det(cov) / np.linalg.det(cov_tilde[i]))
-                                    kld_norm = np.linalg.norm(xi_hat_tilde[i] - obs[i].state)
-                                    KLD = 0.5 * (kld_trace + kld_norm + kld_logdet + 4)
-
-                                    if KLD > 10:
-                                        cov_tilde[i] = cov
-                                        xi_hat_tilde[i] = obs[i].state
-                                        etcEstimation.append(t)
-                                        print('---------------------- ETC: Update Estimation')
-                                    else:
-                                        t_est = t
+                                # Run the ETC routine for the consensus algorithm
+                                etcRoutine.etcRoutineConsensus(t,i,obs[i].state,cov)
+                                if etcRoutine.decisionConsensus:
+                                    etcEstimation.append(t)
+                                    print('-------------------- ETC: Update Estimation - AUV ID',auvID)
                     
                     # TRIGGER THE OPTIMIZATION IF NEW ESTIMATIONS DONE + SAVE TRACKING DATA ########################    
                     if msgTx != []:
@@ -274,22 +233,20 @@ def run_auv_node(pub,auv,obs,Ts,Tf,auvNum):
                             
                             xi_hat_i = msgTx[i]
                             targetPose = targetsData[i]
-
                             d_s_xi = np.sqrt((xi_hat_i[4]-senPose[1])**2+(xi_hat_i[3]-senPose[0])**2)
-                            
-
+                        
                             trackErr[i].append(np.sqrt((targetPose[0] - xi_hat_i[3])**2
                                                         +(targetPose[1] - xi_hat_i[4])**2))
                             xi_hat[i].append(xi_hat_i[3:7])
 
-
+                            # Log mission status
                             f_xi_hat_i = [f"{val:.2f}" for val in xi_hat_i[3:7]]
                             rospy.logout('%s|---- AUV '+str(auvID)+': Target '+str(int(xi_hat_i[2]))
                                         +' State Estimation [m,m/s] --> %s Range Target %s  %s',
                                     blue,f_xi_hat_i,d_s_xi,none)#TODO print the estimate not the msg
 
                         # TODO: Now the stop condition is not working for the MTT
-                        if d_s_xi <= desRange and k_phi < 6.0:
+                        if d_s_xi <= desRange and k_phi < k_stopCondition:
                             rospy.loginfo('%s|---- AUV '+str(auvID)+' MISSION ACCOMPLISHED')
                             missionDone = True
                         else:
@@ -299,7 +256,7 @@ def run_auv_node(pub,auv,obs,Ts,Tf,auvNum):
                         msgTx = [] #empty the list after sending al the msgs
                         ############################################################################################################
         
-            #if the optimization has produced somthing update path, do this control always to avoid unnecessary waitings.
+            # Apply new optimized control if produced
             if sum(ctrlPolicy) != sum(old_pi_bar):
                 
                 if AUV_failure == True and t > h.config.TIME_DURATION/2 and auvID == 3:
@@ -309,51 +266,24 @@ def run_auv_node(pub,auv,obs,Ts,Tf,auvNum):
                 rospy.logout('%s|---- AUV '+str(auvID)+': Optimization Done!, Output Policy [state (X,Y,Theta), headings (rad), surge (m/s)] --> %s%s',
                 BGreen, f_ctrlPolicy, none)
                 
-                tmp = []
-                for i in range(H):
-                    tmp.append([ctrlPolicy[3+i], ctrlPolicy[4+H+i]])
-                U_k = [tuple(u) for u in tmp]
-
                 path, idxMotion, idx, rx, ry, ryaw = h.updatePathRoutine(auvID,senPose,
                                                                 ctrlPolicy[3:3+H+1],ctrlPolicy[3+H+1:-1],dt,DT)
-                if initEtcGuidance == False:
-                    tmp = []
-                    for i in range(H):
-                        tmp.append([ctrlPolicy[3+i], ctrlPolicy[4+H+i]])
-                    U_k1 = [tuple(u) for u in tmp]
-                    initEtcGuidance = True
-                else:
-
-                    decision, thresh, dtw_distance = retransmit_decision(U_k,U_k1,1.0,0.1,0.1,0.1,0.1)
-                    if decision or countETC==H:
-                        etcGuidance.append(t)
-                        if auvID == 1:
-                            print('---------------------- ETC: Update Guidance')
-                        countETC = 0
-                    else:
-                        countETC += 1
-                    tmp = []
-                    for i in range(H):
-                        tmp.append([ctrlPolicy[3+i], ctrlPolicy[4+H+i]])
-                    U_k1 = [tuple(u) for u in tmp]
+                # Run the ETC routine for the guidance algorithm
+                etcRoutine.etcRoutineGuidance(t,senPose,ctrlPolicy)
+                if etcRoutine.decisionGuidance:
+                    etcEstimation.append(t)
+                    print('-------------------- ETC: Update Estimation - AUV ID',auvID)
+    
 
             if path != None and missionDone == False: 
                
-                # PUBLISH THE CTRL_CMD
-                heading.append(ryaw[idxMotion+idx])              
+                # PUBLISH THE CTRL_CMD           
                 pub[2].publish(np.array([int(auvID),rx[idxMotion+idx],
                                             ry[idxMotion+idx],ryaw[idxMotion+idx]], dtype=np.float32))
                 
-                if len(rx)-1 <= idxMotion+idx:
-                    idxMotion += 0
-                else:
-                    if auvID != h.config.failingAUV:
-                        idxMotion += 1  
-                    else:
-                        if t > h.config.TIME_DURATION/2 and AUV_failure == True:
-                            idxMotion += 0
-                        else:
-                            idxMotion += 1
+                if idxMotion + idx < len(rx) - 1:
+                    if auvID != h.config.failingAUV or not (t > h.config.TIME_DURATION / 2 and AUV_failure):
+                        idxMotion += 1
            
             if int(t) == (h.config.TIME_DURATION-1):
                 rospy.on_shutdown(lambda: shutdownCllbk(targetNum))
@@ -377,12 +307,8 @@ def shutdownCllbk(targetNum):
         # Save the covariance data to a file
     
     np.save(log_path+'/'+str(auvID)+'-cov'+str(targetNum)+'.npy', covariance[i])
-
-    np.savetxt(log_path+'/'+str(auvID)+'surge_vel.txt',surge_vel)
-    np.savetxt(log_path+'/'+str(auvID)+'heading.txt',heading)
     np.savetxt(log_path+'/'+str(auvID)+'etcGuidance.txt',etcGuidance)
     np.savetxt(log_path+'/'+str(auvID)+'etcEstimation.txt',etcEstimation)
-    np.savetxt(log_path+'/'+str(auvID)+'heading.txt',heading)
     magenta = "\033[0;35m"
     none = "\033[0m"
 

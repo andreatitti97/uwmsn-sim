@@ -49,7 +49,7 @@ P_min = 5 #regressor min length
 buffLen = 3 #buffer length for storing received pkts
 SIGMA_MEAS = 0.04# #(rad^2) --> 4.5° (as assumed in DAMPS and by cassino)
 k_phi_thresh = 150.0# #Thresh sul condizionamento del regressore per aggiornare la stima
-
+k_stopCondition = 6.0# #Thresh sul condizionamento del regressore per fermare l'algoritmo
 
 # AUVs Team Settings
 AUV_MAX_VEL = 3.0 #(m/s)

@@ -122,6 +122,34 @@ def computeCov(y, phi, regularization=0.001, inflation=1.5):
 
     return cov
 
+# Weighted distance metric (ETC trigger)
+def weighted_distance(seq1, seq2, alpha=0.8):
+    w = np.array([alpha**(h) for h in range(len(seq1))])
+    d_i = 0.0
+    
+    for i in range(len(seq1)):
+        tmp_seq1 = np.array(seq1[i])
+        tmp_seq2 = np.array(seq2[i])
+        d_i += w[i]*np.linalg.norm(tmp_seq1 - tmp_seq2)
+    
+    return np.sum(d_i)
+
+# Simple function that implements Newton-eulero for the underactuated AUV
+def systemModel(senPose, U, H, dt):
+
+    s = [senPose[0], senPose[1], senPose[2]] # [x,y,theta]
+    # Initialize the list to store the predicted states
+    s_hat = []
+    # Compute new headingRef according to the given heading change
+
+    for i in range(H-1):
+
+        s[2] = s[2]+(U[3+H+i])       
+        s[0] = s[0]+np.cos(s[2])*U[3+i]*(dt)
+        s[1] = s[1]+np.sin(s[2])*U[3+i]*(dt)
+        s_hat.append([s[0],s[1],s[2]])
+
+    return s_hat
 
 def kinematic_control_auv(s, x_des, y_des, theta_ref, K_p, dt, e_ij):
     """

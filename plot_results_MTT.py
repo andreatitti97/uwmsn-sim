@@ -62,8 +62,6 @@ for i in range(int(auvNum)):
     avgTime.append(np.loadtxt(log_directory+'/wall_times'+str(i+1)+'.txt')) 
     avgNodes.append(np.loadtxt(log_directory+'/nodes'+str(i+1)+'.txt'))    
 
-    #
-
     # Estimation Data
     err = np.loadtxt(log_directory+'/'+str(i+1)+'-trackErr.txt')
     tracking_errors.append(err)
