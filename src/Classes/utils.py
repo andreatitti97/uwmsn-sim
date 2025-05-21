@@ -141,13 +141,12 @@ def systemModel(senPose, U, H, dt):
     # Initialize the list to store the predicted states
     s_hat = []
     # Compute new headingRef according to the given heading change
+    for i in range(H+1):
 
-    for i in range(H-1):
-
-        s[2] = s[2]+(U[3+H+i])       
-        s[0] = s[0]+np.cos(s[2])*U[3+i]*(dt)
-        s[1] = s[1]+np.sin(s[2])*U[3+i]*(dt)
-        s_hat.append([s[0],s[1],s[2]])
+        s[2] = s[2]+(U[i])       
+        s[0] = s[0]+np.cos(s[2])*U[H+1+i]*(dt)#TODO: FIX THIS PROBLEM OF THE INDEX for plcy intent
+        s[1] = s[1]+np.sin(s[2])*U[H+1+i]*(dt)
+        s_hat.append([s[0],s[1]])
 
     return s_hat
 

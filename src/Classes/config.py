@@ -46,7 +46,7 @@ auvNum = 6 #this is the maximum number of auvs considered in the simulator
 TM = 2 #measurements sampling period (s), lower than this impossible due to AVS processing!
 P_max = 40 # regressor MAX length 40
 P_min = 5 #regressor min length
-buffLen = 3 #buffer length for storing received pkts
+buffLen = 8 #buffer length for storing received pkts
 SIGMA_MEAS = 0.04# #(rad^2) --> 4.5° (as assumed in DAMPS and by cassino)
 k_phi_thresh = 150.0# #Thresh sul condizionamento del regressore per aggiornare la stima
 k_stopCondition = 6.0# #Thresh sul condizionamento del regressore per fermare l'algoritmo
@@ -56,6 +56,7 @@ AUV_MAX_VEL = 3.0 #(m/s)
 AUV_failure = False #auv1 will fail after t = TIME_DURATION/2
 failingAUV = 3 #ID AUV that will fail 
 etcActive = True
+alphaETC = 0.2
 netTopology = [[] for _ in range(auvNum)]
 netTopology[0] = [2] #put the ID of the neigbours of agent 1
 netTopology[1] = [1,3] #put the ID of the neigbours of agent 2
@@ -95,15 +96,7 @@ else:
 
 
   
-    #MORE CLUTTERED INITIAL POSITION
-    AUV_XY[0,0] = 50
-    AUV_XY[0,1] = 100
-
-    AUV_XY[1,0] = 10   
-    AUV_XY[1,1] = -10 
-
-    AUV_XY[2,0] = 110
-    AUV_XY[2,1] = -110
+    
 
 
   # FAR INITIAL POSITION alternative
@@ -126,6 +119,16 @@ else:
     AUV_XY[2,0] = -150
     AUV_XY[2,1] = -100 
 
+    #MORE CLUTTERED INITIAL POSITION
+    AUV_XY[0,0] = -50
+    AUV_XY[0,1] = 200
+
+    AUV_XY[1,0] = 10   
+    AUV_XY[1,1] = -10 
+
+    AUV_XY[2,0] = -180
+    AUV_XY[2,1] = -100
+
 
 # Communication Policy Paramaters
 Ts = 4 #TDMA: slot time # time sampling always equal to Ts/2 -- considering pkt=64B and v=480bps
@@ -143,13 +146,13 @@ avg_d = sum(dist)/(len(dist))
 d = avg_d
 gamma = avg_d*3 #Sigmoid parameter for packet loss --> depends on the distance (tune only alpha)
 PDR = 100 #Packet Delivery Ratio
-
+B = 200 #bps (bandwidth)
 # Acoustic Model Parameters
 SL = 186 #we worked with modem at 182 - 168 db
 NL = 30 #db
 DI = 0 #directivity index a-dimensional
 c = 1500 #sound wave speed
-f = 10 #kHx ( frequency of the modem)
+f = 10 #kHx ( frequency of the modem) long range 2-10 kHz
 
 acoustic_loss = alpha_f(f) #f is in kHz
 TL_min = 20*np.log10(min_distance) + (min_distance*acoustic_loss*1e-3)#dB (transmission loss that if happens is "ideal")
@@ -227,11 +230,17 @@ TARGET_INIT = [400,0, np.pi, 0.2, 0.0, 0.0, 0.0] # SCENARIO 2-3
 
 
 TARGET_INIT = [-100,-350, -np.pi/2, -0.15, 0.0, 0.0, 0.0] # SCENARIO 1 bonus
-TARGET_INIT = [340,600, np.pi, -0.35, 0.0, 0.0, 0.0] # SCENARIO 5
+
+
+
+
+
+TARGET_INIT = [250,350, np.pi, -0.35, 0.0, 0.0, 0.0] # SCENARIO 5
+TARGET_INIT = [-300,25, np.pi/3, 0.35, 0.0, 0.0, 0.0] #scenario 4
 TARGET_INIT = [0,-350, -np.pi/6, -0.15, 0.0, 0.0, 0.0] # SCENARIO 1
 TARGET_INIT = [400,0, np.pi, 0.2, 0.0, 0.0, 0.0] # SCENARIO 2-3
-TARGET_INIT = [-600,25, np.pi/2, 0.35, 0.0, 0.0, 0.0] #scenario 4
 
+TARGET_INIT = [0,-350, 0, 0.2, 0.0, 0.0, 0.0] # SCENARIO 2-3
 a = -0.6 #(m/s) increase for more amplitude of the "turn"
 omega = +0.03#(-) #increase for faster sinusoidal beahviour
 

@@ -173,12 +173,12 @@ def run_auv_node(pub,auv,obs,Ts,Tf,auvNum):
                         measTx.pop(0)
 
                     if etcActive == False:
-                        for i in range(len(measTx)-1):
+                        for i in range(len(measTx)-3):
                             measTx.pop(0)
                     else:
                         if etcRoutine.decisionGuidance == True:
                             etcRoutine.decisionGuidance = False
-                            for i in range(len(measTx)-1):
+                            for i in range(len(measTx)-3):
                                 measTx.pop(0)#remove measurements iff necessary to transmit etc
 
                     measTx = np.array(measTx,dtype=np.float32)
@@ -270,9 +270,9 @@ def run_auv_node(pub,auv,obs,Ts,Tf,auvNum):
                                                                 ctrlPolicy[3:3+H+1],ctrlPolicy[3+H+1:-1],dt,DT)
                 # Run the ETC routine for the guidance algorithm
                 etcRoutine.etcRoutineGuidance(t,senPose,ctrlPolicy)
-                if etcRoutine.decisionGuidance:
-                    etcEstimation.append(t)
-                    print('-------------------- ETC: Update Estimation - AUV ID',auvID)
+                if etcRoutine.decisionGuidance == True:
+                    etcGuidance.append(t)
+                    print('-------------------- ETC: Update Guidance - AUV ID',auvID)
     
 
             if path != None and missionDone == False: 

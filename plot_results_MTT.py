@@ -11,6 +11,7 @@ pkg_directory = os.path.dirname(pathlib.Path(__file__).parent.resolve())+'/uwmsn
 log_directory = os.path.dirname(pathlib.Path(__file__).parent.resolve())+'/logs'
 class_directory = pkg_directory+'/src'+'/Classes'
 
+save_directory = os.path.dirname(pathlib.Path(__file__).parent.resolve())+'/logs_paper-ETC'
 # Import config file 
 module_dir = os.path.dirname(pathlib.Path(__file__).parent.resolve())
 header_file = pkg_directory+'/include'+'/uwmsn-sim'
@@ -34,6 +35,7 @@ auv_y_traj = np.zeros(((samples),(auvNum)))
 target_x_traj = np.zeros(((samples),(auvNum)))
 target_y_traj = np.zeros(((samples),(auvNum)))
 guidanceETC = [[] for _ in range((auvNum))]
+estimationETC = [[] for _ in range((auvNum))]
 surge_vel = [[] for _ in range((auvNum))]
 heading = [[] for _ in range(auvNum)]
 x_hat, tracking_errors, P, avgNodes, avgTime = [], [], [], [], []
@@ -55,6 +57,7 @@ for i in range(int(auvNum)):
     auv_y_traj[:,i] = np.loadtxt(log_directory+'/auv_y_traj'+str(i+1)+'.txt')
 
     guidanceETC[i] = np.loadtxt(log_directory+'/'+str(i+1)+'etcGuidance.txt')
+    estimationETC[i] = np.loadtxt(log_directory+'/'+str(i+1)+'etcEstimation.txt')
     #surge_vel[i] = np.loadtxt(log_directory+'/'+str(i+1)+'surge_vel')
     #heading[i] = np.loadtxt(log_directory+'/'+str(i+1)+'heading')*180/np.pi
 
@@ -173,8 +176,18 @@ for i in range(int(auvNum)):
     print(f'AUV ID {i+1} RMSE (m): {mean_error:.3f}, Std Dev: {np.sqrt(variance_error):.3f}')
     avgError.append(mean_error)
     avgVar.append(np.sqrt(variance_error))
+
+print('alphaETC=',header.config.alphaETC)
 print('AVERAGE TRACKING ERRORS:',np.sum(avgError)/len(avgError))
 print('AVERAGE VARIANCR:',np.sum(avgVar)/len(avgVar))
+pings = 0.0
+for i in range(auvNum):
+    tmp = len(guidanceETC[i])
+    pings += tmp
+avg_pings = pings/auvNum
+horizon = 5
+comm_load_bit = avg_pings*(4+2*horizon)*4*8
+print('COMMUNICATION LOAD ETC GUIDANCE',comm_load_bit)
 #np.savetxt('/home/andrea/Documents/controlo_paper_results/official_results/validation1/logs/logs_COMPARISON_ERRORS/cond_range3',list_phi)
 #np.savetxt('/home/andrea/Documents/controlo_paper_results/official_results/validation1/logs/logs_COMPARISON_ERRORS/err_range3',tracking_errors[0])
 #np.savetxt('/home/andrea/Desktop/cost_gamma=0.3',list_phi)
@@ -222,13 +235,49 @@ for j in range(auvNum):
         axComm.scatter(filtered_pings, pingAUVj, label=f'ping AUV {j+1}', color=colors(j), marker='X', s=500, linewidths=1)
 
 axComm.set_yticks(np.linspace(1, auvNum, auvNum))  # Increase horizontal grid lines
+axComm.set_title('Communication Info: ETC guidance routins', fontsize=fs)
 axComm.set_xlabel('t(s)', fontsize=fs)
 axComm.set_ylabel('AUV ID', fontsize=fs)
 #axComm.legend(fontsize=fs * 3 / 5)
 axComm.grid()
 axComm.tick_params(axis='both', which='major', labelsize=ticks_size)
 
+###########################################################
+# Plot Communication info
 
+figComm, axComm = plt.subplots(figsize=(10, 5 * auvNum-1))
+
+Ts = 12
+min_time_diff = 12  # Minimum allowed time between two pings
+colors = plt.cm.get_cmap('Accent', auvNum)  # Get a colormap with a different color for each AUV
+
+for j in range(auvNum):
+    
+    if estimationETC[j] is not None:
+        estimationETC[j] = estimationETC[j].tolist()  # Convert numpy array to list
+        for i in range(len(estimationETC[j])):
+            estimationETC[j][i] = int(estimationETC[j][i])
+        
+        # Ensure each AUV has a ping at j * Ts
+        estimationETC[j].append(j * Ts)
+        estimationETC[j] = sorted(estimationETC[j])
+        
+        # Filter out pings that are too close to each other
+        filtered_pings = [estimationETC[j][0]]
+        for t in estimationETC[j][1:]:
+            if t - filtered_pings[-1] >= min_time_diff:
+                filtered_pings.append(t)
+
+        pingAUVj = [j + 1] * len(filtered_pings)  # Offset each AUV's y-value by its index
+        axComm.scatter(filtered_pings, pingAUVj, label=f'ping AUV {j+1}', color=colors(j), marker='X', s=500, linewidths=1)
+
+axComm.set_yticks(np.linspace(1, auvNum, auvNum))  # Increase horizontal grid lines
+axComm.set_title('Communication Info: ETC estimation routins', fontsize=fs)
+axComm.set_xlabel('t(s)', fontsize=fs)
+axComm.set_ylabel('AUV ID', fontsize=fs)
+#axComm.legend(fontsize=fs * 3 / 5)
+axComm.grid()
+axComm.tick_params(axis='both', which='major', labelsize=ticks_size)
 
 ##########################################################
 # Plot trend conditioning estimation problem
@@ -243,7 +292,7 @@ ax.plot(t_axis,list_phi,label='Loss Function',linewidth=lw)
 opt_value = []
 for i in range(samples):
     opt_value.append(1)
-ax.plot(t_axis,opt_value,'r:',label='Optimal Value',linewidth=lw/2)
+ax.plot(t_axis,opt_value,'r:',label='Optimal Value',linewidth=2)
 ax.set_xlabel('t (s)', fontsize = fs)
 #ax.set_ylabel(r'$ %s $'%math_vars[2], fontsize=fs)
 ax.set_ylabel('Cumulative Objective', fontsize=fs)
@@ -252,7 +301,7 @@ ax.grid()
 plt.yticks(fontsize=ticks_size, rotation = 0)#to set dimension and orientation of tick labels
 plt.xticks(fontsize=ticks_size, rotation=0)#to set dimension and orientation of tick labels
 #plt.show()
-#np.savetxt('/home/andrea/Desktop/NL=50db',list_phi)
+np.savetxt(save_directory+'/k_phi-alpha='+str(header.config.alphaETC),list_phi)
 ##########################################################
 # Plot tracking error in separate subplots
 

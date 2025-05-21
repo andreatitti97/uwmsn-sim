@@ -5,34 +5,47 @@ import numpy as np
 # Each point represents a different strategy or parameter setting
 # Lower RMSE and lower Communication Load is better
 
+# PLOT SETUP
+fs = 35
+lw = 8
+sw = 1
+tw = 40
+lwsw = 200
+ticks_size = 22
+ms = 15
+
 # RMSE values (tracking performance)
-rmse_periodic = 3.2
-rmse_etc = 3.4
-rmse_etc_aggressive = 3.6
-rmse_etc_conservative = 3.1
+
+rmse_etc1 = 8.830068480020698
+rmse_etc2 = 7.67714995419153
+rmse_etc3 = 6.582400044222864
+rmse_etc4 = 6.786532145569878
 
 # Communication load values (e.g., total number of bytes transmitted)
-comm_periodic = 100000  # in bytes
-comm_etc = 60000
-comm_etc_aggressive = 40000
-comm_etc_conservative = 80000
+
+comm_etc1 = 1941
+comm_etc2 = 3285
+comm_etc3 = 4629
+comm_etc4 = 7168
 
 # Organize into arrays
-rmses = np.array([rmse_periodic, rmse_etc, rmse_etc_aggressive, rmse_etc_conservative])
-comm_loads = np.array([comm_periodic, comm_etc, comm_etc_aggressive, comm_etc_conservative])
-labels = ['Periodic', 'ETC', 'ETC (Aggressive)', 'ETC (Conservative)']
-colors = ['tab:red', 'tab:blue', 'tab:green', 'tab:orange']
+rmses = np.array([rmse_etc1, rmse_etc2, rmse_etc3, rmse_etc4])
+comm_loads = np.array([comm_etc1, comm_etc2, comm_etc3, comm_etc4])
+labels = ['\\alpha=0.001','\\alpha=0.05','\\alpha=0.1','\\alpha=0.2']
+#colors = ['tab:red', 'tab:blue', 'tab:green', 'tab:orange']
 
 # Plotting
 plt.figure(figsize=(8, 6))
 for i in range(len(rmses)):
-    plt.scatter(comm_loads[i], rmses[i], color=colors[i], label=labels[i], s=100)
-    plt.text(comm_loads[i] * 1.01, rmses[i], labels[i], fontsize=10, va='center')
+    plt.scatter(comm_loads[i], rmses[i], label=r'$ %s $'%labels[i], s=500)
 
-plt.xlabel("Communication Load [bytes]", fontsize=12)
-plt.ylabel("Tracking RMSE [m]", fontsize=12)
-plt.title("Trade-off between Communication Load and Tracking Performance", fontsize=13)
+plt.xlabel("Communication Load (bit)", fontsize=fs)
+plt.ylabel("Tracking RMSE (m)", fontsize=fs)
+#plt.title("Communication Load vs Tracking Performance", fontsize=fs)
 plt.grid(True, linestyle='--', alpha=0.6)
 plt.tight_layout()
+plt.legend(fontsize=fs*2/3)
+plt.yticks(fontsize=ticks_size, rotation= 0)#to set dimension and orientation of tick labels
+plt.xticks(fontsize=ticks_size, rotation= 0)#to set dimension and orientation of tick labels
 plt.show()
 

@@ -27,21 +27,25 @@ class EventHandler:
         self.cov_tilde = [np.matrix([[0],[0],[0],[0]]) for _ in range(targetNum)]
         self.xi_hat_tilde = [[] for _ in range(targetNum)]
         self.t_est = [0.0 for _ in range(targetNum)]
-        self.KLD_thres = 10
+        self.KLD_thres = 25
 
         # Guidance Routine init
         self.initEtcGuidance = False
         self.decisionGuidance = False
         self.H = H
         self.DT = DT
+        self.beta = config.alphaETC
+        self.delta_0 = 50
+        self.pos_scale = 10.0
+        self.vel_scale = 0.1
         self.t_last = 0.0
 
-    def etcRoutineConsensus(self,t,targetIndex,obs,cov):
+    def etcRoutineConsensus(self,t,targetIndex,x_hat,cov):
    
         # ETC mechanism
         if not self.initEtcEstimation:
             self.cov_tilde[targetIndex] = cov
-            self.xi_hat_tilde[targetIndex] = obs
+            self.xi_hat_tilde[targetIndex] = x_hat
             self.t_est[targetIndex] = t
             self.initEtcEstimation = True
         else:
@@ -58,12 +62,17 @@ class EventHandler:
 
             kld_trace = np.trace(np.linalg.inv(cov) @ self.cov_tilde[targetIndex] - np.eye(4))
             kld_logdet = np.log(np.linalg.det(cov) / np.linalg.det(self.cov_tilde[targetIndex]))
-            kld_norm = np.linalg.norm(self.xi_hat_tilde[targetIndex] - obs)
+            delta = self.xi_hat_tilde[targetIndex] - x_hat
+            delta[0:2] /= self.pos_scale   # e.g., pos_scale = 10 meters
+            delta[2:4] /= self.vel_scale   # e.g., vel_scale = 1 m/s
+            kld_norm = np.linalg.norm(delta)
             KLD = 0.5 * (kld_trace + kld_norm + kld_logdet + 4)
             print('DEBUG ETC ROUTINE: KLD estimated target state',KLD)
+            print('Old State',self.xi_hat_tilde[targetIndex])
+            print('New State',x_hat)
             if KLD > self.KLD_thres:
                 self.cov_tilde[targetIndex] = cov
-                self.xi_hat_tilde[targetIndex] = obs
+                self.xi_hat_tilde[targetIndex] = x_hat
                 self.decisionConsensus = True
             else:
                 self.t_est[targetIndex] = t
@@ -75,20 +84,22 @@ class EventHandler:
 
             self.U_k_1 = ctrlPolicy[3:]
             self.initEtcGuidance = True
-            print('self.U_k_1',self.U_k_1)
+
         else:
-            print('self.U_k_1',self.U_k_1)
             U_k = ctrlPolicy[3:]
+            print('U_k',U_k)
+            print('U_k_1',self.U_k_1)
             s = [senPose[0],senPose[1],senPose[2]] # [x,y,theta]
             bar_s_hat_k = utils.systemModel(s,U_k,self.H,self.DT)
             bar_s_hat_k_1 = utils.systemModel(s,self.U_k_1,self.H,self.DT)
             dist = utils.weighted_distance(bar_s_hat_k,bar_s_hat_k_1)
             # Adaptive threshold
-            delta_0, beta = 10, 0.9
+            
             print('bar_s_hat_k',bar_s_hat_k)
             print('bar_s_hat_k_1',bar_s_hat_k_1)
             print('dist',dist)
-            delta_k = delta_0*np.exp(-beta*(t-self.t_last))
+            print('delta_t',(t-self.t_last))
+            delta_k = self.delta_0*np.exp(-self.beta*(t-self.t_last))
             print('delta_k',delta_k)
             # Trigger check
             if dist > delta_k:
