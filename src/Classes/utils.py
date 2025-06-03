@@ -101,7 +101,9 @@ def computeCov(y, phi, regularization=0.001, inflation=1.5):
     Returns:
     - cov: covariance matrix (shape: n_features x n_features)
     """
+    
     phi = np.array(phi)
+
     y = np.array(y)
     n = len(y)
 
@@ -121,6 +123,37 @@ def computeCov(y, phi, regularization=0.001, inflation=1.5):
         cov *= inflation
 
     return cov
+
+
+def damped_pseudoinverse_full(phi_list, lambd=0.01, s_star=0.001):
+    """
+    Computes the damped pseudoinverse φ^# of a tall matrix φ ∈ R^{m×n}
+    using full SVD and Tikhonov regularization.
+    
+    Returns a matrix φ^# ∈ R^{n×m}.
+    """
+    phi = np.array(phi_list)
+    m, n = phi.shape
+    U, S, VT = np.linalg.svd(phi, full_matrices=True)  # full SVD: U ∈ R^{m×m}, V ∈ R^{n×n}
+    
+    # Construct Σ̃⁻¹ (damped inverse with padding)
+    S_damped_inv = np.zeros((n, m))  # shape (n x m), matching φ^#
+    for i in range(len(S)):
+        s_i = S[i]
+        if s_i >= s_star:
+            lambda_i =  0
+        else:
+            # Apply Tikhonov regularization
+            lambda_i = lambd(0.5*np.cos(s_i*np.pi/s_star)+0.5)
+            # If singular value is zero, use the regularization parameter        
+        S_damped_inv[i, i] = s_i / s_i**2+lambda_i**2
+    
+    # Compute φ^# = V * S_damped_inv * U.T
+    print("Shape of U:", U.shape)
+    print("Shape of S_damped_inv:", S_damped_inv.shape)
+    print("Shape of VT:", VT.shape)
+    phi_pinv = VT @ S_damped_inv @ U.T
+    return phi_pinv.tolist()
 
 # Weighted distance metric (ETC trigger)
 def weighted_distance(seq1, seq2, alpha=0.8):

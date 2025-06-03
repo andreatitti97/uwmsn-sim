@@ -177,7 +177,8 @@ for i in range(int(auvNum)):
     avgError.append(mean_error)
     avgVar.append(np.sqrt(variance_error))
 
-print('alphaETC=',header.config.alphaETC)
+#print('alphaETC=',header.config.alphaETC)
+print('Slot TDMA (s)',sim_info[0])
 print('AVERAGE TRACKING ERRORS:',np.sum(avgError)/len(avgError))
 print('AVERAGE VARIANCR:',np.sum(avgVar)/len(avgVar))
 pings = 0.0

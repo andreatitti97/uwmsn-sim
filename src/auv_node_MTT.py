@@ -115,13 +115,13 @@ def run_auv_node(pub,auv,obs,Ts,Tf,auvNum):
     # Data structurestargets estimation
     measTable = [[] for _ in range(len(targetsData))]
     measRxOld = [[0,0,0,0,0] for _ in range(targetNum)]
+    n_m = h.config.n_m
     # Init bool
     path = None
     missionDone = False
 
     # ETC on or off
     etcActive = h.config.etcActive
-    decision = True
  
     # Start listeners and init waypoints data structure
     ctrlPolicy = [AUV_XY[auvID-1,i] for i in range(3)]+[0.0]*((h.config.H + 1) * 2)
@@ -138,6 +138,8 @@ def run_auv_node(pub,auv,obs,Ts,Tf,auvNum):
             checkMeasOld = measRxOld[0]
             #check if the a new measurement is received
             if checkMeasNew[0] - checkMeasOld[0] > tol or checkMeasNew[1] - checkMeasOld[1] > tol:
+                if auvID == 3:
+                    print('AUV 3 DEBUG: rECEIVED MEASUREMENTS')
                 for i in range(len(measRx)):
                     tmp = measRx[i]
                     measTable[int(tmp[4])-1].append([tmp[0],tmp[1],tmp[2],tmp[3],tmp[4]])
@@ -167,25 +169,25 @@ def run_auv_node(pub,auv,obs,Ts,Tf,auvNum):
                     rospy.loginfo('%s|---- AUV '+str(auvID)+
                                 ': Transmitting measurements at time %s --> Channel Busy%s',
                                 cyan,f_t,none)
-                    
-                    if len(measTx) > h.config.buffLen:
-                        #remove old measurements (max three meas at time otherwise too many bytes)
-                        measTx.pop(0)
 
-                    if etcActive == False:
-                        for i in range(len(measTx)-3):
-                            measTx.pop(0)
-                    else:
+                    if etcActive == True:
                         if etcRoutine.decisionGuidance == True:
                             etcRoutine.decisionGuidance = False
-                            for i in range(len(measTx)-3):
-                                measTx.pop(0)#remove measurements iff necessary to transmit etc
+                            n_m = h.config.n_m + 3
+                        else:
+                            n_m = h.config.n_m
+
+                    if len(measTx) > n_m:
+                        #remove old measurements, they will not be transmitted
+                        for i in range(len(measTx)-n_m):
+                            measTx.pop(0)
 
                     measTx = np.array(measTx,dtype=np.float32)
                     rows, cols = measTx.shape
+
                     pub[0].publish(Matrix(data=measTx.flatten().tolist(), rows=rows, cols=cols))
                     pub[3].publish(np.array(ctrlPolicy,dtype=np.float32))
-                    measTx = []#empty the buffer of local measures
+                    measTx = []#empty the buffer of local measures to transmit
                     if clkTdma == auvNum*Ts:
                         clkTdma = 0
 

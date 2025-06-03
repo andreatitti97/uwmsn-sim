@@ -79,10 +79,13 @@ class Target:
         self.t += dt
         self.pose.theta = self.pose.theta + (self.ang_vel+self.ang_acc * dt)*dt 
         if sin_pattern == True:
-            #self.pose.x = self.pose.x + self.a*np.sin(self.omega*self.t+np.pi)*dt
-            #self.pose.y = self.pose.y + self.lin_vel*dt
-            self.pose.y = self.pose.y + self.a*np.cos(self.omega*self.t+np.pi)*dt
-            self.pose.x = self.pose.x + self.lin_vel*dt
+            if config.TARGET_INIT[2] == np.pi/2 or config.TARGET_INIT[2] == -np.pi/2:
+                self.pose.x = self.pose.x + self.a*np.sin(self.omega*self.t+np.pi)*dt
+                self.pose.y = self.pose.y + self.lin_vel*dt
+            elif config.TARGET_INIT[2] == 0 or config.TARGET_INIT[2] == np.pi:
+                self.pose.x = self.pose.x + self.lin_vel*dt
+                self.pose.y = self.pose.y + self.a*np.cos(self.omega*self.t+np.pi)*dt
+                
         else:
             self.pose.x = self.pose.x + (self.lin_vel+self.lin_acc*dt) * \
                 np.cos(self.pose.theta) * dt 

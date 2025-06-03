@@ -17,6 +17,38 @@ def state_vector_to_scalars(state_vector):
     '''
     return (state_vector[0][0,0],state_vector[1][0,0],state_vector[2][0,0],state_vector[3][0,0])    
     
+def damped_pseudoinverse_full(phi_list, lambd=0.01, s_star=0.001):
+    """
+    Computes the damped pseudoinverse φ^# of a tall matrix φ ∈ R^{m×n}
+    using full SVD and Tikhonov regularization.
+    
+    Returns a matrix φ^# ∈ R^{n×m}.
+    """
+    phi = np.array(phi_list)
+    m, n = phi.shape
+    U, S, VT = np.linalg.svd(phi, full_matrices=True)  # full SVD: U ∈ R^{m×m}, V ∈ R^{n×n}
+    
+    lambd = 0.0001
+    s_star = 0.00001 * np.max(S)
+    """lambd (low) Less damping, more sensitive to noise (high) More damping, smoother but may oversmooth
+    s_star	(low) Fewer singular values regularized	(high) More values regularized, even moderately small ones"""
+
+    # Construct Σ̃⁻¹ (damped inverse with padding)
+    S_damped_inv = np.zeros((n, m))  # shape (n x m), matching φ^#
+    for i in range(len(S)):
+        s_i = S[i]
+        if s_i >= s_star:
+            lambda_i =  0
+        else:
+            # Apply Tikhonov regularization
+            lambda_i = lambd*(0.5*np.cos(s_i*np.pi/s_star)+0.5)
+            # If singular value is zero, use the regularization parameter        
+        S_damped_inv[i, i] = s_i / (s_i**2 + lambda_i**2)
+    
+    # Compute φ^# = V * S_damped_inv * U.T
+    phi_pinv = VT @ S_damped_inv @ U.T
+    return phi_pinv.tolist()
+
 class Estimator:
     def __init__(self):
         '''
@@ -27,6 +59,7 @@ class Estimator:
         self.__y = []
         self.__C = np.zeros((1,4))
         self.__t = []
+        self.__damped = False
         self.t_prev = 0
         self.P_max = config.P_max
 
@@ -45,7 +78,12 @@ class Estimator:
         tmp_y = np.zeros((len(self.__y),1))
         for i in range(len(self.__y)):
             tmp_y[i] = self.__y[i]
-        self.__x = np.dot(np.linalg.pinv(self.__phi),tmp_y)
+
+        if self.__damped:
+            phi_pinv_tilde = damped_pseudoinverse_full(self.current_regressor[0])
+            self.__x = np.dot(phi_pinv_tilde,tmp_y)
+        else:
+            self.__x = np.dot(np.linalg.pinv(self.__phi),tmp_y)
         
         # Propagate the estimation
         dt = curr_time - self.__t[0] #tempo attuale - tempo ultimo stato noto.
@@ -73,7 +111,6 @@ class Estimator:
                 tmp[2] = ((self.__t[i]-self.__t[0])/(self.__t[i]-prev_t))*tmp[2]
                 tmp[3] = ((self.__t[i]-self.__t[0])/(self.__t[i]-prev_t))*tmp[3]
                 self.__phi[i] = [tmp[0],tmp[1],tmp[2],tmp[3]]
-        
         
 
 

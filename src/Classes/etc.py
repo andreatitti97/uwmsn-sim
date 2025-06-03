@@ -67,9 +67,9 @@ class EventHandler:
             delta[2:4] /= self.vel_scale   # e.g., vel_scale = 1 m/s
             kld_norm = np.linalg.norm(delta)
             KLD = 0.5 * (kld_trace + kld_norm + kld_logdet + 4)
-            print('DEBUG ETC ROUTINE: KLD estimated target state',KLD)
+            '''print('DEBUG ETC ROUTINE: KLD estimated target state',KLD)
             print('Old State',self.xi_hat_tilde[targetIndex])
-            print('New State',x_hat)
+            print('New State',x_hat)'''
             if KLD > self.KLD_thres:
                 self.cov_tilde[targetIndex] = cov
                 self.xi_hat_tilde[targetIndex] = x_hat
@@ -87,20 +87,23 @@ class EventHandler:
 
         else:
             U_k = ctrlPolicy[3:]
-            print('U_k',U_k)
-            print('U_k_1',self.U_k_1)
+            
             s = [senPose[0],senPose[1],senPose[2]] # [x,y,theta]
             bar_s_hat_k = utils.systemModel(s,U_k,self.H,self.DT)
             bar_s_hat_k_1 = utils.systemModel(s,self.U_k_1,self.H,self.DT)
             dist = utils.weighted_distance(bar_s_hat_k,bar_s_hat_k_1)
             # Adaptive threshold
             
+            
+            delta_k = self.delta_0*np.exp(-self.beta*(t-self.t_last))
+            ''' #Debug Prints here 
+            print('U_k',U_k)
+            print('U_k_1',self.U_k_1)
             print('bar_s_hat_k',bar_s_hat_k)
             print('bar_s_hat_k_1',bar_s_hat_k_1)
             print('dist',dist)
             print('delta_t',(t-self.t_last))
-            delta_k = self.delta_0*np.exp(-self.beta*(t-self.t_last))
-            print('delta_k',delta_k)
+            print('delta_k',delta_k)'''
             # Trigger check
             if dist > delta_k:
 

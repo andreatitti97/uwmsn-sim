@@ -172,6 +172,7 @@ time_vars = ['(t_{0})','(t_{f})','(t_{0}=t_{f})']
 targets_vars = ['T'+str(i+1) for i in range(targetNum)]
 targets_vars_math = ['\\xi_'+str(i+1) for i in range(targetNum)]
 
+
 agents_vars = ['AUV'+str(i+1) for i in range(auvNum)]
 agents_vars_math = ['s_'+str(i+1) for i in range(auvNum)]
 colors = ['darkslategrey', 'orange', 'purple', 'blue']
@@ -300,8 +301,8 @@ ax1.set_ylabel('y (m)')
 ax1.grid()
 ax1.legend()
 ax1.axis('equal')
-ax1.set_xlim([-900, +900])
-ax1.set_ylim([-900, +900])
+ax1.set_xlim([-3000, +2000])
+ax1.set_ylim([-3000, +2000])
 
 # Initialization function
 def init():
@@ -372,7 +373,7 @@ def update(frame):
     return est_scatters + auv_lines + auv_scatters + los_lines + target_lines + cost_lines + error_pings + error_plots + auv_circles
 
 # Run the animation
-ani = animation.FuncAnimation(fig, update, frames=samples, init_func=init, blit=True, interval=1)
+ani = animation.FuncAnimation(fig, update, frames=samples, init_func=init, blit=True, interval=0.001)
 plt.show()
 
 # ani.save(filename="/home/andrea/animations/realistic.mp4", writer='ffmpeg', fps=30, dpi=200)  # Increase DPI for better quality
