@@ -95,7 +95,7 @@ AUV_failure = False
 
 # Downsampling script
 original_samples = samples
-sampling = 20
+sampling = 100
 samples = int(np.ceil(original_samples / sampling))
 
 # Downsample target positions
@@ -301,8 +301,10 @@ ax1.set_ylabel('y (m)')
 ax1.grid()
 ax1.legend()
 ax1.axis('equal')
-ax1.set_xlim([-3000, +2000])
-ax1.set_ylim([-3000, +2000])
+ax1.set_xlim([-4000, +2000])
+ax1.set_ylim([-4000, +2000])
+ax1.set_xlim([-500, +500])
+ax1.set_ylim([-500, +500])
 
 # Initialization function
 def init():
@@ -324,9 +326,7 @@ def update(frame):
     for i in range(auvNum):
         normFrame[i] = (int(frame / samples * len(tracking_errors[i])))
         normFrame2[i] = (int(frame / samples*len(pings[i])))
-    #print('frame',frame)
-    #print('normaFrame',normFrame)
-    #print('normaFrame2',normFrame2)
+
     # Update the loss function line
     cost_lines[0].set_data(t[:frame], list_phi[:frame])
 

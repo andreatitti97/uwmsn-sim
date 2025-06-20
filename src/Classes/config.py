@@ -36,7 +36,7 @@ def alpha_f(f):
     
 ############################################################ SIMULATION SETUP ########################################################
 # Simulation parameters
-TIME_DURATION = 3000 # (s)
+TIME_DURATION = 500 # (s)
 TIME_SCALER = 1# in [1 - 10] values near 10 may be source of errors (to fast for ROS stack)
 TIME_STEP = 0.01*TIME_SCALER
 targetNum = 3 #this is the maximum number of target considered in the simulator
@@ -44,24 +44,25 @@ auvNum = 6 #this is the maximum number of auvs considered in the simulator
 
 # Distributed Estimation Algorithm Parameters
 TM = 2 #measurements sampling period (s), lower than this impossible due to AVS processing!
-P_max = 50 # regressor MAX length 40
-P_min = 20 #regressor min length
+P_max = 40 # regressor MAX length 40
+P_min = 10 #regressor min length
 
-SIGMA_MEAS = 0.04# #(rad^2) --> 4.5° (as assumed in DAMPS and by cassino)| 6.0° super harsh
+SIGMA_MEAS = 0.05# #(rad^2) --> 4.5° (as assumed in DAMPS and by cassino)| 6.0° super harsh
 k_phi_thresh = 80.0# #Thresh sul condizionamento del regressore per aggiornare la stima
 k_stopCondition = 4.0# #Thresh sul condizionamento del regressore per fermare l'algoritmo
-n_m = 3 #numero di misure trasmesse
+
+recursiveEstimation = True #True if you want to use the recursive estimation algorithm, False if you want to use the standard one
 
 # AUVs Team Settings
-AUV_MAX_VEL = 5.0 #(m/s)
+AUV_MAX_VEL = 2.0 #(m/s)
 AUV_failure = False #auv1 will fail after t = TIME_DURATION/2
 failingAUV = 3 #ID AUV that will fail 
 etcActive = True
 alphaETC = 0.05
 netTopology = [[] for _ in range(auvNum)]
-netTopology[0] = [2] #put the ID of the neigbours of agent 1
+netTopology[0] = [2,3] #put the ID of the neigbours of agent 1
 netTopology[1] = [1,3] #put the ID of the neigbours of agent 2
-netTopology[2] = [2] #put the ID of the neigbours of agent 3
+netTopology[2] = [2,1] #put the ID of the neigbours of agent 3
 
 # Randomize initial agents position or chose initial positions
 active_auv = 3#choose many AUV you plan to use
@@ -70,7 +71,7 @@ area = (200, 200) # Area dimensions (width, height)
 center = (0,0)
 
 random_init = False
-min_distance = 50 #Minimum distance between AUVs
+min_distance = 15 #Minimum distance between AUVs
 max_distance = 2500 #Maximum distance between AUVs
 
 if random_init == True:
@@ -93,7 +94,7 @@ else:
     AUV_XY[2,0] = 10
     AUV_XY[2,1] = 10
 
-  # FAR INITIAL POSITION alternative
+    # FAR INITIAL POSITION alternative
     AUV_XY[0,0] = 430
     AUV_XY[0,1] = 200
 
@@ -103,15 +104,7 @@ else:
     AUV_XY[2,0] = 10
     AUV_XY[2,1] = 10
 
-         # BASE INITIAL POSITION
-    AUV_XY[0,0] = -38
-    AUV_XY[0,1] = 220
 
-    AUV_XY[1,0] = 10   
-    AUV_XY[1,1] = -10 
-
-    AUV_XY[2,0] = -150
-    AUV_XY[2,1] = -100 
 
     # FAR INITIAL POS
     AUV_XY[0,0] = -10
@@ -132,6 +125,16 @@ else:
 
     AUV_XY[2,0] = 0
     AUV_XY[2,1] = 1000
+
+        # BASE INITIAL POSITION
+    AUV_XY[0,0] = -50
+    AUV_XY[0,1] = -200
+
+    AUV_XY[1,0] = -10   
+    AUV_XY[1,1] = 10 
+
+    AUV_XY[2,0] = -180
+    AUV_XY[2,1] = -100 
 
 
 # Communication Policy Paramaters
@@ -160,11 +163,10 @@ elif max_distance == 5000:
     f = 6 #kHx ( frequency of the modem) long range 2-10 kHz
 elif max_distance == 10000:
     f = 2 #kHx ( frequency of the modem) long range 2-10 kHz
-
+n_m = 4 #numero di misure trasmesse
 pktSize = 1024+128*n_m #(fixed_pkt_size + 128*n_m)
 B = f*1000/20 #bps (bandwidth)
 Ts = TM + int(np.floor(pktSize/B)) #TDMA: slot time # time sampling always equal to Ts/2 -- considering pkt=64B and v=480bps
-print('TIME SLOT',Ts)
 
 # Acoustic Loss Parameters
 acoustic_loss = alpha_f(f) #f is in kHz
@@ -192,7 +194,7 @@ for i in range(len(dist)):
 
 # Optimization Parameters --- alpha = 0.15, gamma = 1.0 (almost fixed formation)
 alpha_w = 0.6 #fixed form 0.45#0.15
-gamma_w = 0.1 #fixed form 0.85#0.25#1.0
+gamma_w = 0.4 #fixed form 0.85#0.25#1.0
 RANGE_TO_TARGET = min_distance*2 #
 
 U = 5  # number of control choices (should be an ODD number)
@@ -238,13 +240,18 @@ TARGET_INIT = [400,0, np.pi, 0.2, 0.0, 0.0, 0.0] # SCENARIO 2-3
 TARGET_INIT = [-100,-350, -np.pi/2, -0.15, 0.0, 0.0, 0.0] # SCENARIO 1 bonus
 TARGET_INIT = [250,350, np.pi, -0.35, 0.0, 0.0, 0.0] # SCENARIO 5
 TARGET_INIT = [-300,25, np.pi/3, 0.35, 0.0, 0.0, 0.0] #scenario 4
-TARGET_INIT = [0,-350, -np.pi/6, -0.15, 0.0, 0.0, 0.0] # SCENARIO 1
+
 TARGET_INIT = [400,0, np.pi, 0.2, 0.0, 0.0, 0.0] # SCENARIO 2-3
 TARGET_INIT = [0,-350, 0, 0.2, 0.0, 0.0, 0.0] # SCENARIO 2-3
 
 ##############[x,y,theta,v_n,v_0,omega_0,a_0,omega_dot_0]##################
 TARGET_INIT = [-1000,500, math.pi/2, -0.3, 0.0, 0.0, 0.0] #SCENARIO FOR COMPARING Ts
-TARGET_INIT = [-1000,-1000, math.pi/2, -0.3, 0.0, 0.0, 0.0] #SCENARIO VERY FAR
+TARGET_INIT = [-1000,-1500, math.pi/2, -0.3, 0.0, 0.0, 0.0] #SCENARIO  FAR
+TARGET_INIT = [-1000,-1500, math.pi/2, -0.5, 0.0, 0.0, 0.0] #SCENARIO  FAR different vel
+TARGET_INIT = [-1000,-2500, math.pi/2, -0.4, 0.0, 0.0, 0.0] #SCENARIO  FAR different vel
+
+TARGET_INIT = [0,-350, np.pi/2, -0.2, 0.0, 0.0, 0.0] # SCENARIO 1
+
 a = -0.3 #(m/s) increase for more amplitude of the "turn"
 omega = +0.01#(-) #increase for faster sinusoidal beahviour
 
@@ -258,6 +265,7 @@ for i in range(len(AUV_XY)):
     AUV_XY[i,2] = math.atan2(TARGET_INIT[1]-AUV_XY[i,1],TARGET_INIT[0]-AUV_XY[i,0])
 
 ###################################################################################################################################
+
 
 
 '''

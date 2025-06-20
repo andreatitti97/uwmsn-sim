@@ -35,7 +35,7 @@ class EventHandler:
         self.H = H
         self.DT = DT
         self.beta = config.alphaETC
-        self.delta_0 = 50
+        self.delta_0 = 100
         self.pos_scale = 10.0
         self.vel_scale = 0.1
         self.t_last = 0.0

@@ -1,4 +1,5 @@
 import os, pathlib, importlib.util
+import numpy as np
 
 pkg_directory = os.path.dirname(pathlib.Path(__file__).parent.resolve())
 class_path = pkg_directory+'/Classes'
@@ -18,6 +19,7 @@ class Tracker:
         self.__curr_time = 0
         self.__prev_time = 0
         self.__label = label
+        
 
     @property
     def state(self):
@@ -25,16 +27,23 @@ class Tracker:
     @property
     def regressor(self):
         return self.__estimator.current_regressor
+    @property
+    def covariance(self):
+        return self.__estimator.current_covariance
 
     def processMeasurement(self, table): #table = [[tempo, misura, auv pos x, auv pos y, label]xTP]
         for i in range(len(table)):
             input_data = table[i]
-            self.__estimator.iteration(input_data[0], input_data[1], input_data[2], input_data[3], self.__prev_time)
-
+            if self.__estimator.recursiveEstimation:
+                self.__estimator.iterationRec(input_data[0], input_data[1], input_data[2], input_data[3], self.__prev_time)
+            else:
+                self.__estimator.iteration(input_data[0], input_data[1], input_data[2], input_data[3], self.__prev_time)
+    
     def propagation(self, curr_time):
         self.__curr_time = curr_time
         self.__estimator.propagation(self.__curr_time, self.__prev_time)
         self.__prev_time = self.__curr_time
 
 
-        
+
+            

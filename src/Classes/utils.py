@@ -167,6 +167,55 @@ def weighted_distance(seq1, seq2, alpha=0.8):
     
     return np.sum(d_i)
 
+# Define a weight function (example: inverse, bounded)
+# Linear
+def w_linear(r, r_max=3000):
+    return np.maximum(0, 1 - r / r_max)
+
+# Exponential
+def w_exp(r, alpha=0.05):
+    return np.exp(-alpha * r)
+
+# Gaussian
+def w_gaussian(r, sigma):
+    return np.exp(-r**2 / (2 * sigma**2))
+
+# Inverse
+def w_inv(r, eps):
+    return 1 / (r + eps)
+
+# Function to compute the consensus step
+def consensusStep(x_hat_i,x_hat_ni,t):
+
+
+    # Compute the sum of differences
+    sum_diff = np.zeros_like(x_hat_i)
+    omega_0 = 0.1
+    for i in range(len(x_hat_ni)):
+        # Include if in first half, or no failure, or if failure happened and this is not the failing AUV
+        if t <= config.TIME_DURATION / 2 or not config.AUV_failure or (t > config.TIME_DURATION / 2 and config.AUV_failure and i != config.failingAUV - 1):
+
+            if len(x_hat_ni[i]) > 0:
+
+                x_hat_j = x_hat_ni[i]
+                omega_ij=(w_linear(x_hat_j[5]))#compute the weight for agent j according to range to target
+                
+                # propagate estimate at time t
+                delta_t = t - x_hat_j[4]
+                F = np.array([
+                    [1, 0, delta_t, 0],
+                    [0, 1, 0, delta_t],
+                    [0, 0, 1, 0],
+                    [0, 0, 0, 1]
+                ])
+
+                x_hat_j[0:4] = F @ x_hat_j[0:4]
+                x_hat_j = np.array(x_hat_j[0:4]).reshape(-1, 1)
+                sum_diff += omega_ij*(x_hat_i - x_hat_j)
+
+    x_hat_i[0:4] = x_hat_i[0:4] + omega_0*np.eye(4)*sum_diff
+    return x_hat_i
+
 # Simple function that implements Newton-eulero for the underactuated AUV
 def systemModel(senPose, U, H, dt):
 

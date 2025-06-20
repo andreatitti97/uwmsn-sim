@@ -70,7 +70,7 @@ include_directories(
 ## Mark executable scripts (Python etc.) for installation
 ## in contrast to setup.py, you can choose the destination
 catkin_install_python(PROGRAMS
-   src/main-kinematic.py src/auv_node.py src/main-kinematic_MTT.py src/auv_node_MTT.py
+   src/main-kinematic_MTT.py src/auv_node_MTT.py
    DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
  )
 

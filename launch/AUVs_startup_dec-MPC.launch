@@ -1,0 +1,123 @@
+<?xml version="1.0"?>
+<launch>
+
+<!-- auvNum must be passed as arg from cmd line -->
+    <arg name="auvNum"/>
+    <arg name="targetNum"/>
+    <arg name="formationControl"/>
+
+<!-- AUV 1 -->
+    <group if="$(eval arg('auvNum') >= 1)" clear_params="false" ns="1">
+        <include file="$(find uwmsn-sim)/launch/auvs_initialization_MTT.launch" >
+            <arg name="auvID" value="1" />
+            <arg name="auvNum" value="$(eval arg('auvNum'))" />
+            <arg name="targetNum" value="$(eval arg('targetNum'))" />
+        </include>
+        <include file="$(find uw-communication)/launch/acoustic_modem_init_MTT.launch" >
+            <arg name="auvID" value="1" />
+            <arg name="auvNum" value="$(eval arg('auvNum'))" />
+            <arg name="targetNum" value="$(eval arg('targetNum'))" />
+        </include>
+        <include file="$(find uwmsn-motion_opt)/launch/dec_MPC.launch" >
+            <arg name="auvID" value="1" />
+            <arg name="auvNum" value="$(eval arg('auvNum'))" />
+            <arg name="targetNum" value="$(eval arg('targetNum'))" />
+        </include>
+    </group>
+    
+<!-- AUV 2 -->
+    <group if="$(eval arg('auvNum') >= 2)" clear_params="false" ns="2">
+        <include file="$(find uwmsn-sim)/launch/auvs_initialization_MTT.launch" >
+            <arg name="auvID" value="2" />
+            <arg name="auvNum" value="$(eval arg('auvNum'))" />
+            <arg name="targetNum" value="$(eval arg('targetNum'))" />
+        </include>
+        <include file="$(find uw-communication)/launch/acoustic_modem_init_MTT.launch" >
+            <arg name="auvID" value="2" />
+            <arg name="auvNum" value="$(eval arg('auvNum'))" />
+            <arg name="targetNum" value="$(eval arg('targetNum'))" />
+        </include>
+        <include file="$(find uwmsn-motion_opt)/launch/dec_MPC.launch" >
+            <arg name="auvID" value="2" />
+            <arg name="auvNum" value="$(eval arg('auvNum'))" />
+            <arg name="targetNum" value="$(eval arg('targetNum'))" />
+        </include>
+    </group>
+    
+<!-- AUV 3 -->
+    <group if="$(eval arg('auvNum') >= 3)" clear_params="false" ns="3">
+        <include file="$(find uwmsn-sim)/launch/auvs_initialization_MTT.launch" >
+            <arg name="auvID" value="3" />
+            <arg name="auvNum" value="$(eval arg('auvNum'))" />
+            <arg name="targetNum" value="$(eval arg('targetNum'))" />
+        </include><include file="$(find uw-communication)/launch/acoustic_modem_init_MTT.launch" >
+            <arg name="auvID" value="3" />
+            <arg name="auvNum" value="$(eval arg('auvNum'))" />
+            <arg name="targetNum" value="$(eval arg('targetNum'))" />
+        </include>
+        <include file="$(find uwmsn-motion_opt)/launch/dec_MPC.launch" >
+            <arg name="auvID" value="3" />
+            <arg name="auvNum" value="$(eval arg('auvNum'))" />
+            <arg name="targetNum" value="$(eval arg('targetNum'))" />
+        </include>
+    </group>
+    
+<!-- AUV 4 -->
+    <group if="$(eval arg('auvNum') >= 4)" clear_params="false" ns="4">
+        <include file="$(find uwmsn-sim)/launch/auvs_initialization_MTT.launch" >
+            <arg name="auvID" value="4" />
+            <arg name="auvNum" value="$(eval arg('auvNum'))" />
+            <arg name="targetNum" value="$(eval arg('targetNum'))" />
+        </include><include file="$(find uw-communication)/launch/acoustic_modem_init_MTT.launch" >
+            <arg name="auvID" value="4" />
+            <arg name="auvNum" value="$(eval arg('auvNum'))" />
+            <arg name="targetNum" value="$(eval arg('targetNum'))" />
+        </include>
+        <include file="$(find uwmsn-motion_opt)/launch/dec_MPC.launch" >
+            <arg name="auvID" value="4" />
+            <arg name="auvNum" value="$(eval arg('auvNum'))" />
+            <arg name="targetNum" value="$(eval arg('targetNum'))" />
+        </include>
+
+    </group>
+    
+    <!-- AUV 5 -->
+    <group if="$(eval arg('auvNum') >= 5)" clear_params="false" ns="5">
+        <include file="$(find uwmsn-sim)/launch/auvs_initialization_MTT.launch" >
+            <arg name="auvID" value="5" />
+            <arg name="auvNum" value="$(eval arg('auvNum'))" />
+            <arg name="targetNum" value="$(eval arg('targetNum'))" />
+        </include><include file="$(find uw-communication)/launch/acoustic_modem_init_MTT.launch" >
+            <arg name="auvID" value="5" />
+            <arg name="auvNum" value="$(eval arg('auvNum'))" />
+            <arg name="targetNum" value="$(eval arg('targetNum'))" />
+        </include>
+        <include file="$(find uwmsn-motion_opt)/launch/dec_MPC.launch" >
+            <arg name="auvID" value="5" />
+            <arg name="auvNum" value="$(eval arg('auvNum'))" />
+            <arg name="targetNum" value="$(eval arg('targetNum'))" />
+        </include>
+    </group>
+    
+    <!-- AUV 6 -->
+    <group if="$(eval arg('auvNum') >= 6)" clear_params="false" ns="6">
+        <include file="$(find uwmsn-sim)/launch/auvs_initialization_MTT.launch" >
+            <arg name="auvID" value="6" />
+            <arg name="auvNum" value="$(eval arg('auvNum'))" />
+            <arg name="targetNum" value="$(eval arg('targetNum'))" />
+        </include><include file="$(find uw-communication)/launch/acoustic_modem_init_MTT.launch" >
+            <arg name="auvID" value="6" />
+            <arg name="auvNum" value="$(eval arg('auvNum'))" />
+            <arg name="targetNum" value="$(eval arg('targetNum'))" />
+        </include>
+        <include file="$(find uwmsn-motion_opt)/launch/dec_MPC.launch" >
+            <arg name="auvID" value="6" />
+            <arg name="auvNum" value="$(eval arg('auvNum'))" />
+            <arg name="targetNum" value="$(eval arg('targetNum'))" />
+        </include>
+
+    </group>
+    
+
+
+</launch>

@@ -24,7 +24,8 @@ splinePlanner = h.planner
 # Init Global Variables for ROS callbacks
 AUV_XY = h.config.AUV_XY
 targetNumSim = h.config.targetNum
-
+#consensusEst = [[] for _ in range(len(AUV_XY))]
+consensusEst = [[] for _ in range(h.config.active_auv)]#TODO check if the generalized version work
 # Sensor state [px,py,yaw]
 senPose = [0,0,0] 
 
@@ -45,33 +46,6 @@ covariance = [[] for _ in range(targetNumSim)]
 etcEstimation = []
 etcGuidance = []
 
-# Weighted distance metric (ETC trigger)
-def weighted_distance(seq1, seq2, alpha=0.8):
-    w = np.array([alpha**(h) for h in range(len(seq1))])
-    d_i = 0.0
-    
-    for i in range(len(seq1)):
-        tmp_seq1 = np.array(seq1[i])
-        tmp_seq2 = np.array(seq2[i])
-        d_i += w[i]*np.linalg.norm(tmp_seq1 - tmp_seq2)
-    
-    return np.sum(d_i)
-
-def systemModel(senPose, U, H, dt):
-
-    s = [senPose[0], senPose[1], senPose[2]] # [x,y,theta]
-    # Initialize the list to store the predicted states
-    s_hat = []
-    # Compute new headingRef according to the given heading change
-
-    for i in range(H-1):
-
-        s[2] = s[2]+(U[3+H+i])       
-        s[0] = s[0]+np.cos(s[2])*U[3+i]*(dt)
-        s[1] = s[1]+np.sin(s[2])*U[3+i]*(dt)
-        s_hat.append([s[0],s[1],s[2]])
-
-    return s_hat
 
 def run_auv_node(pub,auv,obs,Ts,Tf,auvNum):
 
@@ -138,8 +112,6 @@ def run_auv_node(pub,auv,obs,Ts,Tf,auvNum):
             checkMeasOld = measRxOld[0]
             #check if the a new measurement is received
             if checkMeasNew[0] - checkMeasOld[0] > tol or checkMeasNew[1] - checkMeasOld[1] > tol:
-                if auvID == 3:
-                    print('AUV 3 DEBUG: rECEIVED MEASUREMENTS')
                 for i in range(len(measRx)):
                     tmp = measRx[i]
                     measTable[int(tmp[4])-1].append([tmp[0],tmp[1],tmp[2],tmp[3],tmp[4]])
@@ -173,20 +145,17 @@ def run_auv_node(pub,auv,obs,Ts,Tf,auvNum):
                     if etcActive == True:
                         if etcRoutine.decisionGuidance == True:
                             etcRoutine.decisionGuidance = False
-                            n_m = h.config.n_m + 3
-                        else:
-                            n_m = h.config.n_m
+                            measTx.pop(0)#free space for guidance profile
 
-                    if len(measTx) > n_m:
-                        #remove old measurements, they will not be transmitted
-                        for i in range(len(measTx)-n_m):
+                        if etcRoutine.decisionConsensus == True:
+                            etcRoutine.decisionConsensus = False
                             measTx.pop(0)
 
                     measTx = np.array(measTx,dtype=np.float32)
                     rows, cols = measTx.shape
-
                     pub[0].publish(Matrix(data=measTx.flatten().tolist(), rows=rows, cols=cols))
                     pub[3].publish(np.array(ctrlPolicy,dtype=np.float32))
+                    
                     measTx = []#empty the buffer of local measures to transmit
                     if clkTdma == auvNum*Ts:
                         clkTdma = 0
@@ -211,20 +180,29 @@ def run_auv_node(pub,auv,obs,Ts,Tf,auvNum):
                             if k_phi < k_thresh:
                                 # Propagate state and compute covariance
                                 obs[i].propagation(t)
-                                cov = h.utils.computeCov(y, phi)
+                                cov = obs[i].covariance
                                 covariance[i].append(cov)
+
+                                # Consensus step
+                                xi_hat_i = h.utils.consensusStep(obs[i].state,consensusEst,t)
+                                d_s_xi = np.sqrt((xi_hat_i[1]-senPose[1])**2+(xi_hat_i[0]-senPose[0])**2)
 
                                 # Prepare estimation message
                                 confirmed_est = [np.floor(t), k_phi, target_info[4]]
-                                confirmed_est += [obs[i].state[j, 0] for j in range(4)]
+                                confirmed_est += [xi_hat_i[j, 0] for j in range(4)]
                                 confirmed_est += [cov[j, k] for j in range(4) for k in range(4)]
+                                
+                                # Publish the estimation for the consensus step
+                                xi_hat_i = np.vstack((xi_hat_i, [[t]]))
+                                xi_hat_i = np.vstack((xi_hat_i, d_s_xi))
+                                pub[4].publish(np.array(xi_hat_i,dtype=np.float32))
+                                
                                 msgTx.append(confirmed_est)
-
+                            
                                 # Run the ETC routine for the consensus algorithm
                                 etcRoutine.etcRoutineConsensus(t,i,obs[i].state,cov)
                                 if etcRoutine.decisionConsensus:
                                     etcEstimation.append(t)
-                                    print('-------------------- ETC: Update Estimation - AUV ID',auvID)
                     
                     # TRIGGER THE OPTIMIZATION IF NEW ESTIMATIONS DONE + SAVE TRACKING DATA ########################    
                     if msgTx != []:
@@ -245,7 +223,7 @@ def run_auv_node(pub,auv,obs,Ts,Tf,auvNum):
                             f_xi_hat_i = [f"{val:.2f}" for val in xi_hat_i[3:7]]
                             rospy.logout('%s|---- AUV '+str(auvID)+': Target '+str(int(xi_hat_i[2]))
                                         +' State Estimation [m,m/s] --> %s Range Target %s  %s',
-                                    blue,f_xi_hat_i,d_s_xi,none)#TODO print the estimate not the msg
+                                    blue,f_xi_hat_i,d_s_xi,none)
 
                         # TODO: Now the stop condition is not working for the MTT
                         if d_s_xi <= desRange and k_phi < k_stopCondition:
@@ -274,7 +252,6 @@ def run_auv_node(pub,auv,obs,Ts,Tf,auvNum):
                 etcRoutine.etcRoutineGuidance(t,senPose,ctrlPolicy)
                 if etcRoutine.decisionGuidance == True:
                     etcGuidance.append(t)
-                    print('-------------------- ETC: Update Guidance - AUV ID',auvID)
     
 
             if path != None and missionDone == False: 
@@ -339,12 +316,22 @@ def callbackRxMeas(data):
     global measRx 
     measRx = np.array(data.data).reshape(data.rows, data.cols)
 
-def listener(auvID):
+def listener(auvID, auvNum):
 
     rospy.Subscriber('vehicle_state_'+str(auvID), numpy_msg(Floats), callbackSenState)
     rospy.Subscriber('/'+str(auvID)+'/target_state', Matrix, callbackTargetState)
     rospy.Subscriber('/'+str(auvID)+'/ctrl_policy', numpy_msg(Floats), callbackCtrlPolicy)
     rospy.Subscriber('/'+str(auvID)+'/rx_meas', Matrix, callbackRxMeas)
+    for i in range(auvNum):
+        #if i + 1 != auvID:
+            # Define a wrapper function to capture the index
+        
+        def create_callback(index):
+            def callback(data):
+                global consensusEst
+                consensusEst[index] = list(data.data)
+            return callback
+        rospy.Subscriber('/'+str(i+1)+'/consensus', numpy_msg(Floats), create_callback(i))
     
 def wait_for_start_signal():
     rospy.loginfo("Waiting for start signal from simulation...")
@@ -380,10 +367,12 @@ def main():
     pub_ctrl_cmd = rospy.Publisher('/'+str(auvID)+'/ctrl_cmd', numpy_msg(Floats),queue_size=10)
     pub_ctrl_policy = rospy.Publisher('/'+str(auvID)+'/tx_ctrl_policy',
                                     numpy_msg(Floats), queue_size=100)
+    pub_consensus = rospy.Publisher('/'+str(auvID)+'/consensus', numpy_msg(Floats), queue_size=100)
     pub.append(pub_measurement)
     pub.append(pub_estimation)  
     pub.append(pub_ctrl_cmd)
     pub.append(pub_ctrl_policy)
+    pub.append(pub_consensus)
 
     # Initialize sensor and tracker object from costum class
     auv = h.sensor.Sensor(str(auvID),1,0,h.config.SIGMA_MEAS)
@@ -394,7 +383,7 @@ def main():
     
 
     # Start simulation
-    listener(auvID)
+    listener(auvID,auvNum)
     run_auv_node(pub,auv,obs,h.config.Ts,Tf,auvNum)
     rospy.on_shutdown(lambda: shutdownCllbk(targetNum))
     rospy.spin()

@@ -12,6 +12,14 @@ log_directory = os.path.dirname(pathlib.Path(__file__).parent.resolve())+'/logs'
 class_directory = pkg_directory+'/src'+'/Classes'
 
 save_directory = os.path.dirname(pathlib.Path(__file__).parent.resolve())+'/logs_paper-ETC'
+
+
+
+n_sim = 2 #num of simulation for scenario i
+n_scenario = 1#scenario number
+method = 'dec-MPC'#dec-MPC, DMPC, DPSO, MPC
+
+save_directory = os.path.dirname(pathlib.Path(__file__).parent.resolve())+'/logs_COMPARISON/scenario'+str(n_scenario)+'/'+method+'/sim'+str(n_sim)
 # Import config file 
 module_dir = os.path.dirname(pathlib.Path(__file__).parent.resolve())
 header_file = pkg_directory+'/include'+'/uwmsn-sim'
@@ -41,6 +49,7 @@ heading = [[] for _ in range(auvNum)]
 x_hat, tracking_errors, P, avgNodes, avgTime = [], [], [], [], []
 PDR = np.zeros(((auvNum),1))
 
+
 # Load target data - TO DOWNSAMPLE
 for i in range(targetNum):
     target_x_traj[:,i] = np.loadtxt(log_directory+'/target_x_traj'+str(i+1)+'.txt')
@@ -63,7 +72,7 @@ for i in range(int(auvNum)):
 
     # Optimization Data
     avgTime.append(np.loadtxt(log_directory+'/wall_times'+str(i+1)+'.txt')) 
-    avgNodes.append(np.loadtxt(log_directory+'/nodes'+str(i+1)+'.txt'))    
+    #avgNodes.append(np.loadtxt(log_directory+'/nodes'+str(i+1)+'.txt'))    
 
     # Estimation Data
     err = np.loadtxt(log_directory+'/'+str(i+1)+'-trackErr.txt')
@@ -83,7 +92,7 @@ for i in range(int(auvNum)):
 
 # Downsampling script
 
-failed_auv = 1
+failed_auv = header.config.failingAUV
 
 original_samples = samples
 sampling = 20
@@ -166,21 +175,26 @@ for k in range(targetNum):
 # Print some simulation info
 print('SIMULATION INFO [auvNum - Simulation Time (s) - Slot Time (s)]',sim_info)   
 print('Acoustic Communication Stat [PDR AUV1,PDR AUV2,PDR AUV3,PDR AUV4]:',PDR)
+avgFQI = sum(list_phi)/len(list_phi)
+print('Average Formation Quality',sum(list_phi)/len(list_phi))
 avgError = []
 avgVar = []
+avgTimeAUVs = []
 for i in range(int(auvNum)):
-    #print('OPTIMIZATION STATS --> Average Optimization Time AUV ID:',i+1,sum(avgTime[i])/len(avgTime[i]))
+    print('OPTIMIZATION STATS --> Average Optimization Time AUV ID:',i+1,sum(avgTime[i])/len(avgTime[i]))
+    avgTimeAUVs.append(sum(avgTime[i])/len(avgTime[i]))
     mean_error = (sum(tracking_errors[i])/len(tracking_errors[i]))
 
     variance_error = np.var(tracking_errors[i])#sum((e - mean_error) ** 2 for e in tracking_errors[i]) / len(tracking_errors[i])
     print(f'AUV ID {i+1} RMSE (m): {mean_error:.3f}, Std Dev: {np.sqrt(variance_error):.3f}')
     avgError.append(mean_error)
     avgVar.append(np.sqrt(variance_error))
-
-#print('alphaETC=',header.config.alphaETC)
-print('Slot TDMA (s)',sim_info[0])
 print('AVERAGE TRACKING ERRORS:',np.sum(avgError)/len(avgError))
 print('AVERAGE VARIANCR:',np.sum(avgVar)/len(avgVar))
+np.savetxt(save_directory+'/sim_results',[np.sum(avgError)/len(avgError),np.sum(avgVar)/len(avgVar),np.sum(avgTimeAUVs)/len(avgTimeAUVs),avgFQI],delimiter=',')
+#print('alphaETC=',header.config.alphaETC)
+print('Slot TDMA (s)',sim_info[0])
+
 pings = 0.0
 for i in range(auvNum):
     tmp = len(guidanceETC[i])
@@ -302,7 +316,7 @@ ax.grid()
 plt.yticks(fontsize=ticks_size, rotation = 0)#to set dimension and orientation of tick labels
 plt.xticks(fontsize=ticks_size, rotation=0)#to set dimension and orientation of tick labels
 #plt.show()
-np.savetxt(save_directory+'/k_phi-alpha='+str(header.config.alphaETC),list_phi)
+#np.savetxt(save_directory+'/k_phi-alpha='+str(header.config.alphaETC),list_phi)
 ##########################################################
 # Plot tracking error in separate subplots
 
@@ -514,7 +528,7 @@ ax.grid()
 ax.axis('equal')
 ax.legend(fontsize=(fs*2)/3)
 
-plt.show()
+#plt.show()
 
 ##########################################################
 #plot distance to target
