@@ -14,9 +14,9 @@ class_directory = pkg_directory+'/src'+'/Classes'
 save_directory = os.path.dirname(pathlib.Path(__file__).parent.resolve())+'/logs_paper-ETC'
 
 
-
-n_sim = 2 #num of simulation for scenario i
-n_scenario = 1#scenario number
+ 
+n_sim = 3#num of simulation for scenario i
+n_scenario = 4#scenario number
 method = 'dec-MPC'#dec-MPC, DMPC, DPSO, MPC
 
 save_directory = os.path.dirname(pathlib.Path(__file__).parent.resolve())+'/logs_COMPARISON/scenario'+str(n_scenario)+'/'+method+'/sim'+str(n_sim)

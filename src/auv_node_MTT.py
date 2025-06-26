@@ -150,8 +150,18 @@ def run_auv_node(pub,auv,obs,Ts,Tf,auvNum):
                         if etcRoutine.decisionConsensus == True:
                             etcRoutine.decisionConsensus = False
                             measTx.pop(0)
+                        print('DEBUG, NUMBER OF MEASUREMENTS:', len(measTx))
+                        measTx = np.array(measTx,dtype=np.float32)
+                    else:
+                        if len(measTx) < n_m:
+                            print('DEBUG, NUMBER OF MEASUREMENTS:', len(measTx))
+                            measTx = np.array(measTx,dtype=np.float32)
+                        else:
+                            print(len(measTx))
+                            print('DEBUG, NUMBER OF MEASUREMENTS:', len(measTx[-n_m:]))
+                            measTx = np.array(measTx[-n_m:],dtype=np.float32)
 
-                    measTx = np.array(measTx,dtype=np.float32)
+                    
                     rows, cols = measTx.shape
                     pub[0].publish(Matrix(data=measTx.flatten().tolist(), rows=rows, cols=cols))
                     pub[3].publish(np.array(ctrlPolicy,dtype=np.float32))

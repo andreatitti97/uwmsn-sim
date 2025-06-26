@@ -163,6 +163,7 @@ elif max_distance == 5000:
     f = 6 #kHx ( frequency of the modem) long range 2-10 kHz
 elif max_distance == 10000:
     f = 2 #kHx ( frequency of the modem) long range 2-10 kHz
+
 n_m = 4 #numero di misure trasmesse
 pktSize = 1024+128*n_m #(fixed_pkt_size + 128*n_m)
 B = f*1000/20 #bps (bandwidth)
@@ -238,10 +239,10 @@ TARGET_INIT = [-300,150, np.pi-np.pi/3, 0.2, 0.0, 0.0, 0.0]
 TARGET_INIT = [400,0, np.pi/2, 0.35, 0.0, 0.0, 0.0] 
 TARGET_INIT = [400,0, np.pi, 0.2, 0.0, 0.0, 0.0] # SCENARIO 2-3
 TARGET_INIT = [-100,-350, -np.pi/2, -0.15, 0.0, 0.0, 0.0] # SCENARIO 1 bonus
-TARGET_INIT = [250,350, np.pi, -0.35, 0.0, 0.0, 0.0] # SCENARIO 5
-TARGET_INIT = [-300,25, np.pi/3, 0.35, 0.0, 0.0, 0.0] #scenario 4
 
-TARGET_INIT = [400,0, np.pi, 0.2, 0.0, 0.0, 0.0] # SCENARIO 2-3
+
+
+
 TARGET_INIT = [0,-350, 0, 0.2, 0.0, 0.0, 0.0] # SCENARIO 2-3
 
 ##############[x,y,theta,v_n,v_0,omega_0,a_0,omega_dot_0]##################
@@ -250,9 +251,26 @@ TARGET_INIT = [-1000,-1500, math.pi/2, -0.3, 0.0, 0.0, 0.0] #SCENARIO  FAR
 TARGET_INIT = [-1000,-1500, math.pi/2, -0.5, 0.0, 0.0, 0.0] #SCENARIO  FAR different vel
 TARGET_INIT = [-1000,-2500, math.pi/2, -0.4, 0.0, 0.0, 0.0] #SCENARIO  FAR different vel
 
+
+
+
+
+
+
+
+
+TARGET_INIT = [250,350, np.pi, -0.35, 0.0, 0.0, 0.0] # SCENARIO 5
+
 TARGET_INIT = [0,-350, np.pi/2, -0.2, 0.0, 0.0, 0.0] # SCENARIO 1
 
-a = -0.3 #(m/s) increase for more amplitude of the "turn"
+
+TARGET_INIT = [400,0, np.pi, 0.5, 0.0, 0.0, 0.0] # SCENARIO 2
+
+TARGET_INIT = [400,0, np.pi, -0.15, np.pi/2, 0.0, 0.0] # SCENARIO 3
+
+TARGET_INIT = [-600,25, np.pi/2, 0.35, 0.0, 0.0, 0.0] #scenario 4
+
+a = -0.1 #(m/s) increase for more amplitude of the "turn"
 omega = +0.01#(-) #increase for faster sinusoidal beahviour
 
 alpha_0, omega_0,alpha_dot_0,omega_dot_0 = TARGET_INIT[3],TARGET_INIT[4],TARGET_INIT[5],TARGET_INIT[6]
