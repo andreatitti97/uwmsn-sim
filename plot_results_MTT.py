@@ -744,7 +744,7 @@ for i in range(int(auvNum)):
 
     x = np.linspace(0,simTime,int(len(tmp)/sampling)) #subsampled set
 
-    model = make_interp_spline(x, tmp[::sampling]) #TODO CHECK ROUNDING UP PROBLEM FOR INTERP
+    model = make_interp_spline(x, tmp[::sampling])
     t = np.linspace(0,simTime,samples)#original samples length but interpolated
     y = model(t)
 

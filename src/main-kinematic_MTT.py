@@ -1,4 +1,11 @@
 #!/usr/bin/env python
+"""Kinematic simulator for the multi-target UWMSN mission.
+
+This node provides the main simulation loop for the underwater monitoring
+scenario, updating the AUV and target states and publishing the relevant
+messages consumed by the communication and optimization packages.
+"""
+
 #Import basic system modules
 import os, importlib.util, pathlib
 # Import math modules

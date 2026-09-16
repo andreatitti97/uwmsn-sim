@@ -79,7 +79,7 @@ if random_init == True:
     
     for i, point in enumerate(random_points):
 
-        AUV_XY[i,0] = point[0]#TODO: SOLVE THE BUG OF HAVING AUV1 IN POS [0,0,0]
+        AUV_XY[i,0] = point[0]
         AUV_XY[i,1] = point[1]
 
 else:
@@ -176,7 +176,7 @@ TL_max = 20*np.log10(max_distance) + (max_distance*acoustic_loss*1e-3)
 
 SNR_ub = SL -TL_min - NL - DI
 SNR_lb = SL -TL_max - NL - DI
-SNR_minimal = 90 #dB TODO validate this value
+SNR_minimal = 90 #dB
 
 if SNR_ub < SNR_minimal: 
     print('INCREASE SOURCE LEVEL or TOO MUCH NOISE')

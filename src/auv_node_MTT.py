@@ -1,4 +1,11 @@
 #!/usr/bin/env python
+"""AUV node for the multi-target kinematic simulation.
+
+This node simulates the behavior of an underwater vehicle within the team,
+updates local estimates, publishes state information, and transmits the
+resulting control policies used by the optimization layer.
+"""
+
 #Import basic system modules
 import os, importlib.util, pathlib
 # Import math modules
@@ -25,7 +32,7 @@ splinePlanner = h.planner
 AUV_XY = h.config.AUV_XY
 targetNumSim = h.config.targetNum
 #consensusEst = [[] for _ in range(len(AUV_XY))]
-consensusEst = [[] for _ in range(h.config.active_auv)]#TODO check if the generalized version work
+consensusEst = [[] for _ in range(h.config.active_auv)]
 # Sensor state [px,py,yaw]
 senPose = [0,0,0] 
 
@@ -116,7 +123,7 @@ def run_auv_node(pub,auv,obs,Ts,Tf,auvNum):
                     tmp = measRx[i]
                     measTable[int(tmp[4])-1].append([tmp[0],tmp[1],tmp[2],tmp[3],tmp[4]])
 
-            if (count1 % (Hz/t_scaler)) == 0:#count seconds for TDMA and acoustic sampling
+            if (count1 % (Hz/t_scaler)) == 0:
                 clkTdma += 1
                 clkSmpl += 1
 
@@ -235,7 +242,6 @@ def run_auv_node(pub,auv,obs,Ts,Tf,auvNum):
                                         +' State Estimation [m,m/s] --> %s Range Target %s  %s',
                                     blue,f_xi_hat_i,d_s_xi,none)
 
-                        # TODO: Now the stop condition is not working for the MTT
                         if d_s_xi <= desRange and k_phi < k_stopCondition:
                             rospy.loginfo('%s|---- AUV '+str(auvID)+' MISSION ACCOMPLISHED')
                             missionDone = True

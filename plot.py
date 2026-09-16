@@ -60,7 +60,7 @@ for i in range(auvNum):
     # Estimation Data
     err = np.loadtxt(log_directory+'/'+str(i+1)+'-trackErr.txt')
     tracking_errors.append(err)
-    '''TODO Add the possibility of monitoring all the estimations
+    '''
     tmp = np.loadtxt(log_directory+'/'+str(i+1)+'-x_hat_2.txt')
     x_hat_ = np.zeros((len(tmp),4))
     cov = np.zeros((len(tmp),4))
@@ -132,9 +132,9 @@ for k in range(targetNum):
     # Populate phi and compute cost with conditions
     for i in range(samples):
         if header.config.AUV_failure:
-            phi[:3] = phi_lists[:3, i]  #TODO better Only assign the first 3 AUVs' data
+            phi[:3] = phi_lists[:3, i]
         else:
-            phi[:4] = phi_lists[:4, i]  # Assign all 4 AUVs' data
+            phi[:4] = phi_lists[:4, i]
         
         cost = header.utils.computeCost(phi)
         list_phi[i] += cost

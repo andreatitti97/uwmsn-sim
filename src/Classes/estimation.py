@@ -189,7 +189,6 @@ class Estimator:
         return cov
 
     def iterationEKF(self, t_meas, y_i, si_x, si_y, prev_t):
-        # TODO  for now this not work, problem with latencies
         # Measurement model: h(x) = si_x*sin(theta) - si_y*cos(theta)
         def h(x):
             px, py, vx, vy = x[0,0], x[1,0], x[2,0], x[3,0]

@@ -60,7 +60,6 @@ for i in range(auvNum):
     # Estimation Data
     err = np.loadtxt(log_directory+'/'+str(i+1)+'-trackErr.txt')
     tracking_errors.append(err)
-    #TODO Add the possibility of monitoring all the estimations
     '''tmp = np.loadtxt(log_directory+'/'+str(2)+'-x_hat_'+str(1)+'.txt')
     x_hat_ = np.zeros((len(tmp),4))
     cov = np.zeros((len(tmp),4))

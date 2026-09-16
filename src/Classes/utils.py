@@ -27,7 +27,7 @@ def calc_spline_course(sp,ds):
 def computePursuitVel(curr_est,s_pose,d_max, DT):
 
     predicted_pose = np.array(np.zeros(2))
-    predicted_pose[0] = curr_est[0,0] + DT*curr_est[2,0]#TODO: check how much time propagate
+    predicted_pose[0] = curr_est[0,0] + DT*curr_est[2,0]
     predicted_pose[1] = curr_est[1,0] + DT*curr_est[3,0]
 
     eucl_dist = np.sqrt((curr_est[0,0]-s_pose[0])**2+(curr_est[1,0]-s_pose[1])**2)
@@ -226,7 +226,7 @@ def systemModel(senPose, U, H, dt):
     for i in range(H+1):
 
         s[2] = s[2]+(U[i])       
-        s[0] = s[0]+np.cos(s[2])*U[H+1+i]*(dt)#TODO: FIX THIS PROBLEM OF THE INDEX for plcy intent
+        s[0] = s[0]+np.cos(s[2])*U[H+1+i]*(dt)
         s[1] = s[1]+np.sin(s[2])*U[H+1+i]*(dt)
         s_hat.append([s[0],s[1]])
 
