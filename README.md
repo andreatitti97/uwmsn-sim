@@ -71,7 +71,7 @@ python3 plot_connectivity.py
 
 If this package contributes to your research, please cite the project publication describing the motion optimization strategy for passive acoustic monitoring with a team of AUVs under intermittent communication.
 
-> Tiranti, A., et al. "Motion optimization strategy for passive acoustic monitoring with a team of AUVs considering intermittent communication." Please cite the published paper appropriately in any derived work.
+> A. Tiranti, P. Di Lillo, F. Wanderlingh, E. Simetti, M. Baglietto, and G. Antonelli, "Motion Optimization Strategy for Passive Acoustic Monitoring With a Team of AUVs Considering Intermittent Communication," IEEE Journal of Oceanic Engineering, vol. 50, no. 4, 2025. doi: 10.1109/JOE.2025.3586242.
 
 ## Notes
 
